@@ -1,0 +1,20 @@
+{
+    "name": "lsr/core",
+    "description": "Laser framework core.",
+    "require-dev": {
+        "phpunit/phpunit": "10.0.x-dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lsr\\Core\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Tomáš Vojík",
+            "email": "vojik@wboy.cz"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
