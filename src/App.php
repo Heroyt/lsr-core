@@ -11,7 +11,6 @@
 
 namespace Lsr\Core;
 
-use App\Logging\Logger;
 use Gettext\Languages\Language;
 use Lsr\Core\Menu\MenuItem;
 use Lsr\Core\Requests\CliRequest;
@@ -19,6 +18,7 @@ use Lsr\Core\Requests\Request;
 use Lsr\Exceptions\FileException;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;
+use Lsr\Logging\Logger;
 use Nette\DI\Compiler;
 use Nette\DI\Container;
 use Nette\DI\ContainerLoader;
