@@ -1,5 +1,5 @@
 includes:
-	- config/constants.php
+	- ../../../config/constants.php
 parameters:
 	cache:
 		path: '%constants.tempDir%cache.db'
