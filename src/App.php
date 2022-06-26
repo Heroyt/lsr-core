@@ -72,6 +72,11 @@ class App
 
 		self::setupDi();
 
+		// Setup routes
+		/** @noinspection PhpFieldAssignmentTypeMismatchInspection */
+		self::$router = self::getService('routing');
+		self::$router->setup();
+
 		if (PHP_SAPI === "cli") {
 			global $argv;
 			self::$request = new CliRequest($argv[1] ?? '');
@@ -79,11 +84,6 @@ class App
 		else {
 			self::$request = new Request(self::$prettyUrl ? $_SERVER['REQUEST_URI'] : ($_GET['p'] ?? []));
 		}
-
-		// Setup routes
-		/** @noinspection PhpFieldAssignmentTypeMismatchInspection */
-		self::$router = self::getService('routing');
-		self::$router->setup();
 
 		// Set language and translations
 		self::setupLanguage();
