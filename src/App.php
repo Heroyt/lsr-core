@@ -385,8 +385,9 @@ class App
 	/**
 	 * Get current page HTML or run CLI command
 	 *
-	 * @version 1.0
+	 * @throws Requests\Exceptions\RouteNotFoundException
 	 * @since   1.0
+	 * @version 1.0
 	 */
 	public static function run() : void {
 		self::$request->handle();
@@ -397,7 +398,7 @@ class App
 	 *
 	 * @param array $data
 	 */
-	public static function sendAjaxData(array $data) : void {
+	public static function sendAjaxData(array $data) : never {
 		header('Content-Type: application/json; charset=UTF-8');
 		bdump($data);
 		exit(json_encode($data, JSON_THROW_ON_ERROR));
