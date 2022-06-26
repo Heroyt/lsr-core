@@ -1,0 +1,35 @@
+parameters:
+	cache:
+		path: TMP_DIR.'cache.db'
+	templating:
+		tmpPath: TMP_DIR.'latte/'
+services:
+	cache.storage: Nette\Caching\Storages\SQLiteStorage(%cache.path%)
+	cache: Nette\Caching\Cache
+	routing:
+		create: Lsr\Core\Router(@cache)
+		setup:
+			- setup()
+		tags:
+			- routing
+	templating.latte.extension:
+		create: Lsr\Core\Templating\LatteExtension()
+		tags:
+			- templating
+	templating.latte.engine:
+		create: Latte\Engine()
+		setup:
+			- setTempDirectory(%templating.tmpPath%)
+			- addExtension(@templating.latte.extension)
+		tags:
+			- templating
+	templating.latte:
+		create: Lsr\Core\Templating\Latte(@templating.latte.engine)
+		tags:
+			- templating
+search:
+	controllers:
+		extends:
+			- Lsr\Core\Controller
+		tags:
+			- controllers
