@@ -1,3 +1,5 @@
+extensions:
+	search: Nette\DI\Extensions\SearchExtension
 parameters:
 	cache:
 		path: TMP_DIR.'cache.db'
