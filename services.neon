@@ -1,4 +1,5 @@
 parameters:
+	appDir: ROOT
 	tempDir: TMP_DIR
 	cache:
 		path: TMP_DIR.'cache.db'
@@ -32,6 +33,7 @@ services:
 			- templating
 search:
 	controllers:
+		in: %appDir%/src/Controllers
 		extends:
 			- Lsr\Core\Controller
 		tags:
