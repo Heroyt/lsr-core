@@ -1,12 +1,12 @@
+includes:
+	- config/constants.php
 parameters:
-	appDir: ROOT
-	tempDir: TMP_DIR
 	cache:
-		path: TMP_DIR.'cache.db'
+		path: '%constants.tempDir%cache.db'
 	templating:
-		tmpPath: TMP_DIR.'latte/'
+		tmpPath: '%constants.tempDir%latte/'
 extensions:
-	search: Nette\DI\Extensions\SearchExtension(%tempDir%)
+	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
 services:
 	cache.storage: Nette\Caching\Storages\SQLiteStorage(%cache.path%)
 	cache: Nette\Caching\Cache
@@ -33,7 +33,7 @@ services:
 			- templating
 search:
 	controllers:
-		in: %appDir%/src/Controllers
+		in: %constants.appDir%/src/Controllers
 		extends:
 			- Lsr\Core\Controller
 		tags:
