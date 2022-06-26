@@ -22,6 +22,7 @@ use Lsr\Interfaces\RouteInterface;
 use Nette\DI\Compiler;
 use Nette\DI\Container;
 use Nette\DI\ContainerLoader;
+use Nette\DI\Extensions\ExtensionsExtension;
 use Nette\Http\Url;
 
 /**
@@ -96,6 +97,7 @@ class App
 		$loader = new ContainerLoader(TMP_DIR);
 		/** @var Container $class */
 		$class = $loader->load(function(Compiler $compiler) {
+			$compiler->addExtension('extensions', new ExtensionsExtension());
 			/** @noinspection PhpIncludeInspection */
 			/** @var string[] $configs */
 			$configs = require ROOT.'config/services.php';
