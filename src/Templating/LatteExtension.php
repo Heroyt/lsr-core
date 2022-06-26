@@ -7,6 +7,7 @@ use Lsr\Core\App;
 use Lsr\Core\Templating\Nodes\AlertNode;
 use Lsr\Core\Templating\Nodes\CsrfInputNode;
 use Lsr\Core\Templating\Nodes\CsrfNode;
+use Lsr\Core\Templating\Nodes\DumpNode;
 use Lsr\Core\Templating\Nodes\GetUrlNode;
 use Lsr\Core\Templating\Nodes\IconNode;
 use Lsr\Core\Templating\Nodes\LangNode;
@@ -31,6 +32,7 @@ class LatteExtension extends Extension
 			'alertWarning' => [AlertNode::class, 'createWarning'],
 			'alertInfo'    => [AlertNode::class, 'createInfo'],
 			'svgIcon'      => [IconNode::class, 'create'],
+			'tracyDump'    => [DumpNode::class, 'create'],
 		];
 	}
 
