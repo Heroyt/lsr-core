@@ -83,6 +83,7 @@ class App
 		// Setup routes
 		/** @noinspection PhpFieldAssignmentTypeMismatchInspection */
 		self::$router = self::getService('routing');
+		self::$router->setup();
 
 		// Set language and translations
 		self::setupLanguage();
