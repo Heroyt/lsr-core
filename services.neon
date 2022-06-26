@@ -34,5 +34,7 @@ search:
 		in: %constants.appDir%/src/Controllers
 		extends:
 			- Lsr\Core\Controller
+			- Lsr\Core\ApiController
+			- Lsr\Core\CliController
 		tags:
 			- controllers
