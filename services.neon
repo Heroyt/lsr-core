@@ -1,10 +1,11 @@
-extensions:
-	search: Nette\DI\Extensions\SearchExtension
 parameters:
+	tempDir: TMP_DIR
 	cache:
 		path: TMP_DIR.'cache.db'
 	templating:
 		tmpPath: TMP_DIR.'latte/'
+extensions:
+	search: Nette\DI\Extensions\SearchExtension(%tempDir%)
 services:
 	cache.storage: Nette\Caching\Storages\SQLiteStorage(%cache.path%)
 	cache: Nette\Caching\Cache
