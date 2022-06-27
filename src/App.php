@@ -96,7 +96,7 @@ class App
 	 * @return void
 	 */
 	protected static function setupDi() : void {
-		$loader = new ContainerLoader(TMP_DIR);
+		$loader = new ContainerLoader(TMP_DIR.'di/');
 		/** @var Container $class */
 		$class = $loader->load(function(Compiler $compiler) {
 			$compiler->addExtension('extensions', new ExtensionsExtension());
