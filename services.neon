@@ -10,10 +10,6 @@ extensions:
 services:
 	cache.storage: Nette\Caching\Storages\SQLiteStorage(%cache.path%)
 	cache: Nette\Caching\Cache
-	routing:
-		create: Lsr\Core\Router(@cache)
-		tags:
-			- routing
 	templating.latte.extension:
 		create: Lsr\Core\Templating\LatteExtension()
 		tags:

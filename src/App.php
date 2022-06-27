@@ -15,6 +15,7 @@ use Gettext\Languages\Language;
 use Lsr\Core\Menu\MenuItem;
 use Lsr\Core\Requests\CliRequest;
 use Lsr\Core\Requests\Request;
+use Lsr\Core\Routing\Router;
 use Lsr\Exceptions\FileException;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;

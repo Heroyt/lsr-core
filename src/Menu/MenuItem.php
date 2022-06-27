@@ -6,7 +6,7 @@
 namespace Lsr\Core\Menu;
 
 use Lsr\Core\App;
-use Lsr\Core\Router;
+use Lsr\Core\Routing\Router;
 
 class MenuItem
 {
