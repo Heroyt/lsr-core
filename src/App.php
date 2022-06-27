@@ -17,6 +17,7 @@ use Lsr\Core\Requests\CliRequest;
 use Lsr\Core\Requests\Request;
 use Lsr\Core\Routing\Router;
 use Lsr\Exceptions\FileException;
+use Lsr\Helpers\Tools\Timer;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;
 use Lsr\Logging\Logger;
@@ -69,6 +70,7 @@ class App
 	 * @post Latte macros are set
 	 */
 	public static function init() : void {
+		Timer::start('core.setup');
 		self::$logger = new Logger(LOG_DIR, 'app');
 
 		self::setupDi();
@@ -88,6 +90,7 @@ class App
 
 		// Set language and translations
 		self::setupLanguage();
+		Timer::stop('core.setup');
 	}
 
 	/**
@@ -96,6 +99,7 @@ class App
 	 * @return void
 	 */
 	protected static function setupDi() : void {
+		Timer::start('core.setup.di');
 		$loader = new ContainerLoader(TMP_DIR.'di/');
 		/** @var Container $class */
 		$class = $loader->load(function(Compiler $compiler) {
@@ -109,6 +113,7 @@ class App
 			}
 		});
 		self::$container = new $class;
+		Timer::stop('core.setup.di');
 	}
 
 	/**
