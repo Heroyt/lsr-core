@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE latte PUBLIC "-//LATTE//Latte plugin XML V0.0.1//EN" ".idea/intellij-latte/xmlSources/Latte.dtd">
+<latte version="1" vendor="lsr/core">
+    <tags>
+        <tag name="alert" type="UNPAIRED" deprecatedMessage="" allowedFilters="false">
+            <arguments>
+                <argument name="content" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string"
+                          required="true"/>
+                <argument name="type" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string"
+                          required="false"/>
+            </arguments>
+        </tag>
+        <tag name="alertDanger" type="UNPAIRED" deprecatedMessage="" allowedFilters="false">
+            <arguments>
+                <argument name="content" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string"
+                          required="true"/>
+            </arguments>
+        </tag>
+        <tag name="alertInfo" type="UNPAIRED" deprecatedMessage="" allowedFilters="false">
+            <arguments>
+                <argument name="content" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string"
+                          required="true"/>
+            </arguments>
+        </tag>
+        <tag name="alertSuccess" type="UNPAIRED" deprecatedMessage="" allowedFilters="false">
+            <arguments>
+                <argument name="content" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string"
+                          required="true"/>
+            </arguments>
+        </tag>
+        <tag name="alertWarning" type="UNPAIRED" deprecatedMessage="" allowedFilters="false">
+            <arguments>
+                <argument name="content" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string"
+                          required="true"/>
+            </arguments>
+        </tag>
+        <tag name="csrf" type="UNPAIRED" deprecatedMessage="" allowedFilters="true"/>
+        <tag name="csrfInput" type="UNPAIRED" deprecatedMessage="" allowedFilters="true">
+            <arguments>
+                <argument name="name" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string"
+                          required="true"/>
+            </arguments>
+        </tag>
+        <tag name="getUrl" type="UNPAIRED" deprecatedMessage="" allowedFilters="true"/>
+        <tag name="lang" type="UNPAIRED" deprecatedMessage="" allowedFilters="true">
+            <arguments>
+                <argument name="msg" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string" required="true"/>
+                <argument name="plural" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string"
+                          required="false"/>
+                <argument name="num" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="int" required="false"/>
+                <argument name="context" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string"
+                          required="false"/>
+            </arguments>
+        </tag>
+        <tag name="link" type="UNPAIRED" deprecatedMessage="" allowedFilters="true">
+            <arguments>
+                <argument name="path" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="array" required="true"/>
+            </arguments>
+        </tag>
+        <tag name="logo" type="UNPAIRED" deprecatedMessage="" allowedFilters="true"/>
+        <tag name="svgIcon" type="UNPAIRED" deprecatedMessage="" allowedFilters="true"
+             arguments="string $name, [string|int $width='100%', string|int $height='100%']">
+            <arguments>
+                <argument name="name" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string"
+                          required="true"/>
+                <argument name="width" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string|int"
+                          required="false"/>
+                <argument name="height" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="string|int"
+                          required="false"/>
+            </arguments>
+        </tag>
+        <tag name="tracyDump" type="UNPAIRED" deprecatedMessage="" allowedFilters="true">
+            <arguments>
+                <argument name="var" types="PHP_IDENTIFIER,VARIABLE,PHP_EXPRESSION" validType="mixed" required="true"/>
+            </arguments>
+        </tag>
+    </tags>
+    <variables>
+    </variables>
+    <functions>
+        <function name="csrf" returnType="string" arguments="()" description="Get a CSRF token."/>
+        <function name="getUrl" returnType="string" arguments="()" description="Get a site's URL."/>
+        <function name="lang" returnType="string"
+                  arguments="(string $msg, ?string $plural = null, int $num = 1, ?string $context = null)"
+                  description="Translate a string."/>
+        <function name="logo" returnType="string" arguments="()" description="Get a logo."/>
+        <function name="svgIcon" returnType="string"
+                  arguments="(string $name, string|int $width='100%', string|int $height='100%')"
+                  description="Get a icon in SVG."/>
+    </functions>
+    <filters>
+        <filter name="lang" arguments=":(?plural = null, ?num = 1, ?context = null)" description="Translate a string"
+                insertColons=""/>
+    </filters>
+</latte>

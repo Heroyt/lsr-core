@@ -20,17 +20,17 @@ class LatteExtension extends Extension
 
 	public function getTags() : array {
 		return [
-			'lang'         => [LangNode::class, 'create'],
-			'logo'         => [LogoNode::class, 'create'],
-			'link'         => [LinkNode::class, 'create'],
-			'getUrl'       => [GetUrlNode::class, 'create'],
-			'csrf'         => [CsrfNode::class, 'create'],
-			'csrfInput'    => [CsrfInputNode::class, 'create'],
 			'alert'        => [AlertNode::class, 'create'],
 			'alertDanger'  => [AlertNode::class, 'createDanger'],
+			'alertInfo'    => [AlertNode::class, 'createInfo'],
 			'alertSuccess' => [AlertNode::class, 'createSuccess'],
 			'alertWarning' => [AlertNode::class, 'createWarning'],
-			'alertInfo'    => [AlertNode::class, 'createInfo'],
+			'csrf'         => [CsrfNode::class, 'create'],
+			'csrfInput'    => [CsrfInputNode::class, 'create'],
+			'getUrl'       => [GetUrlNode::class, 'create'],
+			'lang'         => [LangNode::class, 'create'],
+			'link'         => [LinkNode::class, 'create'],
+			'logo'         => [LogoNode::class, 'create'],
 			'svgIcon'      => [IconNode::class, 'create'],
 			'tracyDump'    => [DumpNode::class, 'create'],
 		];
@@ -44,12 +44,12 @@ class LatteExtension extends Extension
 
 	public function getFunctions() : array {
 		return [
-			'lang'    => 'lang',
-			'svgIcon' => 'svgIcon',
 			'csrf'    => 'formToken',
-			'logo'    => [LogoHelper::class, 'getLogoHtml'],
-			'link'    => [App::class, 'getLink'],
 			'getUrl'  => [App::class, 'getUrl'],
+			'lang'    => 'lang',
+			'link'    => [App::class, 'getLink'],
+			'logo'    => [LogoHelper::class, 'getLogoHtml'],
+			'svgIcon' => 'svgIcon',
 		];
 	}
 }
