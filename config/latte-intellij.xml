@@ -76,6 +76,10 @@
         </tag>
     </tags>
     <variables>
+        <variable name="_GET" type="array"/>
+        <variable name="_POST" type="array"/>
+        <variable name="_SERVER" type="array"/>
+        <variable name="_SESSION" type="array"/>
     </variables>
     <functions>
         <function name="csrf" returnType="string" arguments="()" description="Get a CSRF token."/>
