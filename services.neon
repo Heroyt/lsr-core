@@ -9,7 +9,7 @@ extensions:
 	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
 services:
 	cache.storage: Nette\Caching\Storages\SQLiteStorage(%cache.path%)
-	cache: Nette\Caching\Cache(@cache.storage)
+	cache: Lsr\Core\Caching\Cache(@cache.storage)
 	cache.extension.latte: Nette\Bridges\CacheLatte\CacheExtension(@cache.storage)
 	templating.latte.extension:
 		create: Lsr\Core\Templating\LatteExtension()
