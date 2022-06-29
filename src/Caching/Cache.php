@@ -12,10 +12,10 @@ use Throwable;
 class Cache extends \Nette\Caching\Cache
 {
 
-	public int $hit  = 0;
-	public int $miss = 0;
+	public static int $hit  = 0;
+	public static int $miss = 0;
 	/** @var array<string|int> */
-	public array $loadedKeys = [];
+	public static array $loadedKeys = [];
 
 	/**
 	 * Reads multiple items from the cache.
@@ -34,7 +34,7 @@ class Cache extends \Nette\Caching\Cache
 		}
 
 		$result = [];
-		if (!$this->storage instanceof BulkReader) {
+		if (!$this->getStorage() instanceof BulkReader) {
 			foreach ($keys as $key) {
 				$result[$key] = $this->load(
 					$key,
@@ -50,22 +50,22 @@ class Cache extends \Nette\Caching\Cache
 		}
 
 		$storageKeys = array_map([$this, 'generateKey'], $keys);
-		$cacheData = $this->storage->bulkRead($storageKeys);
+		$cacheData = $this->getStorage()->bulkRead($storageKeys);
 		foreach ($keys as $i => $key) {
 			$this->logLoadedKey($key);
 			$storageKey = $storageKeys[$i];
 			if (isset($cacheData[$storageKey])) {
-				$this->hit++;
+				self::$hit++;
 				$result[$key] = $cacheData[$storageKey];
 			}
 			elseif ($generator) {
-				$this->miss++;
+				self::$miss++;
 				$result[$key] = $this->load($key, function(&$dependencies) use ($key, $generator) {
 					return $generator(...[$key, &$dependencies]);
 				});
 			}
 			else {
-				$this->miss++;
+				self::$miss++;
 				$result[$key] = null;
 			}
 		}
@@ -85,21 +85,22 @@ class Cache extends \Nette\Caching\Cache
 	public function load($key, ?callable $generator = null) : mixed {
 		$this->logLoadedKey($key);
 		$storageKey = $this->generateKey($key);
-		$data = $this->storage->read($storageKey);
+		$data = $this->getStorage()->read($storageKey);
 		if ($data === null && $generator) {
-			$this->miss++;
-			$this->storage->lock($storageKey);
+			self::$miss++;
+			$this->getStorage()->lock($storageKey);
 			try {
+				$dependencies = [];
 				$data = $generator(...[&$dependencies]);
 			} catch (Throwable $e) {
-				$this->storage->remove($storageKey);
+				$this->getStorage()->remove($storageKey);
 				throw $e;
 			}
 
 			$this->save($key, $data, $dependencies);
 		}
-		else {
-			$this->hit++;
+		else if ($data !== null) {
+			self::$hit++;
 		}
 
 		return $data;
@@ -112,17 +113,17 @@ class Cache extends \Nette\Caching\Cache
 	 */
 	private function logLoadedKey(mixed $key) : void {
 		$key = is_scalar($key) ? (string) $key : serialize($key);
-		if (!isset($this->loadedKeys[$key])) {
-			$this->loadedKeys[$key] = 0;
+		if (!isset(self::$loadedKeys[$key])) {
+			self::$loadedKeys[$key] = 0;
 		}
-		$this->loadedKeys[$key]++;
+		self::$loadedKeys[$key]++;
 	}
 
 	/**
 	 * @return int
 	 */
 	public function getCalls() : int {
-		return $this->hit + $this->miss;
+		return self::$hit + self::$miss;
 	}
 
 }
