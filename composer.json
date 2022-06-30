@@ -34,7 +34,6 @@
 		"nette/di": "^3.0",
 		"nette/caching": "^3.1",
 		"nette/http": "^3.1",
-		"ext-zip": "*",
-		"ext-apache": "*"
+		"ext-zip": "*"
 	}
 }
