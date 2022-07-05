@@ -22,8 +22,10 @@
 			"email": "vojik@wboy.cz"
 		}
 	],
+	"minimum-stability": "dev",
 	"require": {
 		"lsr/interfaces": "dev-master",
+		"lsr/logging": "dev-master",
 		"ext-fileinfo": "*",
 		"ext-gettext": "*",
 		"ext-simplexml": "*",
@@ -34,6 +36,7 @@
 		"nette/di": "^3.0",
 		"nette/caching": "^3.1",
 		"nette/http": "^3.1",
-		"ext-zip": "*"
+		"ext-zip": "*",
+		"dibi/dibi": "^4.2"
 	}
 }
