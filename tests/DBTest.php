@@ -6,6 +6,12 @@ use Dibi\Fluent;
 use Lsr\Core\DB;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Database abstraction test suite
+ *
+ * @author Tomáš Vojík
+ * @covers \Lsr\Core\DB
+ */
 class DBTest extends TestCase
 {
 	public function tearDown() : void {
@@ -94,9 +100,17 @@ class DBTest extends TestCase
 			    age INT 
 			);
 		");
+		DB::getConnection()->query("
+			CREATE TABLE table2 ( 
+			    id INTEGER PRIMARY KEY autoincrement NOT NULL ,
+			    table_1_id INTEGER,
+			    name VARCHAR(60) NOT NULL 
+			);
+		");
 	}
 
 	public function dropTable() : void {
+		DB::getConnection()->query("DROP TABLE table2");
 		DB::getConnection()->query("DROP TABLE table1");
 	}
 
@@ -139,6 +153,15 @@ class DBTest extends TestCase
 			    age INT(10) UNSIGNED,
 			    date DATETIME DEFAULT NULL,
 			    PRIMARY KEY (`id`)
+			);
+		");
+		DB::getConnection()->query("
+			CREATE TABLE IF NOT EXISTS table2 ( 
+			    id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+			    table_1_id INT(11) UNSIGNED DEFAULT NULL,
+			    name VARCHAR(60) NOT NULL, 
+			    PRIMARY KEY (`id`),
+			    CONSTRAINT table_1_fk FOREIGN KEY (`table_1_id`) REFERENCES table1 (id) ON DELETE SET NULL 
 			);
 		");
 	}
@@ -310,6 +333,52 @@ class DBTest extends TestCase
 		$row = DB::select('table1', '*')->where('id = %i', $id + 1)->fetch();
 		self::assertEquals('abc', $row->name);
 		self::assertEquals(30, $row->age);
+		$this->dropTable();
+	}
+
+	/**
+	 * @depends testInsert
+	 * @return void
+	 */
+	public function testSelect() : void {
+		$this->initMysql();
+		DB::insert('table1', [
+			'name' => 'test1',
+			'age'  => null
+		]);
+		$id1 = DB::getInsertId();
+		DB::insert('table1', [
+			'name' => 'test2',
+			'age'  => 12
+		]);
+		$id2 = DB::getInsertId();
+		DB::insert('table2', [
+			'name'       => 'test3',
+			'table_1_id' => $id1,
+		]);
+		$id3 = DB::getInsertId();
+		DB::insert('table2', [
+			'name'       => 'test4',
+			'table_1_id' => null,
+		]);
+		$id4 = DB::getInsertId();
+
+		// Simple select
+		$rows = DB::select('table1', '*')->fetchAll();
+		self::assertCount(2, $rows);
+
+		// Join select with alias
+		$rows = DB::select(['table1', 'a'], 'a.id, a.name, a.age, b.name as value')
+							->join('table2', 'b')
+							->on('a.id = b.table_1_id')
+							->fetchAll();
+		self::assertCount(1, $rows);
+		$row = first($rows);
+		self::assertEquals($id1, $row->id);
+		self::assertEquals('test1', $row->name);
+		self::assertEquals(null, $row->age);
+		self::assertEquals('test3', $row->value);
+
 		$this->dropTable();
 	}
 }

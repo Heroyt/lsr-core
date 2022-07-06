@@ -16,7 +16,15 @@ use function json_encode;
 
 
 /**
+ * Test suite for models
+ *
+ * @author Tomáš Vojík
  * @uses   \Lsr\Core\DB
+ * @covers \Lsr\Core\Models\Model
+ * @covers \Lsr\Core\Models\Attributes\ManyToMany
+ * @covers \Lsr\Core\Models\Attributes\OneToMany
+ * @covers \Lsr\Core\Models\Attributes\ManyToOne
+ * @covers \Lsr\Core\Models\Attributes\PrimaryKey
  */
 class ModelTest extends TestCase
 {
