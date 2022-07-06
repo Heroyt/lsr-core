@@ -5,6 +5,7 @@ namespace Models;
 use Dibi\Row;
 use Lsr\Core\DB;
 use Lsr\Core\Exceptions\ModelNotFoundException;
+use Lsr\Core\Models\Attributes\ManyToMany;
 use Lsr\Core\Models\Attributes\ManyToOne;
 use Lsr\Core\Models\Attributes\OneToMany;
 use Lsr\Core\Models\Attributes\PrimaryKey;
@@ -45,6 +46,25 @@ class ModelTest extends TestCase
 			    value2 CHAR(50) NOT NULL
 			);
 		");
+		DB::getConnection()->query("
+			CREATE TABLE modelsD ( 
+			    model_d_id INTEGER PRIMARY KEY autoincrement NOT NULL,
+			    name CHAR(50) NOT NULL
+			);
+		");
+		DB::getConnection()->query("
+			CREATE TABLE modelsE ( 
+			    model_e_id INTEGER PRIMARY KEY autoincrement NOT NULL,
+			    name CHAR(50) NOT NULL
+			);
+		");
+		DB::getConnection()->query("
+			CREATE TABLE modelsD_modelsE ( 
+			    model_d_id INTEGER NOT NULL,
+			    model_e_id INTEGER NOT NULL,
+			  	PRIMARY KEY(model_d_id, model_e_id)
+			);
+		");
 		$this->refreshData();
 		parent::setUp();
 	}
@@ -53,6 +73,9 @@ class ModelTest extends TestCase
 		DB::delete(ModelA::TABLE, ['1 = 1']);
 		DB::delete(ModelB::TABLE, ['1 = 1']);
 		DB::delete(ModelC::TABLE, ['1 = 1']);
+		DB::delete(ModelD::TABLE, ['1 = 1']);
+		DB::delete(ModelE::TABLE, ['1 = 1']);
+		DB::delete('modelsD_modelsE', ['1 = 1']);
 
 		DB::insert(ModelA::TABLE, [
 			'model_a_id' => 1,
@@ -101,6 +124,57 @@ class ModelTest extends TestCase
 			'value0'     => 'a',
 			'value1'     => 'b',
 			'value2'     => 'c',
+		]);
+
+		DB::insert(ModelE::TABLE, [
+			'model_e_id' => 1,
+			'name'       => 'a',
+		]);
+		DB::insert(ModelE::TABLE, [
+			'model_e_id' => 2,
+			'name'       => 'b',
+		]);
+		DB::insert(ModelE::TABLE, [
+			'model_e_id' => 3,
+			'name'       => 'c',
+		]);
+
+		DB::insert(ModelD::TABLE, [
+			'model_d_id' => 1,
+			'name'       => 'a',
+		]);
+		DB::insert(ModelD::TABLE, [
+			'model_d_id' => 2,
+			'name'       => 'b',
+		]);
+		DB::insert(ModelD::TABLE, [
+			'model_d_id' => 3,
+			'name'       => 'c',
+		]);
+
+		DB::insert('modelsD_modelsE', [
+			'model_d_id' => 1,
+			'model_e_id' => 1,
+		]);
+		DB::insert('modelsD_modelsE', [
+			'model_d_id' => 1,
+			'model_e_id' => 2,
+		]);
+		DB::insert('modelsD_modelsE', [
+			'model_d_id' => 1,
+			'model_e_id' => 3,
+		]);
+		DB::insert('modelsD_modelsE', [
+			'model_d_id' => 2,
+			'model_e_id' => 1,
+		]);
+		DB::insert('modelsD_modelsE', [
+			'model_d_id' => 2,
+			'model_e_id' => 3,
+		]);
+		DB::insert('modelsD_modelsE', [
+			'model_d_id' => 3,
+			'model_e_id' => 1,
 		]);
 	}
 
@@ -364,6 +438,20 @@ class ModelTest extends TestCase
 
 		self::assertFalse($model->delete());
 	}
+
+	public function testManyToMany() : void {
+		$model = ModelD::get(1);
+
+		self::assertEquals('a', $model->name);
+		self::assertCount(3, $model->models);
+
+		$model2 = ModelE::get(2);
+		self::assertEquals('b', $model2->name);
+		self::assertCount(1, $model2->models);
+
+		self::assertSame($model2, $model->models[2]);
+		self::assertSame($model, $model2->models[1]);
+	}
 }
 
 enum TestEnum: string
@@ -410,6 +498,32 @@ class ModelC extends Model
 
 	public string     $value0;
 	public SimpleData $data;
+
+}
+
+#[PrimaryKey('model_d_id')]
+class ModelD extends Model
+{
+
+	public const TABLE = 'modelsD';
+
+	public string $name;
+
+	#[ManyToMany('modelsD_modelsE', class: ModelE::class)]
+	public array $models = [];
+
+}
+
+#[PrimaryKey('model_e_id')]
+class ModelE extends Model
+{
+
+	public const TABLE = 'modelsE';
+
+	public string $name;
+
+	#[ManyToMany('modelsD_modelsE', class: ModelD::class)]
+	public array $models = [];
 
 }
 
