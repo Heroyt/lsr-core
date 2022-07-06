@@ -16,6 +16,7 @@ use JsonSerializable;
 use Lsr\Core\DB;
 use Lsr\Core\Exceptions\ModelNotFoundException;
 use Lsr\Core\Exceptions\ValidationException;
+use Lsr\Core\Models\Attributes\Factory;
 use Lsr\Core\Models\Attributes\ManyToMany;
 use Lsr\Core\Models\Attributes\ManyToOne;
 use Lsr\Core\Models\Attributes\ModelRelation;
@@ -23,6 +24,7 @@ use Lsr\Core\Models\Attributes\NoDB;
 use Lsr\Core\Models\Attributes\OneToMany;
 use Lsr\Core\Models\Attributes\OneToOne;
 use Lsr\Core\Models\Attributes\PrimaryKey;
+use Lsr\Core\Models\Interfaces\FactoryInterface;
 use Lsr\Core\Models\Interfaces\InsertExtendInterface;
 use Lsr\Helpers\Tools\Strings;
 use Lsr\Logging\Logger;
@@ -48,6 +50,11 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	public ?int      $id  = null;
 	protected ?Row   $row = null;
 	protected Logger $logger;
+
+	/** @var ReflectionClass[] */
+	protected static array $reflections = [];
+	/** @var FactoryInterface[] */
+	protected static array $factory = [];
 
 	/**
 	 * @param int|null $id    DB model ID
@@ -206,14 +213,14 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @return ReflectionProperty
 	 */
 	public static function getPropertyReflection(string $name) : ReflectionProperty {
-		return (new ReflectionClass(static::class))->getProperty($name);
+		return static::getReflection()->getProperty($name);
 	}
 
 	/**
 	 * @return ReflectionProperty[]
 	 */
 	public static function getPropertyReflections(?int $filter = null) : array {
-		return (new ReflectionClass(static::class))->getProperties($filter);
+		return static::getReflection()->getProperties($filter);
 	}
 
 	/**
@@ -232,6 +239,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			$info = $attributeClass->getType($property);
 			/** @var Model $className */
 			$className = $info->class;
+			$factory = $className::getFactory();
 
 			$foreignKey = $attributeClass->getForeignKey($className, $this);
 			$localKey = $attributeClass->getLocalKey($className, $this);
@@ -249,7 +257,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 						break;
 					}
 					try {
-						$this->$propertyName = $className::get($id);
+						$this->$propertyName = isset($factory) ? $factory::getById($id) : $className::get($id);
 					} catch (ModelNotFoundException $e) {
 						if (!$info->nullable) {
 							throw $e;
@@ -307,6 +315,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * Get all models
 	 *
 	 * @return static[]
+	 * @throws ValidationException
 	 */
 	public static function getAll() : array {
 		return static::query()->get();
@@ -493,5 +502,31 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			return false;
 		}
 		return true;
+	}
+
+	/**
+	 * @return string|FactoryInterface|null
+	 */
+	public static function getFactory() : string|FactoryInterface|null {
+		if (!isset(static::$factory[static::class])) {
+			$attributes = static::getReflection()->getAttributes(Factory::class);
+			if (empty($attributes)) {
+				return null;
+			}
+			/** @var Factory $attr */
+			$attr = first($attributes)->newInstance();
+			static::$factory[static::class] = $attr->factoryClass;
+		}
+		return static::$factory[static::class];
+	}
+
+	/**
+	 * @return ReflectionClass
+	 */
+	protected static function getReflection() : ReflectionClass {
+		if (!isset(static::$reflections[static::class])) {
+			static::$reflections[static::class] = (new ReflectionClass(static::class));
+		}
+		return static::$reflections[static::class];
 	}
 }
