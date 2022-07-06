@@ -12,6 +12,7 @@ use Lsr\Core\Models\Attributes\PrimaryKey;
 use Lsr\Core\Models\Interfaces\InsertExtendInterface;
 use Lsr\Core\Models\Model;
 use PHPUnit\Framework\TestCase;
+use TestEnum;
 use function json_encode;
 
 
@@ -460,14 +461,6 @@ class ModelTest extends TestCase
 		self::assertSame($model2, $model->models[2]);
 		self::assertSame($model, $model2->models[1]);
 	}
-}
-
-enum TestEnum: string
-{
-	case A = 'A';
-	case B = 'B';
-	case C = 'C';
-	case D = 'D';
 }
 
 #[PrimaryKey('model_a_id')]

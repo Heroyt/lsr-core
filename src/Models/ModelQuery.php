@@ -8,6 +8,7 @@ namespace Lsr\Core\Models;
 use Dibi\Fluent;
 use Lsr\Core\DB;
 use Lsr\Core\Exceptions\ModelNotFoundException;
+use Lsr\Core\Exceptions\ValidationException;
 
 class ModelQuery
 {
@@ -75,6 +76,7 @@ class ModelQuery
 
 	/**
 	 * @return Model[]
+	 * @throws ValidationException
 	 */
 	public function get() : array {
 		$pk = $this->className::getPrimaryKey();
