@@ -30,4 +30,17 @@ class OneToMany extends ModelRelation
 		return $this->foreignKey;
 	}
 
+	/**
+	 * @param string|Model $targetClass
+	 * @param string|Model $class
+	 *
+	 * @return string
+	 */
+	public function getLocalKey(string|Model $targetClass, string|Model $class) : string {
+		if (empty($this->localKey)) {
+			$this->localKey = $this->getForeignKey($targetClass, $class);
+		}
+		return $this->localKey;
+	}
+
 }

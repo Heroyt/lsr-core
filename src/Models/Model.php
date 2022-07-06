@@ -16,6 +16,7 @@ use JsonSerializable;
 use Lsr\Core\DB;
 use Lsr\Core\Exceptions\ModelNotFoundException;
 use Lsr\Core\Exceptions\ValidationException;
+use Lsr\Core\Models\Attributes\ManyToMany;
 use Lsr\Core\Models\Attributes\ManyToOne;
 use Lsr\Core\Models\Attributes\ModelRelation;
 use Lsr\Core\Models\Attributes\NoDB;
@@ -226,18 +227,14 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 */
 	protected function processRelations(array $attributes, ReflectionProperty $property, string $propertyName) : void {
 		foreach ($attributes as $attribute) {
-			/** @var ManyToOne|OneToMany|OneToOne $attributeClass */
+			/** @var ManyToOne|OneToMany|OneToOne|ManyToMany $attributeClass */
 			$attributeClass = $attribute->newInstance();
 			$info = $attributeClass->getType($property);
 			/** @var Model $className */
 			$className = $info->class;
 
 			$foreignKey = $attributeClass->getForeignKey($className, $this);
-			$localKey = $attributeClass->localKey;
-
-			if (empty($localKey)) {
-				$localKey = $foreignKey;
-			}
+			$localKey = $attributeClass->getLocalKey($className, $this);
 
 			switch ($attribute->getName()) {
 				case ManyToOne::class:
@@ -263,6 +260,16 @@ abstract class Model implements JsonSerializable, ArrayAccess
 				case OneToMany::class:
 					$id = $this->id;
 					$this->$propertyName = $className::query()->where('%n = %i', $foreignKey, $id)->get();
+					break;
+				case ManyToMany::class:
+					$id = $this->id;
+					$this->$propertyName = $className::query()
+																					 ->where(
+																						 '%n IN %sql',
+																						 $foreignKey,
+																						 $attributeClass->getConnectionQuery($id, $className, $this)
+																					 )
+																					 ->get();
 					break;
 			}
 		}
