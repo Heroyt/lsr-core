@@ -152,11 +152,19 @@ class DB
 	 *
 	 * @since 1.0
 	 */
-	public static function insert(string $table, iterable $args) : int {
+	public static function insert(string $table, iterable ...$args) : int {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
-		return self::$db->insert($table, $args)->execute(dibi::AFFECTED_ROWS);
+		if (count($args) > 1) {
+			return self::$db
+				->command()
+				->insert()
+				->into('%n', $table, '(%n)', array_keys($args[0]))
+				->values('%l'.str_repeat(', %l', count($args) - 1), ...$args)
+				->execute(dibi::AFFECTED_ROWS);
+		}
+		return self::$db->insert($table, ...$args)->execute(dibi::AFFECTED_ROWS);
 	}
 
 	/**
