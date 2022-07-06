@@ -9,7 +9,8 @@ class Factory
 {
 
 	public function __construct(
-		public string $factoryClass
+		public string $factoryClass,
+		public array  $defaultOptions = [],
 	) {
 	}
 

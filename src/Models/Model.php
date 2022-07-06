@@ -53,7 +53,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 
 	/** @var ReflectionClass[] */
 	protected static array $reflections = [];
-	/** @var FactoryInterface[] */
+	/** @var Factory[] */
 	protected static array $factory = [];
 
 	/**
@@ -257,7 +257,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 						break;
 					}
 					try {
-						$this->$propertyName = isset($factory) ? $factory::getById($id) : $className::get($id);
+						$this->$propertyName = isset($factory) ? $factory->factoryClass::getById($id, $factory->defaultOptions) : $className::get($id);
 					} catch (ModelNotFoundException $e) {
 						if (!$info->nullable) {
 							throw $e;
@@ -507,15 +507,14 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	/**
 	 * @return string|FactoryInterface|null
 	 */
-	public static function getFactory() : string|FactoryInterface|null {
+	public static function getFactory() : ?Factory {
 		if (!isset(static::$factory[static::class])) {
 			$attributes = static::getReflection()->getAttributes(Factory::class);
 			if (empty($attributes)) {
 				return null;
 			}
 			/** @var Factory $attr */
-			$attr = first($attributes)->newInstance();
-			static::$factory[static::class] = $attr->factoryClass;
+			static::$factory[static::class] = first($attributes)->newInstance();
 		}
 		return static::$factory[static::class];
 	}
