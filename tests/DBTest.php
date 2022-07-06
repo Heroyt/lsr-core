@@ -95,16 +95,16 @@ class DBTest extends TestCase
 	public function initSqliteTable() : void {
 		DB::getConnection()->query("
 			CREATE TABLE table1 ( 
-			    id INTEGER PRIMARY KEY autoincrement NOT NULL , 
-			    name CHAR(60) NOT NULL, 
-			    age INT 
+			    id integer PRIMARY KEY autoincrement NOT NULL , 
+			    name char(60) NOT NULL, 
+			    age int 
 			);
 		");
 		DB::getConnection()->query("
 			CREATE TABLE table2 ( 
-			    id INTEGER PRIMARY KEY autoincrement NOT NULL ,
-			    table_1_id INTEGER,
-			    name VARCHAR(60) NOT NULL 
+			    id integer PRIMARY KEY autoincrement NOT NULL ,
+			    table_1_id integer,
+			    name varchar(60) NOT NULL 
 			);
 		");
 	}
@@ -112,6 +112,27 @@ class DBTest extends TestCase
 	public function dropTable() : void {
 		DB::getConnection()->query("DROP TABLE table2");
 		DB::getConnection()->query("DROP TABLE table1");
+	}
+
+	public function testInsertMultiple() {
+		$this->initSqlite();
+		$count = DB::insert('table1',
+												[
+													'name' => 'test1',
+													'age'  => null
+												],
+												[
+													'name' => 'test2',
+													'age'  => 10
+												],
+												[
+													'name' => 'test3',
+													'age'  => 99
+												]
+		);
+		self::assertEquals(3, DB::select('table1', 'count(*)')->fetchSingle());
+		self::assertEquals(3, $count);
+		$this->dropTable();
 	}
 
 	public function testInsertIgnore() {
@@ -148,18 +169,18 @@ class DBTest extends TestCase
 	public function initMysqlTable() : void {
 		DB::getConnection()->query("
 			CREATE TABLE IF NOT EXISTS table1 ( 
-			    id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT, 
-			    name VARCHAR(60) NOT NULL, 
-			    age INT(10) UNSIGNED,
-			    date DATETIME DEFAULT NULL,
+			    id int(11) UNSIGNED NOT NULL AUTO_INCREMENT, 
+			    name varchar(60) NOT NULL, 
+			    age int(10) UNSIGNED,
+			    date datetime DEFAULT NULL,
 			    PRIMARY KEY (`id`)
 			);
 		");
 		DB::getConnection()->query("
 			CREATE TABLE IF NOT EXISTS table2 ( 
-			    id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
-			    table_1_id INT(11) UNSIGNED DEFAULT NULL,
-			    name VARCHAR(60) NOT NULL, 
+			    id int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+			    table_1_id int(11) UNSIGNED DEFAULT NULL,
+			    name varchar(60) NOT NULL, 
 			    PRIMARY KEY (`id`),
 			    CONSTRAINT table_1_fk FOREIGN KEY (`table_1_id`) REFERENCES table1 (id) ON DELETE SET NULL 
 			);
