@@ -7,6 +7,10 @@
 			"url": "https://packages.laserliga.cz"
 		}
 	],
+	"scripts": {
+		"test": "./vendor/bin/phpunit",
+		"docs": "doxygen"
+	},
 	"require-dev": {
 		"roave/security-advisories": "dev-latest",
 		"phpunit/phpunit": "^9.5"

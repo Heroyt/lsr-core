@@ -25,3 +25,4 @@ tests/tmp
 tests/logs
 *.cache
 build
+docs
