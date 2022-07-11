@@ -446,8 +446,11 @@ abstract class Model implements JsonSerializable, ArrayAccess
 				}
 			}
 
-			// TODO: Validation
-			$data[$columnName] = $this->$propertyName;
+			if (!isset($this->$propertyName) && $this::getPrimaryKey() === $columnName) {
+				continue;
+			}
+
+			$data[$columnName] = $this->$propertyName ?? null;
 		}
 		return $data;
 	}
