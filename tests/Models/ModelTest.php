@@ -14,6 +14,8 @@ use Lsr\Core\Models\Attributes\Validation\Email;
 use Lsr\Core\Models\Attributes\Validation\Numeric;
 use Lsr\Core\Models\Attributes\Validation\Required;
 use Lsr\Core\Models\Attributes\Validation\StringLength;
+use Lsr\Core\Models\Attributes\Validation\Uri;
+use Lsr\Core\Models\Attributes\Validation\Url;
 use Lsr\Core\Models\Interfaces\InsertExtendInterface;
 use Lsr\Core\Models\Model;
 use PHPUnit\Framework\TestCase;
@@ -36,6 +38,8 @@ use function json_encode;
  * @covers \Lsr\Core\Models\Attributes\Validation\Required
  * @covers \Lsr\Core\Models\Attributes\Validation\StringLength
  * @covers \Lsr\Core\Models\Attributes\Validation\Email
+ * @covers \Lsr\Core\Models\Attributes\Validation\Uri
+ * @covers \Lsr\Core\Models\Attributes\Validation\Url
  */
 class ModelTest extends TestCase
 {
@@ -642,6 +646,98 @@ class ModelTest extends TestCase
 		$model->email = $value;
 		$model->validate();
 	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return void
+	 *
+	 * @testWith ["http://google.com/"]
+	 *           ["http://localhost"]
+	 *           ["http://example.w3.org/path%20with%20spaces.html"]
+	 *           ["http://example.w3.org/%20"]
+	 *           ["ftp://ftp.is.co.za/rfc/rfc1808.txt"]
+	 *           ["ftp://ftp.is.co.za/../../../rfc/rfc1808.txt"]
+	 *           ["http://www.ietf.org/rfc/rfc2396.txt"]
+	 *           ["ldap://[2001:db8::7]/c=GB?objectClass?one"]
+	 *           ["mailto:John.Doe@example.com"]
+	 *           ["news:comp.infosystems.www.servers.unix"]
+	 *           ["tel:+1-816-555-1212"]
+	 *           ["telnet://192.0.2.16:80"]
+	 *           ["urn:oasis:names:specification:docbook:dtd:xml:4.1.2"]
+	 */
+	public function testValidationUri(string $value) : void {
+		$model = new ModelValidation();
+		$model->requiredString = 'asd';
+
+		$model->uri = $value;
+		$model->validate();
+		self::assertTrue(true);
+	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return void
+	 *
+	 * @testWith [""]
+	 *           ["foo"]
+	 *           ["foo@bar"]
+	 *           ["://foo/"]
+	 */
+	public function testValidationUriInvalid(string $value) : void {
+		$model = new ModelValidation();
+		$model->requiredString = 'asd';
+
+		$model->uri = $value;
+		$this->expectException(ValidationException::class);
+		$model->validate();
+	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return void
+	 *
+	 * @testWith ["http://google.com/"]
+	 *           ["http://localhost"]
+	 *           ["http://example.w3.org/path%20with%20spaces.html"]
+	 *           ["http://example.w3.org/%20"]
+	 *           ["http://www.ietf.org/rfc/rfc2396.txt"]
+	 */
+	public function testValidationUrl(string $value) : void {
+		$model = new ModelValidation();
+		$model->requiredString = 'asd';
+
+		$model->url = $value;
+		$model->validate();
+		self::assertTrue(true);
+	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return void
+	 *
+	 * @testWith [""]
+	 *           ["foo"]
+	 *           ["foo@bar"]
+	 *           ["://foo/"]
+	 *           ["ldap://[2001:db8::7]/c=GB?objectClass?one"]
+	 *           ["mailto:John.Doe@example.com"]
+	 *           ["news:comp.infosystems.www.servers.unix"]
+	 *           ["tel:+1-816-555-1212"]
+	 *           ["telnet://192.0.2.16:80"]
+	 *           ["urn:oasis:names:specification:docbook:dtd:xml:4.1.2"]
+	 */
+	public function testValidationUrlInvalid(string $value) : void {
+		$model = new ModelValidation();
+		$model->requiredString = 'asd';
+
+		$model->url = $value;
+		$this->expectException(ValidationException::class);
+		$model->validate();
+	}
 }
 
 class ModelValidation extends Model
@@ -661,6 +757,10 @@ class ModelValidation extends Model
 	public string|int|float $numeric;
 	#[Email]
 	public string           $email;
+	#[Uri]
+	public string           $uri;
+	#[Url]
+	public string           $url;
 
 }
 
