@@ -1,6 +1,6 @@
 <?php
 
-namespace Models;
+namespace TestCases\Models;
 
 use Dibi\Row;
 use Lsr\Core\DB;

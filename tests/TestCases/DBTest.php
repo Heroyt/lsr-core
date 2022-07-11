@@ -1,10 +1,13 @@
 <?php
 
+namespace TestCases;
 
+use DateTime;
 use Dibi\DriverException;
 use Dibi\Fluent;
 use Lsr\Core\DB;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 /**
  * Database abstraction test suite
@@ -22,62 +25,62 @@ class DBTest extends TestCase
 		parent::tearDown();
 	}
 
-	public function testUninitializedSelect() {
+	public function testUninitializedSelect() : void {
 		$this->expectException(RuntimeException::class);
 		DB::select('table1', '*');
 	}
 
-	public function testUninitializedInsert() {
+	public function testUninitializedInsert() : void {
 		$this->expectException(RuntimeException::class);
 		DB::insert('table1', []);
 	}
 
-	public function testUninitializedInsertIgnore() {
+	public function testUninitializedInsertIgnore() : void {
 		$this->expectException(RuntimeException::class);
 		DB::insertIgnore('table1', []);
 	}
 
-	public function testUninitializedInsertGet() {
+	public function testUninitializedInsertGet() : void {
 		$this->expectException(RuntimeException::class);
 		DB::insertGet('table1', []);
 	}
 
-	public function testUninitializedUpdate() {
+	public function testUninitializedUpdate() : void {
 		$this->expectException(RuntimeException::class);
 		DB::update('table1', []);
 	}
 
-	public function testUninitializedDelete() {
+	public function testUninitializedDelete() : void {
 		$this->expectException(RuntimeException::class);
 		DB::delete('table1', []);
 	}
 
-	public function testUninitializedDeleteGet() {
+	public function testUninitializedDeleteGet() : void {
 		$this->expectException(RuntimeException::class);
 		DB::deleteGet('table1');
 	}
 
-	public function testUninitializedReplace() {
+	public function testUninitializedReplace() : void {
 		$this->expectException(RuntimeException::class);
 		DB::replace('table1', []);
 	}
 
-	public function testUninitializedGetInsertId() {
+	public function testUninitializedGetInsertId() : void {
 		$this->expectException(RuntimeException::class);
 		DB::getInsertId();
 	}
 
-	public function testUninitializedResetAutoincrement() {
+	public function testUninitializedResetAutoincrement() : void {
 		$this->expectException(RuntimeException::class);
 		DB::resetAutoIncrement('table');
 	}
 
-	public function testUninitializedGetAffectedRows() {
+	public function testUninitializedGetAffectedRows() : void {
 		$this->expectException(RuntimeException::class);
 		DB::getAffectedRows();
 	}
 
-	public function testInsert() {
+	public function testInsert() : void {
 		$this->initSqlite();
 		$count = DB::insert('table1', [
 			'name' => 'test1',
@@ -114,7 +117,7 @@ class DBTest extends TestCase
 		DB::getConnection()->query("DROP TABLE table1");
 	}
 
-	public function testInsertMultiple() {
+	public function testInsertMultiple() : void {
 		$this->initSqlite();
 		$count = DB::insert('table1',
 												[
@@ -135,7 +138,7 @@ class DBTest extends TestCase
 		$this->dropTable();
 	}
 
-	public function testInsertIgnore() {
+	public function testInsertIgnore() : void {
 		$this->initMysql();
 		$count = DB::insert('table1', [
 			'name' => 'test1',
@@ -187,7 +190,7 @@ class DBTest extends TestCase
 		");
 	}
 
-	public function testGetAffectedRows() {
+	public function testGetAffectedRows() : void {
 		$this->initMysql();
 		$count = DB::insert('table1', [
 			'name' => 'test1',
@@ -197,7 +200,7 @@ class DBTest extends TestCase
 		$this->dropTable();
 	}
 
-	public function testInit() {
+	public function testInit() : void {
 		// Init SQLite
 		$this->initSqlite();
 		$this->dropTable();
@@ -227,7 +230,7 @@ class DBTest extends TestCase
 						 ]);
 	}
 
-	public function testResetAutoIncrement() {
+	public function testResetAutoIncrement() : void {
 		$this->initMysql();
 		DB::insert('table1', [
 			'name' => 'test1',
@@ -253,7 +256,7 @@ class DBTest extends TestCase
 		$this->dropTable();
 	}
 
-	public function testInsertGet() {
+	public function testInsertGet() : void {
 		$this->initSqlite();
 		$query = DB::insertGet('table1', [
 			'name' => 'test1',
@@ -265,7 +268,7 @@ class DBTest extends TestCase
 		$this->dropTable();
 	}
 
-	public function testUpdate() {
+	public function testUpdate() : void {
 		$this->initSqlite();
 		DB::insert('table1', [
 			'name' => 'test1',
@@ -295,7 +298,7 @@ class DBTest extends TestCase
 		$this->dropTable();
 	}
 
-	public function testDeleteGet() {
+	public function testDeleteGet() : void {
 		$this->initSqlite();
 		DB::insert('table1', [
 			'name' => 'test1',
@@ -307,7 +310,7 @@ class DBTest extends TestCase
 		$this->dropTable();
 	}
 
-	public function testDelete() {
+	public function testDelete() : void {
 		$this->initSqlite();
 		DB::insert('table1', [
 			'name' => 'test1',
@@ -319,7 +322,7 @@ class DBTest extends TestCase
 		$this->dropTable();
 	}
 
-	public function testReplace() {
+	public function testReplace() : void {
 		$this->initMysql();
 		DB::insert('table1', [
 			'name' => 'test1',
@@ -390,9 +393,9 @@ class DBTest extends TestCase
 
 		// Join select with alias
 		$rows = DB::select(['table1', 'a'], 'a.id, a.name, a.age, b.name as value')
-							->join('table2', 'b')
-							->on('a.id = b.table_1_id')
-							->fetchAll();
+			->join('table2', 'b')
+			->on('a.id = b.table_1_id')
+			->fetchAll();
 		self::assertCount(1, $rows);
 		$row = first($rows);
 		self::assertEquals($id1, $row->id);

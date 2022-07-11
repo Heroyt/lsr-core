@@ -1,6 +1,6 @@
 <?php
 
-namespace Models;
+namespace TestCases\Models;
 
 use Dibi\Exception;
 use Lsr\Core\DB;
