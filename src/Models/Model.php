@@ -17,6 +17,7 @@ use Lsr\Core\DB;
 use Lsr\Core\Exceptions\ModelNotFoundException;
 use Lsr\Core\Exceptions\ValidationException;
 use Lsr\Core\Models\Attributes\Factory;
+use Lsr\Core\Models\Attributes\Instantiate;
 use Lsr\Core\Models\Attributes\ManyToMany;
 use Lsr\Core\Models\Attributes\ManyToOne;
 use Lsr\Core\Models\Attributes\ModelRelation;
@@ -82,7 +83,42 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			$this->row = $dbRow;
 			$this->fillFromRow();
 		}
+		$this->instantiateProperties();
 		$this->logger = new Logger(LOG_DIR.'models/', $this::TABLE);
+	}
+
+	/**
+	 * Instantiate properties that have the Instantiate attribute
+	 *
+	 * Can instantiate only properties that have an installable class as its type.
+	 *
+	 * @return void
+	 */
+	protected function instantiateProperties() : void {
+		$properties = $this::getPropertyReflections();
+		foreach ($properties as $property) {
+			$propertyName = $property->getName();
+			$attributes = $property->getAttributes(Instantiate::class);
+			// If the property does not have the Instantiate attribute - skip
+			// If the property already has a value - skip
+			if (empty($attributes) || isset($this->$propertyName)) {
+				continue;
+			}
+
+			// Check type
+			if (!$property->hasType()) {
+				throw new RuntimeException('Cannot initialize property '.self::class.'::'.$propertyName.' with no type.');
+			}
+			/** @var ReflectionNamedType $type */
+			$type = $property->getType();
+			$className = $type->getName();
+			if (!class_exists($className) || $type->isBuiltin()) {
+				// Built in types are not supported - string, int, float,...
+				// Non-built in types can also be interfaces or traits which is invalid. The type needs to be an instantiable class.
+				throw new RuntimeException('Cannot initialize property '.self::class.'::'.$propertyName.' with type '.$type->getName().'.');
+			}
+			$this->$propertyName = new $className;
+		}
 	}
 
 	/**
