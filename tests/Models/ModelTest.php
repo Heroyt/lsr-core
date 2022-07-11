@@ -5,13 +5,19 @@ namespace Models;
 use Dibi\Row;
 use Lsr\Core\DB;
 use Lsr\Core\Exceptions\ModelNotFoundException;
+use Lsr\Core\Exceptions\ValidationException;
 use Lsr\Core\Models\Attributes\ManyToMany;
 use Lsr\Core\Models\Attributes\ManyToOne;
 use Lsr\Core\Models\Attributes\OneToMany;
 use Lsr\Core\Models\Attributes\PrimaryKey;
+use Lsr\Core\Models\Attributes\Validation\Email;
+use Lsr\Core\Models\Attributes\Validation\Numeric;
+use Lsr\Core\Models\Attributes\Validation\Required;
+use Lsr\Core\Models\Attributes\Validation\StringLength;
 use Lsr\Core\Models\Interfaces\InsertExtendInterface;
 use Lsr\Core\Models\Model;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use TestEnum;
 use function json_encode;
 
@@ -26,6 +32,10 @@ use function json_encode;
  * @covers \Lsr\Core\Models\Attributes\OneToMany
  * @covers \Lsr\Core\Models\Attributes\ManyToOne
  * @covers \Lsr\Core\Models\Attributes\PrimaryKey
+ * @covers \Lsr\Core\Models\Attributes\Validation\Numeric
+ * @covers \Lsr\Core\Models\Attributes\Validation\Required
+ * @covers \Lsr\Core\Models\Attributes\Validation\StringLength
+ * @covers \Lsr\Core\Models\Attributes\Validation\Email
  */
 class ModelTest extends TestCase
 {
@@ -223,7 +233,7 @@ class ModelTest extends TestCase
 	public function testInvalidFetch() : void {
 		$model = new ModelA();
 
-		$this->expectException(\RuntimeException::class);
+		$this->expectException(RuntimeException::class);
 		$model->fetch();
 	}
 
@@ -408,7 +418,7 @@ class ModelTest extends TestCase
 		$expected['children'] = [];
 
 		// Test encoded
-		self::assertEquals(json_encode($expected, JSON_THROW_ON_ERROR), \json_encode($model, JSON_THROW_ON_ERROR));
+		self::assertEquals(json_encode($expected, JSON_THROW_ON_ERROR), json_encode($model, JSON_THROW_ON_ERROR));
 	}
 
 	public function testPrimaryKeyGetting() : void {
@@ -461,6 +471,197 @@ class ModelTest extends TestCase
 		self::assertSame($model2, $model->models[2]);
 		self::assertSame($model, $model2->models[1]);
 	}
+
+	public function testValidationRequired() : void {
+		$model = new ModelValidation();
+
+		$model->requiredString = 'test';
+		$model->validate();
+		self::assertTrue(true);
+	}
+
+	public function testValidationRequiredInvalid() : void {
+		$model = new ModelValidation();
+
+		$this->expectException(ValidationException::class);
+		$model->validate();
+	}
+
+	public function testValidationRequiredInvalid3() : void {
+		$model = new Required();
+
+		$this->expectException(ValidationException::class);
+		$model->validateValue(null, ModelValidation::class, 'test');
+	}
+
+	public function testValidationRequiredInvalid2() : void {
+		$model = new ModelValidation();
+		$model->requiredString = null;
+		$this->expectException(ValidationException::class);
+		$model->validate();
+	}
+
+	/**
+	 * @return void
+	 * @throws ValidationException
+	 * @depends testValidationRequired
+	 * @depends testValidationRequiredInvalid
+	 */
+	public function testValidationStringLength() : void {
+		$model = new ModelValidation();
+
+		$model->requiredString = '';
+
+		$model->stringLength10 = '1234567890';
+		$model->validate();
+		$model->stringLengthMax10 = '1234567890';
+		$model->validate();
+		$model->stringLengthMax10 = '123456789';
+		$model->validate();
+		$model->stringLengthMax10 = '12345';
+		$model->validate();
+		$model->stringLengthMax10 = '1';
+		$model->validate();
+		$model->stringLengthMax10 = '';
+		$model->validate();
+		$model->stringLengthBetween5and10 = '12345';
+		$model->validate();
+		$model->stringLengthBetween5and10 = '123456';
+		$model->validate();
+		$model->stringLengthBetween5and10 = '12345678';
+		$model->validate();
+		$model->stringLengthBetween5and10 = '1234567890';
+		$model->validate();
+		$model->notTypedString = '';
+		$model->validate();
+		self::assertTrue(true);
+	}
+
+	/**
+	 * @param string $property
+	 * @param string $value
+	 *
+	 * @return void
+	 * @throws ValidationException
+	 *
+	 * @testWith ["stringLength10", "123"]
+	 *           ["stringLength10", "12345678901"]
+	 *           ["stringLengthMax10", "12345678901"]
+	 *           ["stringLengthMax10", "1234567890123"]
+	 *           ["stringLengthBetween5and10", "123"]
+	 *           ["stringLengthBetween5and10", "1"]
+	 *           ["stringLengthBetween5and10", "123456789012"]
+	 *           ["stringLengthBetween5and10", "1234567890123"]
+	 *           ["notTypedString", 123]
+	 *           ["notTypedString", 123.14]
+	 *
+	 * @depends testValidationRequired
+	 * @depends testValidationRequiredInvalid
+	 */
+	public function testValidationStringInvalid(string $property, mixed $value) : void {
+		$model = new ModelValidation();
+
+		$model->requiredString = '';
+
+		$this->expectException(ValidationException::class);
+		$model->$property = $value;
+		$model->validate();
+	}
+
+	public function testValidationNumeric() : void {
+		$model = new ModelValidation();
+		$model->requiredString = 'asd';
+
+		$model->numeric = 123;
+		$model->validate();
+
+		$model->numeric = '200';
+		$model->validate();
+
+		$model->numeric = 12.12;
+		$model->validate();
+
+		$model->numeric = '12.12';
+		$model->validate();
+
+		self::assertTrue(true);
+	}
+
+	/**
+	 * @throws ValidationException
+	 *
+	 * @testWith ["hi"]
+	 *           ["asda"]
+	 *           ["123n"]
+	 */
+	public function testValidationNumericInvalid(string|int|float $value) : void {
+		$model = new ModelValidation();
+		$model->requiredString = 'asd';
+
+		$this->expectException(ValidationException::class);
+		$model->numeric = $value;
+		$model->validate();
+	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return void
+	 *
+	 * @testWith ["asd@dasd.asd"]
+	 *           ["dsadij.dsa@sdaasd.od"]
+	 *           ["m.m123_13@dasd.asd.asd"]
+	 */
+	public function testValidationEmail(string $value) : void {
+		$model = new ModelValidation();
+		$model->requiredString = 'asd';
+
+		$model->email = $value;
+		$model->validate();
+		self::assertTrue(true);
+	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return void
+	 *
+	 * @testWith ["asdasd.asd"]
+	 *           ["dsadij"]
+	 *           ["sda@.asd.asd"]
+	 *           ["@asd.aa"]
+	 *           ["asda.@asd.as"]
+	 *           ["mysite()*@gmail.com"]
+	 *           ["mysite..1234@yahoo.com"]
+	 */
+	public function testValidationEmailInvalid(string $value) : void {
+		$model = new ModelValidation();
+		$model->requiredString = 'asd';
+
+		$this->expectException(ValidationException::class);
+		$model->email = $value;
+		$model->validate();
+	}
+}
+
+class ModelValidation extends Model
+{
+
+	#[Required]
+	public ?string          $requiredString;
+	#[StringLength]
+	public mixed            $notTypedString;
+	#[StringLength(10)]
+	public string           $stringLength10;
+	#[StringLength(max: 10)]
+	public string           $stringLengthMax10;
+	#[StringLength(5, 10)]
+	public string           $stringLengthBetween5and10;
+	#[Numeric]
+	public string|int|float $numeric;
+	#[Email]
+	public string           $email;
+
 }
 
 #[PrimaryKey('model_a_id')]
