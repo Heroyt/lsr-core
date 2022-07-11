@@ -24,6 +24,8 @@ use Lsr\Core\Models\Attributes\NoDB;
 use Lsr\Core\Models\Attributes\OneToMany;
 use Lsr\Core\Models\Attributes\OneToOne;
 use Lsr\Core\Models\Attributes\PrimaryKey;
+use Lsr\Core\Models\Attributes\Validation\Required;
+use Lsr\Core\Models\Attributes\Validation\Validator;
 use Lsr\Core\Models\Interfaces\FactoryInterface;
 use Lsr\Core\Models\Interfaces\InsertExtendInterface;
 use Lsr\Helpers\Tools\Strings;
@@ -326,6 +328,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @throws ValidationException
 	 */
 	public function save() : bool {
+		$this->validate();
 		return isset($this->id) ? $this->update() : $this->insert();
 	}
 
@@ -527,5 +530,33 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			static::$reflections[static::class] = (new ReflectionClass(static::class));
 		}
 		return static::$reflections[static::class];
+	}
+
+	/**
+	 * Validate the model's value
+	 *
+	 * @return void
+	 * @throws ValidationException
+	 */
+	public function validate() : void {
+		$properties = $this::getPropertyReflections();
+		foreach ($properties as $property) {
+			$attributes = $property->getAttributes(Validator::class, ReflectionAttribute::IS_INSTANCEOF);
+			$propertyName = $property->getName();
+			foreach ($attributes as $attributeReflection) {
+				/** @var Validator $attribute */
+				$attribute = $attributeReflection->newInstance();
+
+				// Property is not set
+				if (!isset($this->$propertyName)) {
+					if ($attribute instanceof Required) {
+						$attribute->throw($this, $propertyName);
+					}
+					continue;
+				}
+
+				$attribute->validateValue($this->$propertyName, $this, $propertyName);
+			}
+		}
 	}
 }
