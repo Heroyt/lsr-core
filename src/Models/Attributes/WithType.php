@@ -10,7 +10,7 @@ use ReflectionType;
 trait WithType
 {
 
-	protected bool $nullable = false;
+	protected bool $nullable;
 
 	/**
 	 * Get a class name for a property for a model relation
