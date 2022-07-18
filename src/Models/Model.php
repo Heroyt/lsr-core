@@ -441,6 +441,9 @@ abstract class Model implements JsonSerializable, ArrayAccess
 						$data[$columnName] = $this->$propertyName->value;
 						continue;
 					}
+					if ($this->$propertyName instanceof DateTimeInterface || $this->$propertyName instanceof DateInterval) {
+						$data[$columnName] = $this->$propertyName;
+					}
 
 					continue;
 				}
