@@ -414,7 +414,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 					$typeInfo = $attr->getType($property);
 
 					$foreignKey = $attr->getForeignKey($typeInfo->class, $this);
-					$localKey = $attr->localKey;
+					$localKey = $attr->getLocalKey($typeInfo->class, $this);
 
 					if (empty($localKey)) {
 						$localKey = $foreignKey;
