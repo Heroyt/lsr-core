@@ -1,6 +1,7 @@
 {
 	"name": "lsr/core",
 	"description": "Laser framework core.",
+	"version": "0.1.1",
 	"repositories": [
 		{
 			"type": "composer",
@@ -28,8 +29,8 @@
 	],
 	"minimum-stability": "dev",
 	"require": {
-		"lsr/interfaces": "dev-master",
-		"lsr/logging": "dev-master",
+		"lsr/interfaces": "^0.1",
+		"lsr/logging": "^0.1",
 		"ext-fileinfo": "*",
 		"ext-gettext": "*",
 		"ext-simplexml": "*",
