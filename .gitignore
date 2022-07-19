@@ -26,3 +26,4 @@ tests/logs
 *.cache
 build
 docs
+temp/

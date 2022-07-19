@@ -8,6 +8,10 @@ use Attribute;
 class Factory
 {
 
+	/**
+	 * @param string               $factoryClass
+	 * @param array<string, mixed> $defaultOptions
+	 */
 	public function __construct(
 		public string $factoryClass,
 		public array  $defaultOptions = [],

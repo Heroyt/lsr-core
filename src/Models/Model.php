@@ -27,9 +27,9 @@ use Lsr\Core\Models\Attributes\OneToOne;
 use Lsr\Core\Models\Attributes\PrimaryKey;
 use Lsr\Core\Models\Attributes\Validation\Required;
 use Lsr\Core\Models\Attributes\Validation\Validator;
-use Lsr\Core\Models\Interfaces\FactoryInterface;
 use Lsr\Core\Models\Interfaces\InsertExtendInterface;
 use Lsr\Helpers\Tools\Strings;
+use Lsr\Logging\Exceptions\DirectoryCreationException;
 use Lsr\Logging\Logger;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -37,33 +37,38 @@ use ReflectionException;
 use ReflectionNamedType;
 use ReflectionProperty;
 use RuntimeException;
+use stdClass;
 
+/**
+ * @implements ArrayAccess<string, mixed>
+ * @phpstan-consistent-constructor
+ */
 abstract class Model implements JsonSerializable, ArrayAccess
 {
 
 	/** @var string Database table name */
 	public const TABLE = '';
 
-	/** @var self[][] Model instance cache */
+	/** @var static[][] Model instance cache */
 	protected static array $instances = [];
 	/** @var string[] Primary key cache */
 	protected static array $primaryKeys = [];
-
-	#[NoDB]
-	public ?int      $id  = null;
-	protected ?Row   $row = null;
-	protected Logger $logger;
-
-	/** @var ReflectionClass[] */
+	/** @var ReflectionClass<Model>[] */
 	protected static array $reflections = [];
 	/** @var Factory[] */
 	protected static array $factory = [];
+	#[NoDB]
+	public ?int            $id      = null;
+	protected ?Row         $row     = null;
+	protected Logger       $logger;
 
 	/**
 	 * @param int|null $id    DB model ID
 	 * @param Row|null $dbRow Prefetched database row
 	 *
-	 * @throws ModelNotFoundException|ValidationException
+	 * @throws ModelNotFoundException
+	 * @throws ValidationException
+	 * @throws DirectoryCreationException
 	 */
 	public function __construct(?int $id = null, ?Row $dbRow = null) {
 		if (!isset(self::$instances[$this::TABLE])) {
@@ -88,40 +93,6 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	}
 
 	/**
-	 * Instantiate properties that have the Instantiate attribute
-	 *
-	 * Can instantiate only properties that have an installable class as its type.
-	 *
-	 * @return void
-	 */
-	protected function instantiateProperties() : void {
-		$properties = $this::getPropertyReflections();
-		foreach ($properties as $property) {
-			$propertyName = $property->getName();
-			$attributes = $property->getAttributes(Instantiate::class);
-			// If the property does not have the Instantiate attribute - skip
-			// If the property already has a value - skip
-			if (empty($attributes) || isset($this->$propertyName)) {
-				continue;
-			}
-
-			// Check type
-			if (!$property->hasType()) {
-				throw new RuntimeException('Cannot initialize property '.self::class.'::'.$propertyName.' with no type.');
-			}
-			/** @var ReflectionNamedType $type */
-			$type = $property->getType();
-			$className = $type->getName();
-			if (!class_exists($className) || $type->isBuiltin()) {
-				// Built in types are not supported - string, int, float,...
-				// Non-built in types can also be interfaces or traits which is invalid. The type needs to be an instantiable class.
-				throw new RuntimeException('Cannot initialize property '.self::class.'::'.$propertyName.' with type '.$type->getName().'.');
-			}
-			$this->$propertyName = new $className;
-		}
-	}
-
-	/**
 	 * Get model's primary key
 	 *
 	 * @return string Primary key's column name
@@ -136,6 +107,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 
 				$attributes = $reflection->getAttributes(PrimaryKey::class);
 				if (!empty($attributes)) {
+					/** @var ReflectionAttribute<ModelRelation> $attribute */
 					$attribute = first($attributes);
 					/** @var PrimaryKey $attr */
 					$attr = $attribute->newInstance();
@@ -174,7 +146,9 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			throw new RuntimeException('Id needs to be set before fetching model\'s data.');
 		}
 		if ($refresh || !isset($this->row)) {
-			$this->row = DB::select($this::TABLE, '*')->where('%n = %i', $this::getPrimaryKey(), $this->id)->fetch();
+			/** @var Row|null $row */
+			$row = DB::select($this::TABLE, '*')->where('%n = %i', $this::getPrimaryKey(), $this->id)->fetch();
+			$this->row = $row;
 		}
 		if (!isset($this->row)) {
 			throw new ModelNotFoundException(get_class($this).' model of ID '.$this->id.' was not found.');
@@ -194,6 +168,9 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @return void
 	 */
 	protected function fillFromRow() : void {
+		if (!isset($this->row)) {
+			return;
+		}
 		foreach ($this->row as $key => $val) {
 			if ($key === $this::getPrimaryKey()) {
 				$this->id = $val;
@@ -215,8 +192,10 @@ abstract class Model implements JsonSerializable, ArrayAccess
 				// Check enum and date values
 				$type = $property->getType();
 				if (
+					isset($this->row) &&
 					$type instanceof ReflectionNamedType &&
 					!$type->isBuiltin() &&
+					/** @phpstan-ignore-next-line */
 					in_array(InsertExtendInterface::class, class_implements($type->getName()), true)
 				) {
 					/** @var InsertExtendInterface $class */
@@ -233,9 +212,11 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			// Check enum and date values
 			$type = $property->getType();
 			if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
+				/** @phpstan-ignore-next-line */
 				if ($value instanceof DateInterval && in_array(DateTimeInterface::class, class_implements($type->getName()), true)) {
 					$value = new DateTime($value->format('%H:%i:%s'));
 				}
+				/** @phpstan-ignore-next-line */
 				if (in_array(BackedEnum::class, class_implements($type->getName()), true)) {
 					$enum = $type->getName();
 					$value = $enum::tryFrom($value);
@@ -255,6 +236,16 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	}
 
 	/**
+	 * @return ReflectionClass<Model>
+	 */
+	protected static function getReflection() : ReflectionClass {
+		if (!isset(static::$reflections[static::class])) {
+			static::$reflections[static::class] = (new ReflectionClass(static::class));
+		}
+		return static::$reflections[static::class];
+	}
+
+	/**
 	 * @return ReflectionProperty[]
 	 */
 	public static function getPropertyReflections(?int $filter = null) : array {
@@ -262,9 +253,9 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	}
 
 	/**
-	 * @param array              $attributes
-	 * @param ReflectionProperty $property
-	 * @param string             $propertyName
+	 * @param ReflectionAttribute<ModelRelation>[] $attributes
+	 * @param ReflectionProperty                   $property
+	 * @param string                               $propertyName
 	 *
 	 * @return void
 	 * @throws ModelNotFoundException
@@ -274,6 +265,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		foreach ($attributes as $attribute) {
 			/** @var ManyToOne|OneToMany|OneToOne|ManyToMany $attributeClass */
 			$attributeClass = $attribute->newInstance();
+			/** @var stdClass $info */
 			$info = $attributeClass->getType($property);
 			/** @var Model $className */
 			$className = $info->class;
@@ -287,6 +279,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 				case OneToOne::class:
 					/** @var int $id */
 					$id = $this->row?->$localKey;
+				/** @phpstan-ignore-next-line */
 					if (is_null($id)) {
 						if (!$info->nullable) {
 							throw new ValidationException('Cannot assign null to a non nullable relation');
@@ -313,6 +306,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 																					 ->where(
 																						 '%n IN %sql',
 																						 $foreignKey,
+																						 /* @phpstan-ignore-next-line */
 																						 $attributeClass->getConnectionQuery($id, $className, $this)
 																					 )
 																					 ->get();
@@ -322,10 +316,27 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	}
 
 	/**
+	 * @return Factory|null
+	 */
+	public static function getFactory() : ?Factory {
+		if (!isset(static::$factory[static::class])) {
+			$attributes = static::getReflection()->getAttributes(Factory::class);
+			if (empty($attributes)) {
+				return null;
+			}
+			/** @var ReflectionAttribute<Factory> $attribute */
+			$attribute = first($attributes);
+			static::$factory[static::class] = $attribute->newInstance();
+		}
+		return static::$factory[static::class];
+	}
+
+	/**
 	 * @param int      $id
 	 * @param Row|null $row
 	 *
 	 * @return static
+	 * @throws DirectoryCreationException
 	 * @throws ModelNotFoundException
 	 * @throws ValidationException
 	 */
@@ -333,8 +344,45 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		return static::$instances[static::TABLE][$id] ?? new static($id, $row);
 	}
 
+	/**
+	 * @return ModelQuery<static>
+	 */
 	public static function query() : ModelQuery {
 		return new ModelQuery(static::class);
+	}
+
+	/**
+	 * Instantiate properties that have the Instantiate attribute
+	 *
+	 * Can instantiate only properties that have an installable class as its type.
+	 *
+	 * @return void
+	 */
+	protected function instantiateProperties() : void {
+		$properties = $this::getPropertyReflections();
+		foreach ($properties as $property) {
+			$propertyName = $property->getName();
+			$attributes = $property->getAttributes(Instantiate::class);
+			// If the property does not have the Instantiate attribute - skip
+			// If the property already has a value - skip
+			if (empty($attributes) || isset($this->$propertyName)) {
+				continue;
+			}
+
+			// Check type
+			if (!$property->hasType()) {
+				throw new RuntimeException('Cannot initialize property '.self::class.'::'.$propertyName.' with no type.');
+			}
+			/** @var ReflectionNamedType $type */
+			$type = $property->getType();
+			$className = $type->getName();
+			if (!class_exists($className) || $type->isBuiltin()) {
+				// Built in types are not supported - string, int, float,...
+				// Non-built in types can also be interfaces or traits which is invalid. The type needs to be an instantiable class.
+				throw new RuntimeException('Cannot initialize property '.self::class.'::'.$propertyName.' with type '.$type->getName().'.');
+			}
+			$this->$propertyName = new $className;
+		}
 	}
 
 	/**
@@ -369,6 +417,34 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	}
 
 	/**
+	 * Validate the model's value
+	 *
+	 * @return void
+	 * @throws ValidationException
+	 */
+	public function validate() : void {
+		$properties = $this::getPropertyReflections();
+		foreach ($properties as $property) {
+			$attributes = $property->getAttributes(Validator::class, ReflectionAttribute::IS_INSTANCEOF);
+			$propertyName = $property->getName();
+			foreach ($attributes as $attributeReflection) {
+				/** @var Validator $attribute */
+				$attribute = $attributeReflection->newInstance();
+
+				// Property is not set
+				if (!isset($this->$propertyName)) {
+					if ($attribute instanceof Required) {
+						$attribute->throw($this, $propertyName);
+					}
+					continue;
+				}
+
+				$attribute->validateValue($this->$propertyName, $this, $propertyName);
+			}
+		}
+	}
+
+	/**
 	 * @return bool
 	 * @throws ValidationException
 	 */
@@ -391,7 +467,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	/**
 	 * Get an array of values for DB to insert/update. Values are validated.
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 * @throws ValidationException
 	 */
 	public function getQueryData() : array {
@@ -411,6 +487,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 				foreach ($relations as $relation) {
 					/** @var OneToMany|ManyToOne|OneToOne $attr */
 					$attr = $relation->newInstance();
+					/** @var stdClass $typeInfo */
 					$typeInfo = $attr->getType($property);
 
 					$foreignKey = $attr->getForeignKey($typeInfo->class, $this);
@@ -482,7 +559,11 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	}
 
 	/**
-	 * @inheritdoc
+	 * Specify data which should be serialized to JSON
+	 *
+	 * @link http://php.net/manual/en/jsonserializable.jsonserialize.php
+	 * @return array<string, mixed> data which can be serialized by <b>json_encode</b>,
+	 * which is a value of any type other than a resource.
 	 */
 	public function jsonSerialize() : array {
 		$vars = get_object_vars($this);
@@ -516,7 +597,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @inheritdoc
 	 */
 	public function offsetSet($offset, $value) : void {
-		if ($this->offsetExists($offset)) {
+		if (isset($offset) && is_string($offset) && $this->offsetExists($offset)) {
 			$this->$offset = $value;
 		}
 	}
@@ -540,65 +621,12 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		$this->logger->info('Delete model: '.$this::TABLE.' of ID: '.$this->id);
 		try {
 			DB::delete($this::TABLE, ['%n = %i', $this::getPrimaryKey(), $this->id]);
-			static::$instances[$this::TABLE][$this->id] = null;
+			unset(static::$instances[$this::TABLE][$this->id]);
 		} catch (Exception $e) {
 			$this->logger->error($e->getMessage());
 			$this->logger->debug($e->getTraceAsString());
 			return false;
 		}
 		return true;
-	}
-
-	/**
-	 * @return string|FactoryInterface|null
-	 */
-	public static function getFactory() : ?Factory {
-		if (!isset(static::$factory[static::class])) {
-			$attributes = static::getReflection()->getAttributes(Factory::class);
-			if (empty($attributes)) {
-				return null;
-			}
-			/** @var Factory $attr */
-			static::$factory[static::class] = first($attributes)->newInstance();
-		}
-		return static::$factory[static::class];
-	}
-
-	/**
-	 * @return ReflectionClass
-	 */
-	protected static function getReflection() : ReflectionClass {
-		if (!isset(static::$reflections[static::class])) {
-			static::$reflections[static::class] = (new ReflectionClass(static::class));
-		}
-		return static::$reflections[static::class];
-	}
-
-	/**
-	 * Validate the model's value
-	 *
-	 * @return void
-	 * @throws ValidationException
-	 */
-	public function validate() : void {
-		$properties = $this::getPropertyReflections();
-		foreach ($properties as $property) {
-			$attributes = $property->getAttributes(Validator::class, ReflectionAttribute::IS_INSTANCEOF);
-			$propertyName = $property->getName();
-			foreach ($attributes as $attributeReflection) {
-				/** @var Validator $attribute */
-				$attribute = $attributeReflection->newInstance();
-
-				// Property is not set
-				if (!isset($this->$propertyName)) {
-					if ($attribute instanceof Required) {
-						$attribute->throw($this, $propertyName);
-					}
-					continue;
-				}
-
-				$attribute->validateValue($this->$propertyName, $this, $propertyName);
-			}
-		}
 	}
 }

@@ -42,7 +42,9 @@ class App
 
 	public static string    $activeLanguageCode = 'cs_CZ';
 	public static ?Language $language;
+	/** @var array<string,string> */
 	public static array     $supportedLanguages = [];
+	/** @var string[] */
 	public static array     $supportedCountries = [];
 	/**
 	 * @var bool $prettyUrl
@@ -52,7 +54,7 @@ class App
 	/** @var RequestInterface $request Current request object */
 	protected static RequestInterface $request;
 	protected static Logger           $logger;
-	/** @var array Parsed config.ini file */
+	/** @var array<string, mixed> Parsed config.ini file */
 	protected static array $config;
 	/**
 	 * @var string
@@ -76,8 +78,9 @@ class App
 		self::setupDi();
 
 		// Setup routes
-		/** @noinspection PhpFieldAssignmentTypeMismatchInspection */
-		self::$router = self::getService('routing');
+		/** @var Router $router */
+		$router = self::getService('routing');
+		self::$router = $router;
 		self::$router->setup();
 
 		if (PHP_SAPI === "cli") {
@@ -149,13 +152,14 @@ class App
 			$supported = self::getSupportedLanguages();
 			self::$activeLanguageCode = self::$language->id;
 			if (isset($supported[self::$language->id])) {
+				/* @phpstan-ignore-next-line */
 				self::$activeLanguageCode .= '_'.$supported[self::$language->id];
 			}
 
 			// Set target language
 			putenv('LANG='.self::$activeLanguageCode);
 			putenv('LC_ALL='.self::$activeLanguageCode);
-			setlocale(LC_ALL, 0);
+			setlocale(LC_ALL, '0');
 			setlocale(LC_ALL, self::$activeLanguageCode, self::$activeLanguageCode.'.UTF8', self::$activeLanguageCode.'.UTF-8', self::$activeLanguageCode.'.utf-8', self::$language->name);
 			setlocale(LC_MESSAGES, self::$activeLanguageCode, self::$activeLanguageCode.'.UTF8', self::$activeLanguageCode.'.UTF-8', self::$activeLanguageCode.'.utf-8', self::$language->name);
 			bindtextdomain(LANGUAGE_FILE_NAME, substr(LANGUAGE_DIR, 0, -1));
@@ -194,7 +198,7 @@ class App
 	/**
 	 * Get the request array
 	 *
-	 * @return Request|null
+	 * @return RequestInterface|null
 	 *
 	 * @version 1.0
 	 * @since   1.0
@@ -230,13 +234,15 @@ class App
 	/**
 	 * @param bool $returnObjects
 	 *
-	 * @return string[]|Language[]
+	 * @return array<string, string|Language|null>
 	 */
 	public static function getSupportedLanguages(bool $returnObjects = false) : array {
 		if (empty(self::$supportedLanguages)) {
+			/** @var string[] $files */
+			$files = glob(LANGUAGE_DIR.'*');
 			$dirs = array_map(static function(string $dir) {
 				return str_replace(LANGUAGE_DIR, '', $dir);
-			}, glob(LANGUAGE_DIR.'*'));
+			}, $files);
 			foreach ($dirs as $dir) {
 				$explode = explode('_', $dir);
 				if (count($explode) !== 2) {
@@ -269,18 +275,22 @@ class App
 	/**
 	 * Get parsed config.ini file
 	 *
-	 * @return array
+	 * @return array<string, mixed>
 	 */
 	public static function getConfig() : array {
 		if (!isset(self::$config)) {
-			self::$config = parse_ini_file(PRIVATE_DIR.'config.ini', true);
+			$ini = parse_ini_file(PRIVATE_DIR.'config.ini', true);
+			if ($ini === false) {
+				$ini = [];
+			}
+			self::$config = $ini;
 		}
 		return self::$config;
 	}
 
 	public static function getSupportedCountries() : array {
 		if (empty(self::$supportedCountries)) {
-			foreach (self::getSupportedLanguages() as $lang => $country) {
+			foreach (self::getSupportedLanguages() as $country) {
 				if (isset(Constants::COUNTRIES[$country])) {
 					self::$supportedCountries[$country] = Constants::COUNTRIES[$country];
 				}

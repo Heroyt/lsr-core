@@ -19,7 +19,7 @@ interface InsertExtendInterface
 	/**
 	 * Add data from the object into the data array for DB INSERT/UPDATE
 	 *
-	 * @param array $data
+	 * @param array<string, mixed> $data
 	 */
 	public function addQueryData(array &$data) : void;
 

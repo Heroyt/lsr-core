@@ -14,8 +14,8 @@ class Latte
 	/**
 	 * Renders a view from a latte template
 	 *
-	 * @param string $template Template name
-	 * @param array  $params   Template parameters
+	 * @param string               $template Template name
+	 * @param array<string, mixed> $params   Template parameters
 	 *
 	 * @throws TemplateDoesNotExistException
 	 */
@@ -45,8 +45,8 @@ class Latte
 	/**
 	 * Renders a view from a latte template
 	 *
-	 * @param string $template Template name
-	 * @param array  $params   Template parameters
+	 * @param string               $template Template name
+	 * @param array<string, mixed> $params   Template parameters
 	 *
 	 * @return string Can be empty if $return is false
 	 * @throws TemplateDoesNotExistException

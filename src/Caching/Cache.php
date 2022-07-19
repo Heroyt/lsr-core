@@ -14,13 +14,17 @@ class Cache extends \Nette\Caching\Cache
 
 	public static int $hit  = 0;
 	public static int $miss = 0;
-	/** @var array<string|int> */
+	/** @var array<string, array{0:int, 1:int}> */
 	public static array $loadedKeys = [];
 
 	/**
 	 * Reads multiple items from the cache.
 	 *
+	 * @param string[] $keys
+	 *
+	 * @return array<string,mixed>
 	 * @throws Throwable
+	 *
 	 */
 	public function bulkLoad(array $keys, ?callable $generator = null) : array {
 		if (count($keys) === 0) {
@@ -39,7 +43,7 @@ class Cache extends \Nette\Caching\Cache
 				$result[$key] = $this->load(
 					$key,
 					$generator
-						? function(&$dependencies) use ($key, $generator) {
+						? static function(&$dependencies) use ($key, $generator) {
 						return $generator(...[$key, &$dependencies]);
 					}
 						: null

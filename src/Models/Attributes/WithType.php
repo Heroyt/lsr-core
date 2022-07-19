@@ -4,6 +4,7 @@ namespace Lsr\Core\Models\Attributes;
 
 use Error;
 use Lsr\Core\Models\Model;
+use ReflectionNamedType;
 use ReflectionProperty;
 use ReflectionType;
 
@@ -24,7 +25,7 @@ trait WithType
 			if (!isset($this->nullable)) {
 				$this->nullable = false;
 				if ($property->hasType()) {
-					$this->nullable = $property->getType()->allowsNull();
+					$this->nullable = $property->getType()?->allowsNull() ?? false;
 				}
 			}
 			return (object) ['class' => $this->class, 'nullable' => $this->nullable];
@@ -32,7 +33,7 @@ trait WithType
 		if ($property->hasType()) {
 			/** @var ReflectionType $type */
 			$type = $property->getType();
-			if ($type instanceof \ReflectionNamedType && !$type->isBuiltin()) {
+			if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
 				$this->class = $type->getName();
 				$this->nullable = $type->allowsNull();
 				return (object) ['class' => $this->class, 'nullable' => $this->nullable];
