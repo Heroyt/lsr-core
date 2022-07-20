@@ -44,6 +44,19 @@ class DB
 	/**
 	 * Initialization function
 	 *
+	 * @param array{
+	 *     Database?: array{
+	 *         DRIVER?: string,
+	 *         HOST?: string,
+	 *         PORT?: string,
+	 *         USER?: string,
+	 *         PASS?: string,
+	 *         DATABASE?: string,
+	 *         COLLATE?: string,
+	 *         PREFIX?: string,
+	 *     }
+	 * } $config
+	 *
 	 * @post  Database connection is created and stored in DB::db variable
 	 *
 	 * @throws Exception
@@ -54,36 +67,51 @@ class DB
 		if (empty($config)) {
 			$config = App::getConfig();
 		}
+		/**
+		 * @var array{
+		 *         DRIVER?: string,
+		 *         HOST?: string,
+		 *         PORT?: string|int,
+		 *         USER?: string,
+		 *         PASS?: string,
+		 *         DATABASE?: string,
+		 *         COLLATE?: string,
+		 *         PREFIX?: string,
+		 *     } $dbConfig
+		 */
+		$dbConfig = $config['Database'] ?? [];
 		self::$log = new Logger(LOG_DIR, 'db');
 		$options = [
-			'driver' => $config['Database']['DRIVER'] ?? 'mysqli',
+			'driver' => $dbConfig['DRIVER'] ?? 'mysqli',
 		];
-		if (!empty($config['Database']['HOST'])) {
-			$options['host'] = $config['Database']['HOST'];
+		if (!empty($dbConfig['HOST'])) {
+			$options['host'] = $dbConfig['HOST'];
 		}
-		if (!empty($config['Database']['PORT'])) {
-			$options['port'] = (int) $config['Database']['PORT'];
+		if (!empty($dbConfig['PORT'])) {
+			$options['port'] = (int) $dbConfig['PORT'];
 		}
-		if (!empty($config['Database']['USER'])) {
-			$options['username'] = $config['Database']['USER'];
+		if (!empty($dbConfig['USER'])) {
+			$options['username'] = $dbConfig['USER'];
 		}
-		if (!empty($config['Database']['PASS'])) {
-			$options['password'] = $config['Database']['PASS'];
+		if (!empty($dbConfig['PASS'])) {
+			$options['password'] = $dbConfig['PASS'];
 		}
-		if (!empty($config['Database']['DATABASE'])) {
-			$options['database'] = $config['Database']['DATABASE'];
+		if (!empty($dbConfig['DATABASE'])) {
+			$options['database'] = $dbConfig['DATABASE'];
 		}
-		if (!empty($config['Database']['COLLATE'])) {
-			$options['charset'] = $config['Database']['COLLATE'];
+		if (!empty($dbConfig['COLLATE'])) {
+			$options['charset'] = $dbConfig['COLLATE'];
 		}
 		if ($options['driver'] === 'sqlite') {
+			/** @var string $dbFile */
 			$dbFile = $options['database'] ?? TMP_DIR.'db.db';
 			if (!file_exists($dbFile)) {
 				touch($dbFile);
 			}
 		}
 		self::$db = new Connection($options);
-		self::$db->getSubstitutes()->{''} = $config['Database']['PREFIX'] ?? '';
+		/** @phpstan-ignore-next-line */
+		self::$db->getSubstitutes()->{''} = $dbConfig['PREFIX'] ?? '';
 		self::$db->onEvent[] = [self::$log, 'logDb'];
 	}
 
@@ -104,22 +132,24 @@ class DB
 	/**
 	 * Get query update
 	 *
-	 * @param string     $table
-	 * @param iterable   $args
-	 * @param array|null $where
+	 * @param string                 $table
+	 * @param array<string, mixed>   $args
+	 * @param array<int, mixed>|null $where
 	 *
 	 * @return Fluent|int
 	 *
 	 * @throws Exception
 	 * @since 1.0
 	 */
-	public static function update(string $table, iterable $args, array $where = null) : Fluent|int {
+	public static function update(string $table, array $args, array $where = null) : Fluent|int {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
 		$q = self::$db->update($table, $args);
 		if (isset($where)) {
-			$q = $q->where(...$where)->execute(dibi::AFFECTED_ROWS);
+			/** @var int $rows */
+			$rows = $q->where(...$where)->execute(dibi::AFFECTED_ROWS);
+			return $rows;
 		}
 		return $q;
 	}
@@ -127,8 +157,8 @@ class DB
 	/**
 	 * Get query insert
 	 *
-	 * @param string   $table
-	 * @param iterable $args
+	 * @param string                  $table
+	 * @param iterable<string, mixed> $args
 	 *
 	 * @return Fluent
 	 *
@@ -144,19 +174,20 @@ class DB
 	/**
 	 * Insert values
 	 *
-	 * @param string   $table
-	 * @param iterable $args
+	 * @param string               $table
+	 * @param array<string, mixed> ...$args
 	 *
 	 * @return int
 	 * @throws Exception
 	 *
 	 * @since 1.0
 	 */
-	public static function insert(string $table, iterable ...$args) : int {
+	public static function insert(string $table, array ...$args) : int {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
 		if (count($args) > 1) {
+			/** @phpstan-ignore-next-line */
 			return self::$db
 				->command()
 				->insert()
@@ -164,14 +195,15 @@ class DB
 				->values('%l'.str_repeat(', %l', count($args) - 1), ...$args)
 				->execute(dibi::AFFECTED_ROWS);
 		}
+		/** @phpstan-ignore-next-line */
 		return self::$db->insert($table, ...$args)->execute(dibi::AFFECTED_ROWS);
 	}
 
 	/**
 	 * Insert value with IGNORE flag enabled
 	 *
-	 * @param string   $table
-	 * @param iterable $args
+	 * @param string                  $table
+	 * @param iterable<string, mixed> $args
 	 *
 	 * @return int
 	 * @throws Exception
@@ -180,6 +212,7 @@ class DB
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
+		/** @phpstan-ignore-next-line */
 		return self::$db->insert($table, $args)->setFlag('IGNORE')->execute(dibi::AFFECTED_ROWS);
 	}
 
@@ -202,8 +235,8 @@ class DB
 	/**
 	 * Insert values
 	 *
-	 * @param string $table
-	 * @param array  $where
+	 * @param string            $table
+	 * @param array<int, mixed> $where
 	 *
 	 * @return int
 	 * @throws Exception
@@ -217,6 +250,7 @@ class DB
 		if (!empty($where)) {
 			$query->where(...$where);
 		}
+		/** @phpstan-ignore-next-line */
 		return $query->execute(dibi::AFFECTED_ROWS);
 	}
 
@@ -248,8 +282,8 @@ class DB
 	/**
 	 * Start query select
 	 *
-	 * @param array|string $table
-	 * @param mixed        ...$args
+	 * @param string[]|string $table
+	 * @param mixed           ...$args
 	 *
 	 * @return Fluent
 	 *
@@ -287,8 +321,8 @@ class DB
 	}
 
 	/**
-	 * @param string        $table
-	 * @param array[]|array $values
+	 * @param string                                    $table
+	 * @param array<string, mixed|array<string, mixed>> $values
 	 *
 	 * @return int
 	 * @throws Exception

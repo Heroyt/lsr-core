@@ -1,4 +1,8 @@
 <?php
+/** @noinspection PhpDocMissingThrowsInspection */
+/** @noinspection PhpUndefinedFieldInspection */
+
+/** @noinspection PhpUnhandledExceptionInspection */
 
 namespace TestCases\Models;
 
@@ -211,6 +215,7 @@ class ModelTest extends TestCase
 		$this->refreshData();
 
 		// Test row only
+		/** @var Row|null $row */
 		$row = DB::select(ModelA::TABLE, '*')->where('%n = %i', ModelA::getPrimaryKey(), 1)->fetch();
 		$model = new ModelA(dbRow: $row);
 		self::assertEquals(1, $model->id);
@@ -333,13 +338,17 @@ class ModelTest extends TestCase
 		self::assertNotNull($model->id);
 
 		// Check object caching
+		/** @phpstan-ignore-next-line */
 		self::assertSame($model, ModelA::get($model->id));
 
 		// Check DB
 		$row = DB::select(ModelA::TABLE, '*')->where('model_a_id = %i', $model->id)->fetch();
 		self::assertNotNull($row);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals($model->id, $row->model_a_id);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals($model->name, $row->name);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals($model->age, $row->age);
 
 		// Update
@@ -350,8 +359,11 @@ class ModelTest extends TestCase
 		// Check DB
 		$row = DB::select(ModelA::TABLE, '*')->where('model_a_id = %i', $model->id)->fetch();
 		self::assertNotNull($row);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals($model->id, $row->model_a_id);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals($model->name, $row->name);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals($model->age, $row->age);
 	}
 
@@ -383,8 +395,11 @@ class ModelTest extends TestCase
 		// Check DB
 		$row = DB::select(ModelA::TABLE, '*')->where('model_a_id = %i', $model->id)->fetch();
 		self::assertNotNull($row);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals($model->id, $row->model_a_id);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals($model->name, $row->name);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals($model->age, $row->age);
 	}
 
@@ -429,8 +444,8 @@ class ModelTest extends TestCase
 		self::assertEquals('model_a_id', ModelA::getPrimaryKey());
 		self::assertEquals('model_b_id', ModelB::getPrimaryKey());
 		self::assertEquals('id', ModelInvalid::getPrimaryKey());
-		self::assertEquals('id_model_pk1', ModelPK1::getPrimaryKey());
-		self::assertEquals('model_pk2_id', ModelPK2::getPrimaryKey());
+		self::assertEquals('id_model_pk1', ModelPk1::getPrimaryKey());
+		self::assertEquals('model_pk2_id', ModelPk2::getPrimaryKey());
 	}
 
 	public function testExists() : void {
@@ -773,6 +788,9 @@ class ModelA extends Model
 	public string $name;
 	public ?int   $age = null;
 
+	/**
+	 * @var ModelB[]
+	 */
 	#[OneToMany(class: ModelB::class)]
 	public array $children = [];
 
@@ -811,6 +829,7 @@ class ModelD extends Model
 
 	public string $name;
 
+	/** @var ModelE[] */
 	#[ManyToMany('modelsD_modelsE', class: ModelE::class)]
 	public array $models = [];
 
@@ -824,6 +843,7 @@ class ModelE extends Model
 
 	public string $name;
 
+	/** @var ModelD[] */
 	#[ManyToMany('modelsD_modelsE', class: ModelD::class)]
 	public array $models = [];
 
@@ -857,7 +877,7 @@ class ModelPk2 extends Model
 
 }
 
-class SimpleData implements InsertExtendInterface
+final class SimpleData implements InsertExtendInterface
 {
 
 	public function __construct(
@@ -873,9 +893,10 @@ class SimpleData implements InsertExtendInterface
 	 * @param Row $row Row from DB
 	 *
 	 * @return static|null
+	 * @noinspection PhpUnnecessaryStaticReferenceInspection
 	 */
 	public static function parseRow(Row $row) : ?static {
-		return new self(
+		return new SimpleData(
 			$row->value1,
 			$row->value2,
 		);
@@ -884,7 +905,7 @@ class SimpleData implements InsertExtendInterface
 	/**
 	 * Add data from the object into the data array for DB INSERT/UPDATE
 	 *
-	 * @param array $data
+	 * @param array<string, mixed> $data
 	 */
 	public function addQueryData(array &$data) : void {
 		$data['value1'] = $this->value1;

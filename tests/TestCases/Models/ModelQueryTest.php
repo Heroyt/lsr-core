@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpUnhandledExceptionInspection */
 
 namespace TestCases\Models;
 
@@ -141,6 +142,7 @@ class ModelQueryTest extends TestCase
 													->get();
 
 		self::assertCount(1, $models);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals(1, first($models)->id);
 
 	}
@@ -176,7 +178,9 @@ class ModelQueryTest extends TestCase
 
 	public function testFirst() : void {
 		$model = TestingModel::query()->first();
+		self::assertNotNull($model);
 		self::assertInstanceOf(TestingModel::class, $model);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals(1, $model->id);
 	}
 
@@ -197,6 +201,7 @@ class TestingModel extends Model
 	public ?int   $age = null;
 
 	#[OneToMany(foreignKey: 'id', class: DataModel::class)]
+	/** @phpstan-ignore-next-line */
 	public array $data = [];
 
 }

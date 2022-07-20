@@ -1,4 +1,6 @@
 <?php
+/** @noinspection AutoloadingIssuesInspection */
+/** @noinspection PhpIllegalPsrClassPathInspection */
 
 define('ROOT', dirname(__DIR__).'/');
 const PRIVATE_DIR = ROOT.'tests/private/';
@@ -11,6 +13,9 @@ const DEFAULT_LANGUAGE = 'cs_CZ';
 
 require_once ROOT.'vendor/autoload.php';
 
+/**
+ * @property string $value
+ */
 enum TestEnum: string
 {
 	case A = 'A';

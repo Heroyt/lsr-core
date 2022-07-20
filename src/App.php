@@ -12,9 +12,11 @@
 namespace Lsr\Core;
 
 use Gettext\Languages\Language;
+use JsonException;
 use Lsr\Core\Menu\MenuItem;
 use Lsr\Core\Requests\CliRequest;
 use Lsr\Core\Requests\Request;
+use Lsr\Core\Routing\Route;
 use Lsr\Core\Routing\Router;
 use Lsr\Exceptions\FileException;
 use Lsr\Helpers\Tools\Timer;
@@ -26,6 +28,7 @@ use Nette\DI\Container;
 use Nette\DI\ContainerLoader;
 use Nette\DI\Extensions\ExtensionsExtension;
 use Nette\Http\Url;
+use ReflectionException;
 
 /**
  * @class   App
@@ -43,9 +46,9 @@ class App
 	public static string    $activeLanguageCode = 'cs_CZ';
 	public static ?Language $language;
 	/** @var array<string,string> */
-	public static array     $supportedLanguages = [];
+	public static array $supportedLanguages = [];
 	/** @var string[] */
-	public static array     $supportedCountries = [];
+	public static array $supportedCountries = [];
 	/**
 	 * @var bool $prettyUrl
 	 * @brief If app should use a SEO-friendly pretty url
@@ -70,6 +73,8 @@ class App
 	 * @post Routes are set
 	 * @post Request is parsed
 	 * @post Latte macros are set
+	 * @throws JsonException
+	 * @throws ReflectionException
 	 */
 	public static function init() : void {
 		Timer::start('core.setup');
@@ -275,7 +280,7 @@ class App
 	/**
 	 * Get parsed config.ini file
 	 *
-	 * @return array<string, mixed>
+	 * @return array<string, string|array<string,string>>
 	 */
 	public static function getConfig() : array {
 		if (!isset(self::$config)) {
@@ -288,8 +293,12 @@ class App
 		return self::$config;
 	}
 
+	/**
+	 * @return string[]
+	 */
 	public static function getSupportedCountries() : array {
 		if (empty(self::$supportedCountries)) {
+			/** @var string $country */
 			foreach (self::getSupportedLanguages() as $country) {
 				if (isset(Constants::COUNTRIES[$country])) {
 					self::$supportedCountries[$country] = Constants::COUNTRIES[$country];
@@ -328,6 +337,7 @@ class App
 	 * @since   1.0
 	 */
 	public static function getCss() : string {
+		/** @var string[] $files */
 		$files = glob(ROOT.'dist/*.css');
 		$return = '';
 		foreach ($files as $file) {
@@ -387,6 +397,7 @@ class App
 	 * @since   1.0
 	 */
 	public static function getJs() : string {
+		/** @var string[] $files */
 		$files = glob(ROOT.'dist/*.js');
 		$return = '';
 		foreach ($files as $file) {
@@ -412,7 +423,10 @@ class App
 	/**
 	 * Echo json-encoded data and exits
 	 *
-	 * @param array $data
+	 * @param array<string, mixed> $data
+	 *
+	 * @return never
+	 * @throws JsonException
 	 */
 	public static function sendAjaxData(array $data) : never {
 		header('Content-Type: application/json; charset=UTF-8');
@@ -426,7 +440,7 @@ class App
 	 * @return bool
 	 */
 	public static function isProduction() : bool {
-		return !(bool) (self::getconfig()['General']['DEBUG'] ?? false);
+		return !(self::getconfig()['General']['DEBUG'] ?? false);
 	}
 
 	/**
@@ -449,6 +463,7 @@ class App
 			$link = self::getLink($to);
 		}
 		elseif (is_string($to)) {
+			/** @var Route|null $route */
 			$route = self::$router->getRouteByName($to);
 			if (isset($route)) {
 				$link = self::getLink($route->path);
@@ -467,9 +482,9 @@ class App
 	/**
 	 * Get url to request location
 	 *
-	 * @param array $request      request array
-	 *                            * Ex: ['user', 'login', 'view' => 1, 'type' => 'company']: http(s)://host.cz/user/login?view=1&type=company
-	 * @param bool  $returnObject if set to true, return Url object
+	 * @param array<string|int> $request      request array
+	 *                                        * Ex: ['user', 'login', 'view' => 1, 'type' => 'company']: http(s)://host.cz/user/login?view=1&type=company
+	 * @param bool              $returnObject if set to true, return Url object
 	 *
 	 * @return string|Url
 	 *
@@ -477,6 +492,7 @@ class App
 	 * @since   1.0
 	 */
 	public static function getLink(array $request = [], bool $returnObject = false) : Url|string {
+		/** @var Url $url */
 		$url = self::getUrl(true);
 		$request = array_filter($request, static function($value) {
 			return !empty($value);
@@ -513,8 +529,9 @@ class App
 	 */
 	public static function getLogger() : Logger {
 		if (!isset(self::$logger)) {
-			/** @noinspection PhpFieldAssignmentTypeMismatchInspection */
-			self::$logger = self::getService('logger');
+			/** @var Logger $logger */
+			$logger = self::getService('logger');
+			self::$logger = $logger;
 		}
 		return self::$logger;
 	}
@@ -529,6 +546,7 @@ class App
 		if (!file_exists(ROOT.'config/nav/'.$type.'.php')) {
 			throw new FileException('Menu configuration file "'.$type.'.php" does not exist.');
 		}
+		/** @noinspection PhpIncludeInspection */
 		$config = require ROOT.'config/nav/'.$type.'.php';
 		$menu = [];
 		foreach ($config as $item) {
@@ -560,14 +578,22 @@ class App
 	}
 
 	/**
-	 * @param array{access:array|null|string,loggedInOnly:bool|null,loggedOutOnly:bool|null} $item
+	 * @param array{
+	 *   access:string[]|null|string,
+	 *   loggedInOnly:bool|null,
+	 *   loggedOutOnly:bool|null
+	 * } $item
 	 *
 	 * @return bool
+	 * @todo         : Implement auth package
+	 * @noinspection PhpUndefinedClassInspection
 	 */
 	private static function checkAccess(array $item) : bool {
+		/** @phpstan-ignore-next-line */
 		if (isset($item['loggedInOnly']) && $item['loggedInOnly'] && !User::loggedIn()) {
 			return false;
 		}
+		/** @phpstan-ignore-next-line */
 		if (isset($item['loggedOutOnly']) && $item['loggedOutOnly'] && User::loggedIn()) {
 			return false;
 		}
@@ -583,6 +609,7 @@ class App
 			$access = $item['access'];
 		}
 		foreach ($access as $right) {
+			/** @phpstan-ignore-next-line */
 			if (!User::hasRight($right)) {
 				$available = false;
 				break;

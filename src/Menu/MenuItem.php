@@ -15,10 +15,10 @@ class MenuItem
 	public string $url    = '';
 
 	/**
-	 * @param string     $name
-	 * @param string     $icon
-	 * @param array      $path
-	 * @param MenuItem[] $children
+	 * @param string            $name
+	 * @param string            $icon
+	 * @param array<string|int> $path
+	 * @param MenuItem[]        $children
 	 */
 	public function __construct(
 		public string $name = '',

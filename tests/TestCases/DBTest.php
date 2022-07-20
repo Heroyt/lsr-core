@@ -1,10 +1,16 @@
 <?php
+/** @noinspection PhpDocMissingThrowsInspection */
+/** @noinspection PhpUndefinedFieldInspection */
+/** @noinspection SqlResolve */
+/** @noinspection PhpUnhandledExceptionInspection */
 
 namespace TestCases;
 
 use DateTime;
 use Dibi\DriverException;
 use Dibi\Fluent;
+use Dibi\Result;
+use Dibi\Row;
 use Lsr\Core\DB;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -155,6 +161,7 @@ class DBTest extends TestCase
 	}
 
 	public function initMysql() : void {
+		/** @phpstan-ignore-next-line */
 		DB::init([
 							 'Database' => [
 								 'HOST'     => 'localhost',
@@ -192,7 +199,7 @@ class DBTest extends TestCase
 
 	public function testGetAffectedRows() : void {
 		$this->initMysql();
-		$count = DB::insert('table1', [
+		DB::insert('table1', [
 			'name' => 'test1',
 			'age'  => null
 		]);
@@ -217,6 +224,7 @@ class DBTest extends TestCase
 
 		// Init MySQL - invalid login
 		$this->expectException(DriverException::class);
+		/** @phpstan-ignore-next-line */
 		DB::init([
 							 'Database' => [
 								 'HOST'     => 'localhost',
@@ -262,7 +270,9 @@ class DBTest extends TestCase
 			'name' => 'test1',
 			'age'  => null
 		]);
+		/** @noinspection UnnecessaryAssertionInspection */
 		self::assertInstanceOf(Fluent::class, $query);
+		/** @var Result $count */
 		$count = $query->execute();
 		self::assertEquals(1, $count->count());
 		$this->dropTable();
@@ -281,19 +291,27 @@ class DBTest extends TestCase
 													'id = %i',
 													$id
 												]);
-		self::assertTrue(is_int($count));
+		self::assertIsInt($count);
 		self::assertEquals(1, $count);
+		/** @var Row|null $row */
 		$row = DB::select('table1', '*')->where('id = %i', $id)->fetch();
+		self::assertNotNull($row);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals('hello!', $row->name);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals(null, $row->age);
 
+		/** @var Fluent $query */
 		$query = DB::update('table1', [
 			'name' => 'hello!'
 		]);
 		self::assertInstanceOf(Fluent::class, $query);
 		$query->execute();
 		$row = DB::select('table1', '*')->where('id = %i', $id)->fetch();
+		self::assertNotNull($row);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals('hello!', $row->name);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals(null, $row->age);
 		$this->dropTable();
 	}
@@ -305,6 +323,7 @@ class DBTest extends TestCase
 			'age'  => null
 		]);
 		$id = DB::getInsertId();
+		/** @var Result $query */
 		$query = DB::deleteGet('table1')->where('id = %i', $id)->execute();
 		self::assertEquals(1, $query->count());
 		$this->dropTable();
@@ -334,9 +353,14 @@ class DBTest extends TestCase
 			'name' => 'name',
 			'age'  => 1,
 		]);
+		/** @var Row|null $row */
 		$row = DB::select('table1', '*')->where('id = %i', $id)->fetch();
+		self::assertNotNull($row);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals('name', $row->name);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals(1, $row->age);
+		/** @phpstan-ignore-next-line */
 		DB::replace('table1', [
 			[
 				'id'   => $id,
@@ -352,10 +376,16 @@ class DBTest extends TestCase
 			],
 		]);
 		$row = DB::select('table1', '*')->where('id = %i', $id)->fetch();
+		self::assertNotNull($row);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals('name2', $row->name);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals(12, $row->age);
 		$row = DB::select('table1', '*')->where('id = %i', $id + 1)->fetch();
+		self::assertNotNull($row);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals('abc', $row->name);
+		/** @phpstan-ignore-next-line */
 		self::assertEquals(30, $row->age);
 		$this->dropTable();
 	}
@@ -397,6 +427,7 @@ class DBTest extends TestCase
 			->on('a.id = b.table_1_id')
 			->fetchAll();
 		self::assertCount(1, $rows);
+		/** @var Row $row */
 		$row = first($rows);
 		self::assertEquals($id1, $row->id);
 		self::assertEquals('test1', $row->name);

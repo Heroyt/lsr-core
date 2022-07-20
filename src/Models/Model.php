@@ -139,7 +139,11 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	/**
 	 * Fetch model's data from DB
 	 *
-	 * @throws ModelNotFoundException|ValidationException
+	 * @param bool $refresh
+	 *
+	 * @throws DirectoryCreationException
+	 * @throws ModelNotFoundException
+	 * @throws ValidationException
 	 */
 	public function fetch(bool $refresh = false) : void {
 		if (!isset($this->id) || $this->id <= 0) {
@@ -258,6 +262,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @param string                               $propertyName
 	 *
 	 * @return void
+	 * @throws DirectoryCreationException
 	 * @throws ModelNotFoundException
 	 * @throws ValidationException
 	 */
@@ -320,7 +325,11 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 */
 	public static function getFactory() : ?Factory {
 		if (!isset(static::$factory[static::class])) {
-			$attributes = static::getReflection()->getAttributes(Factory::class);
+			try {
+				$attributes = static::getReflection()->getAttributes(Factory::class);
+			} catch (ReflectionException) {
+				return null;
+			}
 			if (empty($attributes)) {
 				return null;
 			}

@@ -14,6 +14,8 @@
 namespace Lsr\Core;
 
 
+use JsonException;
+use Lsr\Core\Routing\Middleware;
 use Lsr\Core\Templating\Latte;
 use Lsr\Exceptions\TemplateDoesNotExistException;
 use Lsr\Interfaces\ControllerInterface;
@@ -33,9 +35,10 @@ use Lsr\Interfaces\RequestInterface;
 abstract class Controller implements ControllerInterface
 {
 
+	/** @var Middleware[] */
 	public array $middleware = [];
 	/**
-	 * @var array $params Parameters added to latte template
+	 * @var array<string, mixed> $params Parameters added to latte template
 	 */
 	public array $params = [];
 	/**
@@ -63,7 +66,9 @@ abstract class Controller implements ControllerInterface
 		$this->request = $request;
 		$this->params['page'] = $this;
 		$this->params['request'] = $request;
+		/** @phpstan-ignore-next-line */
 		$this->params['errors'] = $request->errors;
+		/** @phpstan-ignore-next-line */
 		$this->params['notices'] = $request->notices;
 	}
 
@@ -92,20 +97,20 @@ abstract class Controller implements ControllerInterface
 	}
 
 	/**
-	 * @param string|array|object $data
-	 * @param int                 $code
-	 * @param string[]            $headers
+	 * @param string|array<string, mixed>|object $data
+	 * @param int                                $code
+	 * @param string[]                           $headers
 	 *
 	 * @return never
+	 * @throws JsonException
 	 */
 	public function respond(string|array|object $data, int $code = 200, array $headers = []) : never {
 		http_response_code($code);
 
-		$dataNormalized = '';
 		if (is_string($data)) {
 			$dataNormalized = $data;
 		}
-		else if (is_array($data) || is_object($data)) {
+		else {
 			$dataNormalized = json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 			$headers['Content-Type'] = 'application/json';
 		}
