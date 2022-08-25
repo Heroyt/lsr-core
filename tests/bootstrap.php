@@ -10,6 +10,9 @@ const LANGUAGE_DIR = ROOT.'languages/';
 const TEMPLATE_DIR = ROOT.'templates/';
 const LANGUAGE_FILE_NAME = 'translations';
 const DEFAULT_LANGUAGE = 'cs_CZ';
+const CHECK_TRANSLATIONS = true;
+const PRODUCTION = true;
+const ASSETS_DIR = ROOT.'assets/';
 
 require_once ROOT.'vendor/autoload.php';
 
