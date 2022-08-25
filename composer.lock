@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "884f933f6837c3bc0e252a851c424131",
+    "content-hash": "baeab625ce09bd021a67f8254538ceac",
     "packages": [
         {
             "name": "dibi/dibi",
@@ -1645,12 +1645,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan.git",
-                "reference": "d0841cf34829e33ac424b479ee75d0d682903a41"
+                "reference": "95404c8b4d94e69f8fc497b47d656d26b2dbc54b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/d0841cf34829e33ac424b479ee75d0d682903a41",
-                "reference": "d0841cf34829e33ac424b479ee75d0d682903a41",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/95404c8b4d94e69f8fc497b47d656d26b2dbc54b",
+                "reference": "95404c8b4d94e69f8fc497b47d656d26b2dbc54b",
                 "shasum": ""
             },
             "require": {
@@ -1697,7 +1697,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2022-08-25T12:51:17+00:00"
+            "time": "2022-08-25T13:20:43+00:00"
         },
         {
             "name": "phpstan/phpstan-dibi",
