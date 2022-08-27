@@ -27,3 +27,4 @@ tests/logs
 build
 docs
 temp/
+*.lock
