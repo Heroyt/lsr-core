@@ -88,6 +88,9 @@ class MigrationLoader
 					$base[] = $val;
 					$index++;
 				}
+				else if (!is_array($val)) {
+					$base[$key] = $val;
+				}
 				else {
 					$base[$key] = static::merge($val, $base[$key] ?? null);
 				}

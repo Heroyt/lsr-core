@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "baeab625ce09bd021a67f8254538ceac",
+    "content-hash": "a8e74cdd3164423c37b3ca73fa8228b7",
     "packages": [
         {
             "name": "dibi/dibi",
@@ -310,26 +310,31 @@
         },
         {
             "name": "lsr/helpers",
-            "version": "0.1.1",
+            "version": "0.1.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Heroyt/lsr-helpers.git",
-                "reference": "b733fb0e4215080018bfee42fdff6f9fa95c83d6"
+                "reference": "8e79cf07617fa40842149af233349b4448be5d5b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Heroyt/lsr-helpers/zipball/b733fb0e4215080018bfee42fdff6f9fa95c83d6",
-                "reference": "b733fb0e4215080018bfee42fdff6f9fa95c83d6",
+                "url": "https://api.github.com/repos/Heroyt/lsr-helpers/zipball/8e79cf07617fa40842149af233349b4448be5d5b",
+                "reference": "8e79cf07617fa40842149af233349b4448be5d5b",
                 "shasum": ""
             },
             "require": {
                 "gettext/gettext": "^5.6",
                 "lsr/interfaces": "^0.1",
+                "lsr/routing": "^0.1",
                 "nette/utils": "^3.2",
                 "php": ">=8.1",
                 "tracy/tracy": "^2.8"
             },
             "require-dev": {
+                "phpstan/extension-installer": "^1.1",
+                "phpstan/phpstan": "^1.8",
+                "phpstan/phpstan-dibi": "^1.0",
+                "phpstan/phpstan-nette": "^1.0",
                 "phpunit/phpunit": "^9.5",
                 "roave/security-advisories": "dev-latest"
             },
@@ -343,6 +348,14 @@
                     "includes/functions.php"
                 ]
             },
+            "scripts": {
+                "analyze": [
+                    "vendor/bin/phpstan analyze"
+                ],
+                "test": [
+                    "vendor/bin/phpunit"
+                ]
+            },
             "authors": [
                 {
                     "name": "Tomáš Vojík",
@@ -351,10 +364,10 @@
             ],
             "description": "Laser framework core - Helpers.",
             "support": {
-                "source": "https://github.com/Heroyt/lsr-helpers/tree/v0.1.1",
+                "source": "https://github.com/Heroyt/lsr-helpers/tree/v0.1.2",
                 "issues": "https://github.com/Heroyt/lsr-helpers/issues"
             },
-            "time": "2022-07-18T06:23:24+00:00"
+            "time": "2022-08-25T15:29:28+00:00"
         },
         {
             "name": "lsr/interfaces",
@@ -1645,12 +1658,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan.git",
-                "reference": "95404c8b4d94e69f8fc497b47d656d26b2dbc54b"
+                "reference": "d9cae2c61a1df7995945c7fb03331b1620c3716f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/95404c8b4d94e69f8fc497b47d656d26b2dbc54b",
-                "reference": "95404c8b4d94e69f8fc497b47d656d26b2dbc54b",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/d9cae2c61a1df7995945c7fb03331b1620c3716f",
+                "reference": "d9cae2c61a1df7995945c7fb03331b1620c3716f",
                 "shasum": ""
             },
             "require": {
@@ -1697,7 +1710,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2022-08-25T13:20:43+00:00"
+            "time": "2022-08-27T10:46:28+00:00"
         },
         {
             "name": "phpstan/phpstan-dibi",
