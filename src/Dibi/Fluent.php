@@ -207,7 +207,11 @@ class Fluent
 	}
 
 	public function __call($name, $arguments) {
-		return $this->fluent->$name(...$arguments);
+		$return = $this->fluent->$name(...$arguments);
+		if ($return === $this->fluent) {
+			return $this;
+		}
+		return $return;
 	}
 
 }
