@@ -15,10 +15,9 @@ use DateTimeInterface;
 use dibi;
 use Dibi\Connection;
 use Dibi\Exception;
-use Dibi\Fluent;
 use Dibi\Result;
 use InvalidArgumentException;
-use Lsr\Core\Dibi\Drivers\MySqliDriver;
+use Lsr\Core\Dibi\Fluent;
 use Lsr\Logging\Logger;
 use RuntimeException;
 
@@ -110,9 +109,6 @@ class DB
 				touch($dbFile);
 			}
 		}
-		else if ($options['driver'] === 'mysqli') {
-			$options['driver'] = new MySqliDriver($options);
-		}
 		self::$db = new Connection($options);
 		/** @phpstan-ignore-next-line */
 		self::$db->getSubstitutes()->{''} = $dbConfig['PREFIX'] ?? '';
@@ -155,7 +151,7 @@ class DB
 			$rows = $q->where(...$where)->execute(dibi::AFFECTED_ROWS);
 			return $rows;
 		}
-		return $q;
+		return new Fluent($q);
 	}
 
 	/**
@@ -172,7 +168,7 @@ class DB
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
-		return self::$db->insert($table, $args);
+		return new Fluent(self::$db->insert($table, $args));
 	}
 
 	/**
@@ -233,7 +229,7 @@ class DB
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
-		return self::$db->delete($table);
+		return new Fluent(self::$db->delete($table));
 	}
 
 	/**
@@ -306,25 +302,7 @@ class DB
 		elseif (is_array($table)) {
 			$query->from(...$table);
 		}
-		return $query;
-	}
-
-	public static function disableCache() : void {
-		if (isset(self::$db)) {
-			$driver = self::$db->getDriver();
-			if (isset($driver->cacheEnabled)) {
-				$driver->cacheEnabled = false;
-			}
-		}
-	}
-
-	public static function enableCache() : void {
-		if (isset(self::$db)) {
-			$driver = self::$db->getDriver();
-			if (isset($driver->cacheEnabled)) {
-				$driver->cacheEnabled = true;
-			}
-		}
+		return new Fluent($query);
 	}
 
 	/**

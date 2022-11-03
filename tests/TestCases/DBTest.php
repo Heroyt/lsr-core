@@ -271,7 +271,7 @@ class DBTest extends TestCase
 			'age'  => null
 		]);
 		/** @noinspection UnnecessaryAssertionInspection */
-		self::assertInstanceOf(Fluent::class, $query);
+		self::assertInstanceOf(\Lsr\Core\Dibi\Fluent::class, $query);
 		/** @var Result $count */
 		$count = $query->execute();
 		self::assertEquals(1, $count->count());
@@ -305,7 +305,7 @@ class DBTest extends TestCase
 		$query = DB::update('table1', [
 			'name' => 'hello!'
 		]);
-		self::assertInstanceOf(Fluent::class, $query);
+		self::assertInstanceOf(\Lsr\Core\Dibi\Fluent::class, $query);
 		$query->execute();
 		$row = DB::select('table1', '*')->where('id = %i', $id)->fetch();
 		self::assertNotNull($row);
@@ -423,9 +423,9 @@ class DBTest extends TestCase
 
 		// Join select with alias
 		$rows = DB::select(['table1', 'a'], 'a.id, a.name, a.age, b.name as value')
-			->join('table2', 'b')
-			->on('a.id = b.table_1_id')
-			->fetchAll();
+							->join('table2', 'b')
+							->on('a.id = b.table_1_id')
+							->fetchAll();
 		self::assertCount(1, $rows);
 		/** @var Row $row */
 		$row = first($rows);

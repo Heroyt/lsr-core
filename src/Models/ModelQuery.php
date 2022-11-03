@@ -5,8 +5,8 @@
 
 namespace Lsr\Core\Models;
 
-use Dibi\Fluent;
 use Lsr\Core\DB;
+use Lsr\Core\Dibi\Fluent;
 use Lsr\Core\Exceptions\ModelNotFoundException;
 use Lsr\Core\Exceptions\ValidationException;
 
