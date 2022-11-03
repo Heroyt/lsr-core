@@ -18,6 +18,7 @@ use Dibi\Exception;
 use Dibi\Fluent;
 use Dibi\Result;
 use InvalidArgumentException;
+use Lsr\Core\Dibi\Drivers\MySqliDriver;
 use Lsr\Logging\Logger;
 use RuntimeException;
 
@@ -108,6 +109,9 @@ class DB
 			if (!file_exists($dbFile)) {
 				touch($dbFile);
 			}
+		}
+		else if ($options['driver'] === 'mysqli') {
+			$options['driver'] = new MySqliDriver($options);
 		}
 		self::$db = new Connection($options);
 		/** @phpstan-ignore-next-line */
@@ -303,6 +307,24 @@ class DB
 			$query->from(...$table);
 		}
 		return $query;
+	}
+
+	public static function disableCache() : void {
+		if (isset(self::$db)) {
+			$driver = self::$db->getDriver();
+			if (isset($driver->cacheEnabled)) {
+				$driver->cacheEnabled = false;
+			}
+		}
+	}
+
+	public static function enableCache() : void {
+		if (isset(self::$db)) {
+			$driver = self::$db->getDriver();
+			if (isset($driver->cacheEnabled)) {
+				$driver->cacheEnabled = true;
+			}
+		}
 	}
 
 	/**
