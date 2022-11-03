@@ -3,8 +3,8 @@
 namespace Lsr\Core\Models\Attributes;
 
 use Attribute;
-use Dibi\Fluent;
 use Lsr\Core\DB;
+use Lsr\Core\Dibi\Fluent;
 use Lsr\Core\Models\Model;
 
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::IS_REPEATABLE)]
