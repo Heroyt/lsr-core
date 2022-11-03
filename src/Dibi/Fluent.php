@@ -47,7 +47,7 @@ class Fluent
 
 	protected Cache $cache;
 
-	public function __construct(protected DibiFluent $fluent) {
+	public function __construct(public readonly DibiFluent $fluent) {
 	}
 
 	public static function __callStatic($name, $arguments) : mixed {
@@ -207,6 +207,11 @@ class Fluent
 	}
 
 	public function __call($name, $arguments) {
+		foreach ($arguments as $key => $argument) {
+			if ($argument instanceof Fluent) {
+				$arguments[$key] = $argument->fluent;
+			}
+		}
 		$return = $this->fluent->$name(...$arguments);
 		if ($return === $this->fluent) {
 			return $this;
