@@ -54,6 +54,10 @@ class Fluent
 		return DibiFluent::$name(...$arguments);
 	}
 
+	public function __toString() {
+		return $this->fluent->__toString();
+	}
+
 	/**
 	 * Generates, executes SQL query and fetches the single row.
 	 *
