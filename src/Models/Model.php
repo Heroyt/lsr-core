@@ -51,6 +51,8 @@ abstract class Model implements JsonSerializable, ArrayAccess
 
 	/** @var string Database table name */
 	public const TABLE = '';
+	/** @var string[] Static tags to add to all cache records for this model */
+	public const CACHE_TAGS = [];
 
 	/** @var static[][] Model instance cache */
 	protected static array $instances = [];
@@ -64,6 +66,9 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	public ?int            $id      = null;
 	protected ?Row         $row     = null;
 	protected Logger       $logger;
+
+	/** @var string[] Dynamic tags to add to cache records for this model instance */
+	protected array $cacheTags = [];
 
 	/**
 	 * @param int|null $id    DB model ID
@@ -140,6 +145,17 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	}
 
 	/**
+	 * @return string[]
+	 */
+	protected function getCacheTags() : array {
+		return array_merge(
+			['models', $this::TABLE, $this::TABLE.'/'.$this->id],
+			$this::CACHE_TAGS,
+			$this->cacheTags,
+		);
+	}
+
+	/**
 	 * Fetch model's data from DB
 	 *
 	 * @param bool $refresh
@@ -156,7 +172,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			/** @var Row|null $row */
 			$row = DB::select($this::TABLE, '*')
 							 ->where('%n = %i', $this::getPrimaryKey(), $this->id)
-							 ->cacheTags('models', $this::TABLE, $this::TABLE.'/'.$this->id)
+							 ->cacheTags(...$this->getCacheTags())
 							 ->fetch();
 			$this->row = $row;
 		}
@@ -555,6 +571,11 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		return $data;
 	}
 
+	/**
+	 * Clear cache for this model instance
+	 *
+	 * @return void
+	 */
 	public function clearCache() : void {
 		if (isset($this->id)) {
 			/** @var Cache $cache */
@@ -566,6 +587,21 @@ abstract class Model implements JsonSerializable, ArrayAccess
 											]
 										]);
 		}
+	}
+
+	/**
+	 * Clear cache for this model
+	 *
+	 * @return void
+	 */
+	public static function clearModelCache() : void {
+		/** @var Cache $cache */
+		$cache = App::getService('cache');
+		$cache->clean([
+										CacheParent::Tags => [
+											static::TABLE,
+										]
+									]);
 	}
 
 	/**
