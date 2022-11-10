@@ -24,7 +24,8 @@ class ModelQuery
 	public function __construct(
 		protected string $className
 	) {
-		$this->query = DB::select([$this->className::TABLE, 'a'], '*');
+		$this->query = DB::select([$this->className::TABLE, 'a'], '*')
+										 ->cacheTags('models', $this->className::TABLE);
 	}
 
 	/**
@@ -119,6 +120,11 @@ class ModelQuery
 		return new $className($row->{$this->className::getPrimaryKey()}, $row);
 	}
 
+	public function cacheTags(string ...$tags) : static {
+		$this->query->cacheTags(...$tags);
+		return $this;
+	}
+
 	/**
 	 * @return T[]
 	 * @throws ValidationException
@@ -131,7 +137,7 @@ class ModelQuery
 		foreach ($rows as $row) {
 			try {
 				$model[$row->{$pk}] = $className::get($row->$pk, $row);
-			} catch (ModelNotFoundException $e) {
+			} catch (ModelNotFoundException) {
 			}
 		}
 		return $model;

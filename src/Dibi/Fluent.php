@@ -47,6 +47,9 @@ class Fluent
 
 	protected Cache $cache;
 
+	/** @var string[] */
+	protected array $cacheTags = [];
+
 	public function __construct(public readonly DibiFluent $fluent) {
 	}
 
@@ -101,6 +104,11 @@ class Fluent
 		return $this->queryHash;
 	}
 
+	public function cacheTags(string ...$tags) : static {
+		$this->cacheTags = array_merge($this->cacheTags, $tags);
+		return $this;
+	}
+
 	/**
 	 * Like fetch(), but returns only first field.
 	 *
@@ -113,9 +121,9 @@ class Fluent
 		try {
 			return $this->getCache()->load('sql/'.$this->getQueryHash().'/fetchSingle', function(array &$dependencies) {
 				$dependencies[CacheParent::EXPIRE] = '1 hours';
-				$dependencies[CacheParent::Tags] = [
+				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
 					'sql',
-				];
+				]);
 				return $this->fluent->fetchSingle();
 			});
 		} catch (Throwable) {
@@ -136,9 +144,9 @@ class Fluent
 			/** @phpstan-ignore-next-line */
 			return $this->getCache()->load('sql/'.$this->getQueryHash().'/fetchAll/'.$offset.'/'.$limit, function(array &$dependencies) use ($offset, $limit) {
 				$dependencies[CacheParent::EXPIRE] = '1 hours';
-				$dependencies[CacheParent::Tags] = [
+				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
 					'sql',
-				];
+				]);
 				return $this->fluent->fetchAll($offset, $limit);
 			});
 		} catch (Throwable) {
@@ -161,9 +169,9 @@ class Fluent
 			/** @phpstan-ignore-next-line */
 			return $this->getCache()->load('sql/'.$this->getQueryHash().'/fetchAssoc/'.$assoc, function(array &$dependencies) use ($assoc) {
 				$dependencies[CacheParent::EXPIRE] = '1 hours';
-				$dependencies[CacheParent::Tags] = [
+				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
 					'sql',
-				];
+				]);
 				return $this->fluent->fetchAssoc($assoc);
 			});
 		} catch (Throwable) {
@@ -184,9 +192,9 @@ class Fluent
 			/** @phpstan-ignore-next-line */
 			return $this->getCache()->load('sql/'.$this->getQueryHash().'/fetchPairs/'.$key.'/'.$value, function(array &$dependencies) use ($key, $value) {
 				$dependencies[CacheParent::EXPIRE] = '1 hours';
-				$dependencies[CacheParent::Tags] = [
+				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
 					'sql',
-				];
+				]);
 				return $this->fluent->fetchPairs($key, $value);
 			});
 		} catch (Throwable) {

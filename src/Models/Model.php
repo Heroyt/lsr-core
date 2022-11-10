@@ -13,6 +13,8 @@ use DateTimeInterface;
 use Dibi\Exception;
 use Dibi\Row;
 use JsonSerializable;
+use Lsr\Core\App;
+use Lsr\Core\Caching\Cache;
 use Lsr\Core\DB;
 use Lsr\Core\Exceptions\ModelNotFoundException;
 use Lsr\Core\Exceptions\ValidationException;
@@ -31,6 +33,7 @@ use Lsr\Core\Models\Interfaces\InsertExtendInterface;
 use Lsr\Helpers\Tools\Strings;
 use Lsr\Logging\Exceptions\DirectoryCreationException;
 use Lsr\Logging\Logger;
+use Nette\Caching\Cache as CacheParent;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
@@ -151,7 +154,10 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		}
 		if ($refresh || !isset($this->row)) {
 			/** @var Row|null $row */
-			$row = DB::select($this::TABLE, '*')->where('%n = %i', $this::getPrimaryKey(), $this->id)->fetch();
+			$row = DB::select($this::TABLE, '*')
+							 ->where('%n = %i', $this::getPrimaryKey(), $this->id)
+							 ->cacheTags('models', $this::TABLE, $this::TABLE.'/'.$this->id)
+							 ->fetch();
 			$this->row = $row;
 		}
 		if (!isset($this->row)) {
@@ -303,7 +309,10 @@ abstract class Model implements JsonSerializable, ArrayAccess
 					break;
 				case OneToMany::class:
 					$id = $this->id;
-					$this->$propertyName = $className::query()->where('%n = %i', $foreignKey, $id)->get();
+					$this->$propertyName = $className::query()
+																					 ->where('%n = %i', $foreignKey, $id)
+																					 ->cacheTags($this::TABLE.'/'.$this->id.'/relations')
+																					 ->get();
 					break;
 				case ManyToMany::class:
 					$id = $this->id;
@@ -314,6 +323,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 																						 /* @phpstan-ignore-next-line */
 																						 $attributeClass->getConnectionQuery($id, $className, $this)
 																					 )
+																					 ->cacheTags($this::TABLE.'/'.$this->id.'/relations')
 																					 ->get();
 					break;
 			}
@@ -464,6 +474,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		$this->logger->info('Updating model - '.$this->id);
 		try {
 			DB::update($this::TABLE, $this->getQueryData(), ['%n = %i', $this::getPrimaryKey(), $this->id]);
+			$this->clearCache();
 		} catch (Exception $e) {
 			$this->logger->error('Error running update query: '.$e->getMessage());
 			$this->logger->debug('Query: '.$e->getSql());
@@ -542,6 +553,19 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			$data[$columnName] = $this->$propertyName ?? null;
 		}
 		return $data;
+	}
+
+	public function clearCache() : void {
+		if (isset($this->id)) {
+			/** @var Cache $cache */
+			$cache = App::getService('cache');
+			$cache->clean([
+											CacheParent::Tags => [
+												$this::TABLE.'/'.$this->id,
+												$this::TABLE.'/'.$this->id.'/relations',
+											]
+										]);
+		}
 	}
 
 	/**
@@ -631,6 +655,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		try {
 			DB::delete($this::TABLE, ['%n = %i', $this::getPrimaryKey(), $this->id]);
 			unset(static::$instances[$this::TABLE][$this->id]);
+			$this->clearCache();
 		} catch (Exception $e) {
 			$this->logger->error($e->getMessage());
 			$this->logger->debug($e->getTraceAsString());
