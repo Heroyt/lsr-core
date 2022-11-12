@@ -536,7 +536,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 					switch ($relation->getName()) {
 						case OneToOne::class:
 						case ManyToOne::class:
-							$data[$localKey] = $this->$propertyName->id;
+							$data[$localKey] = $this->$propertyName?->id;
 							break;
 					}
 				}
