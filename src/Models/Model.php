@@ -590,6 +590,16 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		}
 	}
 
+	public static function clearQueryCache() : void {
+		/** @var Cache $cache */
+		$cache = App::getService('cache');
+		$cache->clean([
+										CacheParent::Tags => [
+											static::TABLE.'/query',
+										]
+									]);
+	}
+
 	/**
 	 * Clear cache for this model
 	 *
@@ -614,6 +624,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		try {
 			DB::insert($this::TABLE, $this->getQueryData());
 			$this->id = DB::getInsertId();
+			$this::clearQueryCache();
 		} catch (Exception $e) {
 			$this->logger->error('Error running insert query: '.$e->getMessage());
 			$this->logger->debug('Query: '.$e->getSql());
