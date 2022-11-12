@@ -25,7 +25,7 @@ class ModelQuery
 		protected string $className
 	) {
 		$this->query = DB::select([$this->className::TABLE, 'a'], '*')
-										 ->cacheTags('models', $this->className::TABLE, ...$this->className::CACHE_TAGS);
+										 ->cacheTags('models', $this->className::TABLE, $this->className::TABLE.'/query', ...$this->className::CACHE_TAGS);
 	}
 
 	/**

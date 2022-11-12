@@ -582,6 +582,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			$cache = App::getService('cache');
 			$cache->clean([
 											CacheParent::Tags => [
+												$this::TABLE.'/query',
 												$this::TABLE.'/'.$this->id,
 												$this::TABLE.'/'.$this->id.'/relations',
 											]
