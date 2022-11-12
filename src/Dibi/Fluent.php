@@ -74,9 +74,9 @@ class Fluent
 			/** @phpstan-ignore-next-line */
 			return $this->getCache()->load('sql/'.$this->getQueryHash().'/fetch', function(array &$dependencies) {
 				$dependencies[CacheParent::EXPIRE] = '1 hours';
-				$dependencies[CacheParent::Tags] = [
+				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
 					'sql',
-				];
+				]);
 				return $this->fluent->fetch();
 			});
 		} catch (Throwable) {
