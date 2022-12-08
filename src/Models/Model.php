@@ -67,7 +67,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	protected ?Row         $row     = null;
 	protected Logger       $logger;
 
-	/** @var array<class-string, Logger> */
+	/** @var array<string, Logger> */
 	protected static array $modelLoggers = [];
 
 	/** @var string[] Dynamic tags to add to cache records for this model instance */
@@ -105,10 +105,10 @@ abstract class Model implements JsonSerializable, ArrayAccess
 
 	public function getLogger() : Logger {
 		if (!isset($this->logger)) {
-			if (!isset(self::$modelLoggers[$this::class])) {
-				self::$modelLoggers[$this::class] = new Logger(LOG_DIR.'models/', $this::TABLE);
+			if (!isset(self::$modelLoggers[$this::TABLE])) {
+				self::$modelLoggers[$this::TABLE] = new Logger(LOG_DIR.'models/', $this::TABLE);
 			}
-			$this->logger = self::$modelLoggers[$this::class];
+			$this->logger = self::$modelLoggers[$this::TABLE];
 		}
 		return $this->logger;
 	}
