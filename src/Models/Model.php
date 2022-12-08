@@ -67,6 +67,9 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	protected ?Row         $row     = null;
 	protected Logger       $logger;
 
+	/** @var array<class-string, Logger> */
+	protected static array $modelLoggers = [];
+
 	/** @var string[] Dynamic tags to add to cache records for this model instance */
 	protected array $cacheTags = [];
 
@@ -74,9 +77,9 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @param int|null $id    DB model ID
 	 * @param Row|null $dbRow Prefetched database row
 	 *
+	 * @throws DirectoryCreationException
 	 * @throws ModelNotFoundException
 	 * @throws ValidationException
-	 * @throws DirectoryCreationException
 	 */
 	public function __construct(?int $id = null, ?Row $dbRow = null) {
 		if (!isset(self::$instances[$this::TABLE])) {
@@ -97,7 +100,17 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			$this->fillFromRow();
 		}
 		$this->instantiateProperties();
-		$this->logger = new Logger(LOG_DIR.'models/', $this::TABLE);
+		$this->logger = $this->getLogger();
+	}
+
+	public function getLogger() : Logger {
+		if (!isset($this->logger)) {
+			if (!isset(self::$modelLoggers[$this::class])) {
+				self::$modelLoggers[$this::class] = new Logger(LOG_DIR.'models/', $this::TABLE);
+			}
+			$this->logger = self::$modelLoggers[$this::class];
+		}
+		return $this->logger;
 	}
 
 	/**
@@ -428,7 +441,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @return bool
 	 */
 	public static function exists(int $id) : bool {
-		$test = DB::select(static::TABLE, 'count(*)')->where('%n = %i', static::getPrimaryKey(), $id)->fetchSingle();
+		$test = DB::select(static::TABLE, 'count(*)')->where('%n = %i', static::getPrimaryKey(), $id)->fetchSingle(cache: false);
 		return $test > 0;
 	}
 
