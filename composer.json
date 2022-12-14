@@ -33,7 +33,7 @@
 	],
 	"minimum-stability": "dev",
 	"require": {
-		"lsr/interfaces": "^0.1",
+		"lsr/interfaces": "^0.2",
 		"lsr/logging": "^0.1",
 		"ext-fileinfo": "*",
 		"ext-gettext": "*",
@@ -47,8 +47,8 @@
 		"nette/http": "^3.1",
 		"ext-zip": "*",
 		"dibi/dibi": "^4.2",
-		"lsr/routing": "^0.1",
-		"lsr/request": "^0.1"
+		"lsr/routing": "^0.2",
+		"lsr/request": "^0.2"
 	},
 	"config": {
 		"allow-plugins": {

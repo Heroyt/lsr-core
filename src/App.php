@@ -16,6 +16,7 @@ use JsonException;
 use Lsr\Core\Menu\MenuItem;
 use Lsr\Core\Requests\CliRequest;
 use Lsr\Core\Requests\Request;
+use Lsr\Core\Requests\Uri;
 use Lsr\Core\Routing\Route;
 use Lsr\Core\Routing\Router;
 use Lsr\Exceptions\FileException;
@@ -93,7 +94,9 @@ class App
 			self::$request = new CliRequest($argv[1] ?? '');
 		}
 		else {
-			self::$request = new Request(self::$prettyUrl ? $_SERVER['REQUEST_URI'] : ($_GET['p'] ?? []));
+			self::$request = new Request(
+				new Uri((self::isSecure() ? 'https' : 'http').'://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'])
+			);
 		}
 
 		// Set language and translations
