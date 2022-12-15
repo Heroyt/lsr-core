@@ -39,7 +39,7 @@
 	"minimum-stability": "dev",
 	"require": {
 		"lsr/interfaces": "^0.2-dev",
-		"lsr/logging": "^0.1",
+		"lsr/logging": "^0.2-dev",
 		"ext-fileinfo": "*",
 		"ext-gettext": "*",
 		"ext-simplexml": "*",
@@ -58,6 +58,11 @@
 	"config": {
 		"allow-plugins": {
 			"phpstan/extension-installer": true
+		}
+	},
+	"extra": {
+		"branch-alias": {
+			"v0.2": "0.2.x-dev"
 		}
 	}
 }
