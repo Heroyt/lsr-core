@@ -1,7 +1,7 @@
 {
 	"name": "lsr/core",
 	"description": "Laser framework core.",
-	"version": "0.1.20",
+	"version": "dev-0.2.0",
 	"repositories": [
 		{
 			"type": "composer",
@@ -25,6 +25,11 @@
 			"Lsr\\Core\\": "src/"
 		}
 	},
+	"autoload-dev": {
+		"psr-4": {
+			"TestCases\\": "tests/TestCases/"
+		}
+	},
 	"authors": [
 		{
 			"name": "Tomáš Vojík",
@@ -33,7 +38,7 @@
 	],
 	"minimum-stability": "dev",
 	"require": {
-		"lsr/interfaces": "^0.2",
+		"lsr/interfaces": "^0.2-dev",
 		"lsr/logging": "^0.1",
 		"ext-fileinfo": "*",
 		"ext-gettext": "*",
@@ -47,8 +52,8 @@
 		"nette/http": "^3.1",
 		"ext-zip": "*",
 		"dibi/dibi": "^4.2",
-		"lsr/routing": "^0.2",
-		"lsr/request": "^0.2"
+		"lsr/routing": "^0.2-dev",
+		"lsr/request": "^0.2-dev"
 	},
 	"config": {
 		"allow-plugins": {
