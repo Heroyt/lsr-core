@@ -92,8 +92,8 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		if (isset($id) && !empty($this::TABLE)) {
 			$this->id = $id;
 			$this->row = $dbRow;
-			self::$instances[$this::TABLE][$this->id] = $this;
 			$this->fetch();
+			self::$instances[$this::TABLE][$this->id] = $this;
 		}
 		else if (isset($dbRow)) {
 			$this->row = $dbRow;
