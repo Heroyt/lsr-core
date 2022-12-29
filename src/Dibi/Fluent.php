@@ -202,6 +202,31 @@ class Fluent
 		}
 	}
 
+	/**
+	 * Fetches the row count
+	 *
+	 * @param bool $cache
+	 *
+	 * @return int
+	 */
+	public function count(bool $cache = true) : int {
+		if (!$cache) {
+			return $this->fluent->count();
+		}
+		try {
+			/** @phpstan-ignore-next-line */
+			return $this->getCache()->load('sql/'.$this->getQueryHash().'/count', function(array &$dependencies) {
+				$dependencies[CacheParent::EXPIRE] = '1 hours';
+				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
+					'sql',
+				]);
+				return $this->fluent->count();
+			});
+		} catch (Throwable) {
+			return $this->fluent->count();
+		}
+	}
+
 	public function __get($name) : mixed {
 		return $this->fluent->$name;
 	}
