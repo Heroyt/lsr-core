@@ -119,6 +119,7 @@ class App
 							CliRequest::class,
 							Route::class,
 							CliRoute::class,
+							Uri::class,
 						],
 					]
 				);
