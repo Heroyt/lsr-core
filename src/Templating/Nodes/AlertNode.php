@@ -40,7 +40,7 @@ class AlertNode extends StatementNode
 		$node = new self();
 		$node->args = $tag->parser->parseArguments();
 		$node->args->items[] = new ArrayItemNode(
-			new StringNode("'danger'")
+			new StringNode("danger")
 		);
 		return $node;
 	}
@@ -56,7 +56,7 @@ class AlertNode extends StatementNode
 		$node = new self();
 		$node->args = $tag->parser->parseArguments();
 		$node->args->items[] = new ArrayItemNode(
-			new StringNode("'success'")
+			new StringNode("success")
 		);
 		return $node;
 	}
@@ -72,7 +72,7 @@ class AlertNode extends StatementNode
 		$node = new self();
 		$node->args = $tag->parser->parseArguments();
 		$node->args->items[] = new ArrayItemNode(
-			new StringNode("'info'")
+			new StringNode("info")
 		);
 		return $node;
 	}
@@ -88,7 +88,7 @@ class AlertNode extends StatementNode
 		$node = new self();
 		$node->args = $tag->parser->parseArguments();
 		$node->args->items[] = new ArrayItemNode(
-			new StringNode("'warning'")
+			new StringNode("warning")
 		);
 		return $node;
 	}
