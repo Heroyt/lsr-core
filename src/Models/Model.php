@@ -91,9 +91,9 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		}
 		if (isset($id) && !empty($this::TABLE)) {
 			$this->id = $id;
+			self::$instances[$this::TABLE][$this->id] = $this;
 			$this->row = $dbRow;
 			$this->fetch();
-			self::$instances[$this::TABLE][$this->id] = $this;
 		}
 		else if (isset($dbRow)) {
 			$this->row = $dbRow;
@@ -389,7 +389,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @throws ValidationException
 	 */
 	public static function get(int $id, ?Row $row = null) : static {
-		return static::$instances[static::TABLE][$id] ?? new static($id, $row);
+		return self::$instances[static::TABLE][$id] ?? new static($id, $row);
 	}
 
 	/**
