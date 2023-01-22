@@ -17,6 +17,7 @@ use Lsr\Core\Menu\MenuItem;
 use Lsr\Core\Requests\CliRequest;
 use Lsr\Core\Requests\Request;
 use Lsr\Core\Requests\Uri;
+use Lsr\Core\Routing\CliRoute;
 use Lsr\Core\Routing\Route;
 use Lsr\Core\Routing\Router;
 use Lsr\Exceptions\FileException;
@@ -110,7 +111,17 @@ class App
 			$previousRequest = self::$session->getFlash('fromRequest');
 			if (isset($previousRequest)) {
 				/** @var Request|false $previousRequest */
-				$previousRequest = unserialize($previousRequest, ['allowed_classes' => [Request::class]]);
+				$previousRequest = unserialize(
+					$previousRequest,
+					[
+						'allowed_classes' => [
+							Request::class,
+							CliRequest::class,
+							Route::class,
+							CliRoute::class,
+						],
+					]
+				);
 				if ($previousRequest instanceof RequestInterface) {
 					self::$request->setPreviousRequest($previousRequest);
 				}
