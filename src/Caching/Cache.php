@@ -82,13 +82,14 @@ class Cache extends \Nette\Caching\Cache
 	/**
 	 * Reads the specified item from the cache or generate it.
 	 *
-	 * @param mixed         $key
-	 * @param callable|null $generator
+	 * @param mixed                    $key
+	 * @param callable|null            $generator
+	 * @param array<string,mixed>|null $dependencies
 	 *
 	 * @return mixed
 	 * @throws Throwable
 	 */
-	public function load($key, ?callable $generator = null) : mixed {
+	public function load($key, ?callable $generator = null, ?array $dependencies = null) : mixed {
 		$storageKey = $this->generateKey($key);
 		$data = $this->getStorage()->read($storageKey);
 		if ($data === null && $generator) {
