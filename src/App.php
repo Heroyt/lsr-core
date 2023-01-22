@@ -23,6 +23,7 @@ use Lsr\Exceptions\FileException;
 use Lsr\Helpers\Tools\Timer;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;
+use Lsr\Interfaces\SessionInterface;
 use Lsr\Logging\Logger;
 use Nette\DI\Compiler;
 use Nette\DI\Container;
@@ -63,9 +64,10 @@ class App
 	/**
 	 * @var string
 	 */
-	private static mixed     $timezone;
-	private static Container $container;
-	private static Router    $router;
+	private static mixed            $timezone;
+	private static Container        $container;
+	private static Router           $router;
+	private static SessionInterface $session;
 
 	/**
 	 * Initialization function
@@ -83,6 +85,13 @@ class App
 
 		self::setupDi();
 
+		// Setup session
+		/**
+		 * @noinspection PhpFieldAssignmentTypeMismatchInspection
+		 * @phpstan-ignore-next-line
+		 */
+		self::$session = self::getService('session');
+
 		// Setup routes
 		/** @var Router $router */
 		$router = self::getService('routing');
@@ -97,6 +106,15 @@ class App
 			self::$request = new Request(
 				new Uri((self::isSecure() ? 'https' : 'http').'://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'])
 			);
+			/** @var string|null $previousRequest */
+			$previousRequest = self::$session->getFlash('fromRequest');
+			if (isset($previousRequest)) {
+				/** @var Request|false $previousRequest */
+				$previousRequest = unserialize($previousRequest, ['allowed_classes' => [Request::class]]);
+				if ($previousRequest instanceof RequestInterface) {
+					self::$request->setPreviousRequest($previousRequest);
+				}
+			}
 		}
 
 		// Set language and translations
@@ -115,7 +133,6 @@ class App
 		/** @var Container $class */
 		$class = $loader->load(function(Compiler $compiler) {
 			$compiler->addExtension('extensions', new ExtensionsExtension());
-			/** @noinspection PhpIncludeInspection */
 			/** @var string[] $configs */
 			$configs = require ROOT.'config/services.php';
 			// This will load all found services.neon files in the whole application that are cached in one PHP file
@@ -143,6 +160,18 @@ class App
 	 */
 	public static function getContainer() : Container {
 		return self::$container;
+	}
+
+	/**
+	 * Get if https is enabled
+	 *
+	 * @return bool
+	 *
+	 * @version 1.0
+	 * @since   1.0
+	 */
+	public static function isSecure() : bool {
+		return !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 	}
 
 	/**
@@ -188,8 +217,10 @@ class App
 		if (isset($request, $request->params['lang']) && self::isSupportedLanguage($request->params['lang'])) {
 			return $request->params['lang'];
 		}
-		if (isset($_SESSION['lang']) && self::isSupportedLanguage($_SESSION['lang'])) {
-			return $_SESSION['lang'];
+		/** @var string|null $sessLang */
+		$sessLang = self::$session->get('lang');
+		if (isset($sessLang) && self::isSupportedLanguage($sessLang)) {
+			return $sessLang;
 		}
 		if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
 			$info = explode(';', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
@@ -371,18 +402,6 @@ class App
 	}
 
 	/**
-	 * Get if https is enabled
-	 *
-	 * @return bool
-	 *
-	 * @version 1.0
-	 * @since   1.0
-	 */
-	public static function isSecure() : bool {
-		return !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
-	}
-
-	/**
 	 * Gets the FE cache version from config.ini
 	 *
 	 * @return int
@@ -476,7 +495,7 @@ class App
 			}
 		}
 		if (isset($from)) {
-			$_SESSION['fromRequest'] = serialize($from);
+			self::$session->flash('fromRequest', serialize($from));
 		}
 		header('Location: '.$link);
 		exit;
@@ -549,7 +568,6 @@ class App
 		if (!file_exists(ROOT.'config/nav/'.$type.'.php')) {
 			throw new FileException('Menu configuration file "'.$type.'.php" does not exist.');
 		}
-		/** @noinspection PhpIncludeInspection */
 		$config = require ROOT.'config/nav/'.$type.'.php';
 		$menu = [];
 		foreach ($config as $item) {
