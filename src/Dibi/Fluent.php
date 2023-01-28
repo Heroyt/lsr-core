@@ -43,14 +43,18 @@ use Throwable;
 class Fluent
 {
 
-	protected string $queryHash;
+	protected ?string $queryHash = null;
 
 	protected Cache $cache;
 
 	/** @var string[] */
 	protected array $cacheTags = [];
 
-	public function __construct(public readonly DibiFluent $fluent) {
+	public function __construct(public DibiFluent $fluent) {
+	}
+
+	public function __clone() : void {
+		$this->fluent = clone $this->fluent;
 	}
 
 	public static function __callStatic($name, $arguments) : mixed {
@@ -247,6 +251,7 @@ class Fluent
 		}
 		$return = $this->fluent->$name(...$arguments);
 		if ($return === $this->fluent) {
+			$this->queryHash = null;
 			return $this;
 		}
 		return $return;
