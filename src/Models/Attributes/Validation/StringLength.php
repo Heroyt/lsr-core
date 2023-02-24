@@ -30,7 +30,7 @@ class StringLength implements Validator
 			return;
 		}
 
-		$len = strlen($value);
+		$len = mb_strlen($value, 'UTF-8');
 		if (isset($this->length, $this->max) && ($len < $this->length || $len > $this->max)) {
 			throw new ValidationException('Value\'s length must be between '.$this->length.' and '.$this->max.'.');
 		}
