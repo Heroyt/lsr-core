@@ -31,6 +31,48 @@ class Session implements SessionInterface
 	}
 
 	/**
+	 * Get session Cookie parameters
+	 *
+	 * @return array{lifetime:int,path:string,domain:string,secure:bool,httponly:bool}
+	 */
+	public function getParams() : array {
+		// @phpstan-ignore-next-line
+		return session_get_cookie_params();
+	}
+
+	public function setParams(int $lifetime, ?string $path = null, ?string $domain = null, ?bool $secure = null, ?bool $httponly = null) : bool {
+		$defaults = $this->getParams();
+		$path = $path ?? $defaults['path'];
+		$domain = $domain ?? $defaults['domain'];
+		$secure = $secure ?? $defaults['secure'];
+		$httponly = $httponly ?? $defaults['httponly'];
+
+		if ($this->getStatus() === PHP_SESSION_ACTIVE) {
+			return setcookie(
+				session_name(),
+				session_id(),
+				$lifetime,
+				$path,
+				$domain,
+				$secure,
+				$httponly
+			);
+		}
+		/** @noinspection PhpVoidFunctionResultUsedInspection */
+		return session_set_cookie_params(
+			$lifetime,
+			$path,
+			$domain,
+			$secure,
+			$httponly
+		);
+	}
+
+	public function getStatus() : int {
+		return session_status();
+	}
+
+	/**
 	 * @inheritDoc
 	 */
 	public function get(string $key, mixed $default = null) : mixed {
