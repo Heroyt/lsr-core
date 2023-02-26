@@ -38,4 +38,10 @@ class LangNode extends StatementNode
 			$this->position,
 		);
 	}
+
+	public function &getIterator() : \Generator {
+		if (false) {
+			yield;
+		}
+	}
 }

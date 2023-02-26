@@ -2,6 +2,7 @@
 
 namespace Lsr\Core\Templating\Nodes;
 
+use Generator;
 use Latte\CompileException;
 use Latte\Compiler\Node;
 use Latte\Compiler\Nodes\Php\Expression\ArrayItemNode;
@@ -101,5 +102,11 @@ class AlertNode extends StatementNode
 			$this->args,
 			$this->position,
 		);
+	}
+
+	public function &getIterator() : Generator {
+		if (false) {
+			yield;
+		}
 	}
 }
