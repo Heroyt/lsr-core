@@ -1,7 +1,7 @@
 {
 	"name": "lsr/core",
 	"description": "Laser framework core.",
-	"version": "0.2.13",
+	"version": "0.2.14",
 	"repositories": [
 		{
 			"type": "composer",
@@ -14,11 +14,11 @@
 	},
 	"require-dev": {
 		"roave/security-advisories": "dev-latest",
-		"phpunit/phpunit": "^9.5",
-		"phpstan/phpstan": "^1.8",
-		"phpstan/extension-installer": "^1.1",
+		"phpunit/phpunit": "^10",
+		"phpstan/phpstan": "^1.10",
+		"phpstan/extension-installer": "^1.2",
 		"phpstan/phpstan-dibi": "^1.0",
-		"phpstan/phpstan-nette": "^1.0"
+		"phpstan/phpstan-nette": "^1.2"
 	},
 	"autoload": {
 		"psr-4": {
@@ -46,10 +46,10 @@
 		"ext-ctype": "*",
 		"ext-mbstring": "*",
 		"ext-pdo_sqlite": "*",
-		"latte/latte": "3.0.0",
-		"nette/di": "^3.0",
-		"nette/caching": "^3.1",
-		"nette/http": "^3.1",
+		"latte/latte": "^3.0",
+		"nette/di": "^3.1",
+		"nette/caching": "^3.2",
+		"nette/http": "^3.2",
 		"ext-zip": "*",
 		"dibi/dibi": "^4.2",
 		"lsr/routing": "^0.2",
