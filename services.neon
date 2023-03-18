@@ -8,6 +8,9 @@ parameters:
 extensions:
 	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
 services:
+	- Lsr\Core\Menu\MenuBuilder
+	- Lsr\Core\Links\Generator
+
 	config:
 		create: Lsr\Core\Config::getInstance()
 		setup:

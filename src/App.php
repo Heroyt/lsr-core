@@ -13,6 +13,8 @@ namespace Lsr\Core;
 
 use Gettext\Languages\Language;
 use JsonException;
+use Lsr\Core\Links\Generator;
+use Lsr\Core\Menu\MenuBuilder;
 use Lsr\Core\Menu\MenuItem;
 use Lsr\Core\Requests\CliRequest;
 use Lsr\Core\Requests\Request;
@@ -514,30 +516,21 @@ class App
 	 *                                        * Ex: ['user', 'login', 'view' => 1, 'type' => 'company']: http(s)://host.cz/user/login?view=1&type=company
 	 * @param bool              $returnObject if set to true, return Url object
 	 *
-	 * @return string|Url
+	 * @return ($returnObject is true ? Url : string)
+	 *
+	 * @warning Should use the new \Lsr\Core\Links\Generator class to generate links
+	 * @see     Generator
 	 *
 	 * @version 1.0
 	 * @since   1.0
 	 */
 	public static function getLink(array $request = [], bool $returnObject = false) : Url|string {
-		/** @var Url $url */
-		$url = self::getUrl(true);
-		$request = array_filter($request, static function($value) {
-			return !empty($value);
-		});
-		if (self::isPrettyUrl()) {
-			$url->setPath(implode('/', array_filter($request, 'is_int', ARRAY_FILTER_USE_KEY)));
-			$url->setQuery(array_filter($request, 'is_string', ARRAY_FILTER_USE_KEY));
-		}
-		else {
-			$query = array_filter($request, 'is_string', ARRAY_FILTER_USE_KEY);
-			$query['p'] = array_filter($request, 'is_int', ARRAY_FILTER_USE_KEY);
-			$url->setQuery($query);
-		}
+		$generator = self::getServiceByType(Generator::class);
+
 		if ($returnObject) {
-			return $url;
+			return $generator->getLinkObject($request);
 		}
-		return (string) $url;
+		return $generator->getLink($request);
 	}
 
 	/**
@@ -582,78 +575,7 @@ class App
 	 * @throws FileException
 	 */
 	public static function getMenu(string $type = 'menu') : array {
-		if (!file_exists(ROOT.'config/nav/'.$type.'.php')) {
-			throw new FileException('Menu configuration file "'.$type.'.php" does not exist.');
-		}
-		$config = require ROOT.'config/nav/'.$type.'.php';
-		$menu = [];
-		foreach ($config as $item) {
-			if (!self::checkAccess($item)) {
-				continue;
-			}
-			if (isset($item['route'])) {
-				$path = self::$router->getRouteByName($item['route'])?->getPath();
-			}
-			else {
-				$path = $item['path'] ?? ['E404'];
-			}
-			$menuItem = new MenuItem(name: $item['name'], icon: $item['icon'] ?? '', path: $path);
-			foreach ($item['children'] ?? [] as $child) {
-				if (!self::checkAccess($child)) {
-					continue;
-				}
-				if (isset($child['route'])) {
-					$path = self::$router->getRouteByName($child['route'])?->getPath();
-				}
-				else {
-					$path = $child['path'] ?? ['E404'];
-				}
-				$menuItem->children[] = new MenuItem(name: $child['name'], icon: $child['icon'] ?? '', path: $path);
-			}
-			$menu[] = $menuItem;
-		}
-		return $menu;
-	}
-
-	/**
-	 * @param array{
-	 *   access:string[]|null|string,
-	 *   loggedInOnly:bool|null,
-	 *   loggedOutOnly:bool|null
-	 * } $item
-	 *
-	 * @return bool
-	 * @todo         : Implement auth package
-	 * @noinspection PhpUndefinedClassInspection
-	 */
-	private static function checkAccess(array $item) : bool {
-		/** @phpstan-ignore-next-line */
-		if (isset($item['loggedInOnly']) && $item['loggedInOnly'] && !User::loggedIn()) {
-			return false;
-		}
-		/** @phpstan-ignore-next-line */
-		if (isset($item['loggedOutOnly']) && $item['loggedOutOnly'] && User::loggedIn()) {
-			return false;
-		}
-		if (!isset($item['access'])) {
-			return true;
-		}
-		$available = true;
-		$access = [];
-		if (is_string($item['access'])) {
-			$access = [$item['access']];
-		}
-		else if (is_array($item['access'])) {
-			$access = $item['access'];
-		}
-		foreach ($access as $right) {
-			/** @phpstan-ignore-next-line */
-			if (!User::hasRight($right)) {
-				$available = false;
-				break;
-			}
-		}
-		return $available;
+		return self::getServiceByType(MenuBuilder::class)->getMenu($type);
 	}
 
 	public static function getShortLanguageCode() : string {

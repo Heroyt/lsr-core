@@ -32,7 +32,7 @@ class LinkNode extends StatementNode
 	public function print(PrintContext $context) : string {
 		return $context->format(
 			<<<'XX'
-			echo \Lsr\Core\App::getLink(%args) %line;
+			echo \Lsr\Core\App::getServiceByType(\Lsr\Core\Links\Generator::class)->getLink(%args) %line;
 			XX,
 			$this->args,
 			$this->position,
