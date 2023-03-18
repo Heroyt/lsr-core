@@ -82,7 +82,11 @@ class Config
 
 		$dotenv = Dotenv::createImmutable(ROOT);
 		$dotenv->safeLoad();
-		$this->config['ENV'] = array_merge($this->config['ENV'], $_ENV);
+		$env = getenv();
+		if (!is_array($env)) {
+			$env = [];
+		}
+		$this->config['ENV'] = array_merge($this->config['ENV'], $_ENV, $env);
 
 		$this->initialized = true;
 	}
