@@ -53,7 +53,8 @@
 		"ext-zip": "*",
 		"dibi/dibi": "^4.2",
 		"lsr/routing": "^0.2",
-		"lsr/request": "^0.2"
+		"lsr/request": "^0.2",
+		"vlucas/phpdotenv": "^5.5"
 	},
 	"config": {
 		"allow-plugins": {

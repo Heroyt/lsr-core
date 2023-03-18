@@ -65,7 +65,19 @@ class DB
 	 */
 	public static function init(array $config = []) : void {
 		if (empty($config)) {
-			$config = App::getConfig();
+			$env = App::getServiceByType(Config::class)->getConfig('ENV');
+			$config = [
+				'Database' => [
+					'DRIVER'   => $env['DB_DRIVER'] ?? 'mysqli',
+					'HOST'     => $env['DB_HOST'] ?? 'localhost',
+					'PORT'     => $env['DB_PORT'] ?? 3306,
+					'USER'     => $env['DB_USER'] ?? 'root',
+					'PASSWORD' => $env['DB_PASSWORD'] ?? '',
+					'DATABASE' => $env['DB_DATABASE'] ?? '',
+					'COLLATE'  => $env['DB_COLLATE'] ?? 'utf8mb4',
+					'PREFIX'   => $env['DB_PREFIX'] ?? '',
+				],
+			];
 		}
 		/**
 		 * @var array{

@@ -8,6 +8,10 @@ parameters:
 extensions:
 	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
 services:
+	config:
+		create: Lsr\Core\Config::getInstance()
+		setup:
+			- init()
 	session:
 		create: \Lsr\Core\Session::getInstance()
 		setup:

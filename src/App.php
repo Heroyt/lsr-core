@@ -30,6 +30,7 @@ use Nette\DI\Compiler;
 use Nette\DI\Container;
 use Nette\DI\ContainerLoader;
 use Nette\DI\Extensions\ExtensionsExtension;
+use Nette\DI\MissingServiceException;
 use Nette\Http\Url;
 use ReflectionException;
 
@@ -60,8 +61,6 @@ class App
 	/** @var RequestInterface $request Current request object */
 	protected static RequestInterface $request;
 	protected static Logger           $logger;
-	/** @var array<string, mixed> Parsed config.ini file */
-	protected static array $config;
 	/**
 	 * @var string
 	 */
@@ -69,6 +68,7 @@ class App
 	private static Container        $container;
 	private static Router           $router;
 	private static SessionInterface $session;
+	private static Config           $config;
 
 	/**
 	 * Initialization function
@@ -87,17 +87,13 @@ class App
 		self::setupDi();
 
 		// Setup session
-		/**
-		 * @noinspection PhpFieldAssignmentTypeMismatchInspection
-		 * @phpstan-ignore-next-line
-		 */
-		self::$session = self::getService('session');
+		self::$session = self::getServiceByType(SessionInterface::class);
 
 		// Setup routes
-		/** @var Router $router */
-		$router = self::getService('routing');
-		self::$router = $router;
+		self::$router = self::getServiceByType(Router::class);
 		self::$router->setup();
+
+		self::$config = self::getServiceByType(Config::class);
 
 		if (PHP_SAPI === "cli") {
 			global $argv;
@@ -157,14 +153,17 @@ class App
 	}
 
 	/**
-	 * Gets the service object by name.
+	 * Resolves service by type.
 	 *
-	 * @param string $name
+	 * @template T of object
 	 *
-	 * @return object
+	 * @param class-string<T> $type
+	 *
+	 * @return T
+	 * @throws MissingServiceException
 	 */
-	public static function getService(string $name) : object {
-		return self::getContainer()->getService($name);
+	public static function getServiceByType(string $type) : object {
+		return self::getContainer()->getByType($type);
 	}
 
 	/**
@@ -318,7 +317,7 @@ class App
 	 */
 	public static function getTimezone() : string {
 		if (empty(self::$timezone)) {
-			self::$timezone = self::getConfig()['General']['TIMEZONE'] ?? 'Europe/Prague';
+			self::$timezone = (string) (self::$config->getConfig('General')['TIMEZONE'] ?? 'Europe/Prague');
 		}
 		return self::$timezone;
 	}
@@ -326,17 +325,12 @@ class App
 	/**
 	 * Get parsed config.ini file
 	 *
-	 * @return array<string, string|array<string,string>>
+	 * @return array<string,array<string,string|numeric>|numeric|string>
+	 *
+	 * @deprecated Use DI for loading config instead
 	 */
 	public static function getConfig() : array {
-		if (!isset(self::$config)) {
-			$ini = parse_ini_file(PRIVATE_DIR.'config.ini', true);
-			if ($ini === false) {
-				$ini = [];
-			}
-			self::$config = $ini;
-		}
-		return self::$config;
+		return self::$config->getConfig();
 	}
 
 	/**
@@ -400,7 +394,7 @@ class App
 	 *
 	 * @param bool $returnObject If true, return Url object, else return string
 	 *
-	 * @return Url|string
+	 * @return ($returnObject is true ? Url : string)
 	 */
 	public static function getUrl(bool $returnObject = false) : Url|string {
 		$url = new Url();
@@ -419,7 +413,7 @@ class App
 	 * @return int
 	 */
 	public static function getCacheVersion() : int {
-		return (int) (self::getconfig()['General']['CACHE_VERSION'] ?? 1);
+		return (int) (self::$config->getConfig('General')['CACHE_VERSION'] ?? 1);
 	}
 
 	/**
@@ -474,7 +468,7 @@ class App
 	 * @return bool
 	 */
 	public static function isProduction() : bool {
-		return !(self::getconfig()['General']['DEBUG'] ?? false);
+		return !(self::$config->getConfig('General')['DEBUG'] ?? false);
 	}
 
 	/**
@@ -571,6 +565,17 @@ class App
 	}
 
 	/**
+	 * Gets the service object by name.
+	 *
+	 * @param string $name
+	 *
+	 * @return object
+	 */
+	public static function getService(string $name) : object {
+		return self::getContainer()->getService($name);
+	}
+
+	/**
 	 * @param string $type
 	 *
 	 * @return MenuItem[]
@@ -655,5 +660,8 @@ class App
 		return explode('_', self::$activeLanguageCode)[0];
 	}
 
+	public static function getAppName() : string {
+		return (string) (self::$config->getConfig('ENV')['APP_NAME'] ?? '');
+	}
 
 }

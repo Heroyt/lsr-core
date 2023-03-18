@@ -27,20 +27,6 @@ namespace Lsr\Core;
 class Constants
 {
 
-	// Logging constants
-
-	/** Constant marking an error message */
-	public const E = 'ERROR';
-	/** Constant marking a warning message */
-	public const W = 'WARNING';
-	/** Constant marking a notice message */
-	public const N = 'NOTICE';
-	/** Constant marking an ordinary message */
-	public const M = 'MESSAGE';
-
-	/** @var string Name of the app */
-	public const SITE_NAME = 'LaserArenaControl';
-
 	public const MONTH_NAMES = [
 		1  => 'Leden',
 		2  => 'Únor',
@@ -317,12 +303,24 @@ class Constants
 		'ZW' => 'Zimbabwe',
 	];
 
-	/** @var int Time, when a game should be considered "new" when loaded */
+	/**
+	 * @var int Time, when a game should be considered "new" when loaded
+	 * @deprecated Move to ENV config
+	 */
 	public const GAME_LOADED_TIME = 300; // 5 minutes
-	/** @var int Time, when a game should be considered "new" when loaded */
+	/**
+	 * @var int Time, when a game should be considered "new" when loaded
+	 * @deprecated Move to ENV config
+	 */
 	public const GAME_STARTED_TIME = 1800; // 30 minutes
-	/** @var int Time, when a game should be considered "new" when the results are loaded */
+	/**
+	 * @var int Time, when a game should be considered "new" when the results are loaded
+	 * @deprecated Move to ENV config
+	 */
 	public const GAME_RESULTS_TIME = 120; // 2 minutes
-	/** @var int How long should a set game be displayed on gate */
+	/**
+	 * @var int How long should a set game be displayed on gate
+	 * @deprecated Move to ENV config
+	 */
 	public const TMP_GAME_RESULTS_TIME = 120; // 2 minutes
 }

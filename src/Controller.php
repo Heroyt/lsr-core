@@ -81,7 +81,7 @@ abstract class Controller implements ControllerInterface
 	 * @since   1.0
 	 */
 	public function getTitle() : string {
-		return Constants::SITE_NAME.(!empty($this->title) ? ' - '.lang($this->title, context: 'pageTitles') : '');
+		return App::getAppName().(!empty($this->title) ? ' - '.lang($this->title, context: 'pageTitles') : '');
 	}
 
 	/**
