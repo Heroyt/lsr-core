@@ -105,7 +105,10 @@ class DB
 		if (!empty($dbConfig['USER'])) {
 			$options['username'] = $dbConfig['USER'];
 		}
-		if (!empty($dbConfig['PASS'])) {
+		if (!empty($dbConfig['PASSWORD'])) {
+			$options['password'] = $dbConfig['PASSWORD'];
+		}
+		else if (!empty($dbConfig['PASS'])) {
 			$options['password'] = $dbConfig['PASS'];
 		}
 		if (!empty($dbConfig['DATABASE'])) {
