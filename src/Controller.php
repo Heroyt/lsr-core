@@ -44,11 +44,11 @@ abstract class Controller implements ControllerInterface
 	/**
 	 * @var string $title Page name
 	 */
-	protected string $title;
+	protected string $title = '';
 	/**
 	 * @var string $description Page description
 	 */
-	protected string           $description;
+	protected string           $description = '';
 	protected RequestInterface $request;
 
 	public function __construct(protected Latte $latte) {
