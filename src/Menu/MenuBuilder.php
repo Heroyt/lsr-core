@@ -69,7 +69,7 @@ class MenuBuilder
 		try {
 			$auth = App::getServiceByType(AuthInterface::class);
 		} catch (MissingServiceException) {
-			return false;
+			return true;
 		}
 
 		if (isset($item['loggedInOnly']) && $item['loggedInOnly'] && !$auth->loggedIn()) {
