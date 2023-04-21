@@ -35,24 +35,37 @@ use Lsr\Interfaces\RequestInterface;
 abstract class Controller implements ControllerInterface
 {
 
-	/** @var Middleware[] */
-	public array $middleware = [];
-	/**
-	 * @var array<string, mixed> $params Parameters added to latte template
-	 */
-	public array $params = [];
-	/**
-	 * @var string $title Page name
-	 */
-	protected string $title = '';
-	/**
-	 * @var string $description Page description
-	 */
-	protected string           $description = '';
-	protected RequestInterface $request;
+    /** @var Middleware[] */
+    public array $middleware = [];
+    /**
+     * @var array<string, mixed> $params Parameters added to latte template
+     */
+    public array $params = [];
+    /**
+     * @var string $title Page name
+     */
+    protected string $title = '';
 
-	public function __construct(protected Latte $latte) {
-	}
+    /**
+     * @var array<int,string|numeric> Parameters to replace description wildcards
+     * @see sprintf()
+     */
+    protected array $descriptionParams = [];
+
+    /**
+     * @var array<int,string|numeric> Parameters to replace title wildcards
+     * @see sprintf()
+     */
+    protected array $titleParams = [];
+
+    /**
+     * @var string $description Page description
+     */
+    protected string $description = '';
+    protected RequestInterface $request;
+
+    public function __construct(protected Latte $latte) {
+    }
 
 	/**
 	 * Initialization function
@@ -81,7 +94,7 @@ abstract class Controller implements ControllerInterface
 	 * @since   1.0
 	 */
 	public function getTitle() : string {
-		return App::getAppName().(!empty($this->title) ? ' - '.lang($this->title, context: 'pageTitles') : '');
+        return App::getAppName() . (!empty($this->title) ? ' - ' . sprintf(lang($this->title, context: 'pageTitles'), ...$this->titleParams) : '');
 	}
 
 	/**
@@ -93,7 +106,7 @@ abstract class Controller implements ControllerInterface
 	 * @since   1.0
 	 */
 	public function getDescription() : string {
-		return lang($this->description, context: 'pageDescription');
+        return sprintf(lang($this->description, context: 'pageDescription'), ...$this->descriptionParams);
 	}
 
 	/**
