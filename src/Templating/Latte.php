@@ -3,12 +3,20 @@
 namespace Lsr\Core\Templating;
 
 use Latte\Engine;
+use Latte\Loaders\FileLoader;
+use Latte\Loaders\StringLoader;
 use Lsr\Exceptions\TemplateDoesNotExistException;
 
 class Latte
 {
 
 	public function __construct(private readonly Engine $engine) {
+		$sandbox = SecurityPolicy::createSafePolicy();
+		$sandbox->allowTags(['svgIcon', 'link', 'getUrl', 'lang']);
+		$sandbox->allowFilters($sandbox::ALL);
+		$sandbox->allowFunctions(['sprintf', 'lang']);
+
+		$this->engine->setPolicy($sandbox);
 	}
 
 	/**
@@ -45,14 +53,74 @@ class Latte
 	/**
 	 * Renders a view from a latte template
 	 *
-	 * @param string               $template Template name
-	 * @param array<string, mixed> $params   Template parameters
+	 * @param string $template Template name
+	 * @param array<string, mixed> $params Template parameters
 	 *
 	 * @return string Can be empty if $return is false
 	 * @throws TemplateDoesNotExistException
 	 */
-	public function viewToString(string $template, array $params = []) : string {
+	public function viewToString(string $template, array $params = []): string {
 		return $this->engine->renderToString($this->getTemplate($template), $params);
+	}
+
+	/**
+	 * Render template in sandbox mode
+	 *
+	 * @param string $template
+	 * @param array<string,mixed> $params
+	 * @return void
+	 * @throws TemplateDoesNotExistException
+	 */
+	public function sandbox(string $template, array $params): void {
+		$this->engine->setSandboxMode();
+		$this->engine->render($this->getTemplate($template), $params);
+		$this->engine->setSandboxMode(false);
+	}
+
+	/**
+	 * Render template in sandbox mode.
+	 *
+	 * @param string $template
+	 * @param array<string,mixed> $params
+	 * @return string
+	 * @throws TemplateDoesNotExistException
+	 */
+	public function sandboxToString(string $template, array $params): string {
+		$this->engine->setSandboxMode();
+		$return = $this->engine->renderToString($this->getTemplate($template), $params);
+		$this->engine->setSandboxMode(false);
+		return $return;
+	}
+
+	/**
+	 * Render template from string in sandbox mode.
+	 *
+	 * @param string $latte
+	 * @param array<string,mixed> $params
+	 * @return void
+	 */
+	public function sandboxFromString(string $latte, array $params): void {
+		$this->engine->setSandboxMode();
+		$this->engine->setLoader(new StringLoader);
+		$this->engine->render($latte, $params);
+		$this->engine->setLoader(new FileLoader);
+		$this->engine->setSandboxMode(false);
+	}
+
+	/**
+	 * Render template from string in sandbox mode.
+	 *
+	 * @param string $latte
+	 * @param array<string, mixed> $params
+	 * @return string
+	 */
+	public function sandboxFromStringToString(string $latte, array $params): string {
+		$this->engine->setSandboxMode();
+		$this->engine->setLoader(new StringLoader);
+		$return = $this->engine->renderToString($latte, $params);
+		$this->engine->setSandboxMode(false);
+		$this->engine->setLoader(new FileLoader);
+		return $return;
 	}
 
 }
