@@ -5,6 +5,7 @@ namespace Lsr\Core\Templating;
 use Latte\Engine;
 use Latte\Loaders\FileLoader;
 use Latte\Loaders\StringLoader;
+use Latte\Sandbox\SecurityPolicy;
 use Lsr\Exceptions\TemplateDoesNotExistException;
 
 class Latte
