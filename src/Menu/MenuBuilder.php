@@ -38,7 +38,7 @@ class MenuBuilder
 			else {
 				$path = $item['path'] ?? ['E404'];
 			}
-			$menuItem = new MenuItem(name: $item['name'], icon: $item['icon'] ?? '', path: $path);
+			$menuItem = new MenuItem(name: $item['name'], icon: $item['icon'] ?? '', path: $path, order: $item['order'] ?? 0);
 			foreach ($item['children'] ?? [] as $child) {
 				if (!self::checkAccess($child)) {
 					continue;
@@ -49,11 +49,23 @@ class MenuBuilder
 				else {
 					$path = $child['path'] ?? ['E404'];
 				}
-				$menuItem->children[] = new MenuItem(name: $child['name'], icon: $child['icon'] ?? '', path: $path);
+				$menuItem->children[] = new MenuItem(name: $child['name'], icon: $child['icon'] ?? '', path: $path, order: $item['order'] ?? 0);
+			}
+			if (!empty($menuItem->children)) {
+				$this->sortItems($menuItem->children);
 			}
 			$menu[] = $menuItem;
 		}
+		$this->sortItems($menu);
 		return $menu;
+	}
+
+	/**
+	 * @param MenuItem[] $items
+	 * @return void
+	 */
+	private function sortItems(array &$items): void {
+		usort($items, static fn(MenuItem $a, MenuItem $b) => $a->order - $b->order);
 	}
 
 	/**
