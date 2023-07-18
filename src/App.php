@@ -290,13 +290,19 @@ class App
 	 */
 	public static function getSupportedLanguages(bool $returnObjects = false) : array {
 		if (empty(self::$supportedLanguages)) {
-			/** @var string[] $files */
-			$files = glob(LANGUAGE_DIR.'*');
-			$dirs = array_map(static function(string $dir) {
-				return str_replace(LANGUAGE_DIR, '', $dir);
-			}, $files);
-			foreach ($dirs as $dir) {
-				$explode = explode('_', $dir);
+			// Load configured languages
+			$languages = self::$config->getConfig('languages');
+			if (empty($languages)) {
+				// By default, load all languages in language directory
+				/** @var string[] $files */
+				$files = glob(LANGUAGE_DIR . '*');
+				$languages = array_map(static function (string $dir) {
+					return str_replace(LANGUAGE_DIR, '', $dir);
+				}, $files);
+			}
+
+			foreach ($languages as $language) {
+				$explode = explode('_', $language);
 				if (count($explode) !== 2) {
 					continue;
 				}
@@ -304,6 +310,7 @@ class App
 				self::$supportedLanguages[$lang] = $country;
 			}
 		}
+
 		if ($returnObjects) {
 			$return = [];
 			foreach (self::$supportedLanguages as $lang => $country) {
@@ -311,6 +318,7 @@ class App
 			}
 			return $return;
 		}
+
 		return self::$supportedLanguages;
 	}
 
