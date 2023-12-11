@@ -3,6 +3,7 @@
 namespace Lsr\Core\Caching;
 
 use Nette\Caching\BulkReader;
+use Nette\Caching\Storage;
 use Nette\InvalidArgumentException;
 use Throwable;
 
@@ -16,6 +17,14 @@ class Cache extends \Nette\Caching\Cache
 	public static int $miss = 0;
 	/** @var array<string, array{0:int, 1:int}> */
 	public static array $loadedKeys = [];
+
+	public function __construct(
+		Storage        $storage,
+		?string        $namespace = null,
+		protected bool $debug = true,
+	) {
+		parent::__construct($storage, $namespace);
+	}
 
 	/**
 	 * Reads multiple items from the cache.
@@ -121,6 +130,9 @@ class Cache extends \Nette\Caching\Cache
 	 * @return void
 	 */
 	private function logLoadedKey(mixed $key, bool $miss = false) : void {
+		if (!$this->debug) {
+			return;
+		}
 		$key = is_scalar($key) ? (string) $key : serialize($key);
 		if (!isset(self::$loadedKeys[$key])) {
 			self::$loadedKeys[$key] = [0, 0];

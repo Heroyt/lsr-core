@@ -69,6 +69,26 @@ class ModelQuery
 	}
 
 	/**
+	 * @param mixed ...$table
+	 *
+	 * @return $this
+	 */
+	public function leftJoin(...$table): ModelQuery {
+		$this->query->leftJoin(...$table);
+		return $this;
+	}
+
+	/**
+	 * @param mixed ...$table
+	 *
+	 * @return $this
+	 */
+	public function rightJoin(...$table): ModelQuery {
+		$this->query->rightJoin(...$table);
+		return $this;
+	}
+
+	/**
 	 * @param mixed ...$cond
 	 *
 	 * @return $this

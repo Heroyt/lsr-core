@@ -3,6 +3,7 @@
 namespace Lsr\Core\Dibi;
 
 use Dibi\Fluent as DibiFluent;
+use Dibi\Result;
 use Dibi\Row;
 use Lsr\Core\App;
 use Lsr\Core\Caching\Cache;
@@ -39,6 +40,7 @@ use Throwable;
  * @method Fluent set(...$args)
  * @method Fluent asc()
  * @method Fluent desc()
+ * @method Result execute(string $return = null)
  */
 class Fluent
 {

@@ -20,7 +20,7 @@ services:
 		setup:
 			- init()
 	cache.storage: Nette\Caching\Storages\SQLiteStorage(%cache.path%)
-	cache: Lsr\Core\Caching\Cache(@cache.storage)
+	cache: Lsr\Core\Caching\Cache(@cache.storage, null, %constants.debug%)
 	cache.extension.latte: Nette\Bridges\CacheLatte\CacheExtension(@cache.storage)
 	templating.latte.extension:
 		create: Lsr\Core\Templating\LatteExtension()

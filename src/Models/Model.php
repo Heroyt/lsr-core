@@ -62,14 +62,12 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	protected static array $reflections = [];
 	/** @var Factory[] */
 	protected static array $factory = [];
-	#[NoDB]
-	public ?int            $id      = null;
-	protected ?Row         $row     = null;
-	protected Logger       $logger;
-
 	/** @var array<string, Logger> */
 	protected static array $modelLoggers = [];
-
+	#[NoDB]
+	public ?int            $id           = null;
+	protected ?Row         $row          = null;
+	protected Logger       $logger;
 	/** @var string[] Dynamic tags to add to cache records for this model instance */
 	protected array $cacheTags = [];
 
@@ -95,22 +93,14 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			$this->row = $dbRow;
 			$this->fetch();
 		}
-		else if (isset($dbRow)) {
-			$this->row = $dbRow;
-			$this->fillFromRow();
+		else {
+			if (isset($dbRow)) {
+				$this->row = $dbRow;
+				$this->fillFromRow();
+			}
 		}
 		$this->instantiateProperties();
 		$this->logger = $this->getLogger();
-	}
-
-	public function getLogger() : Logger {
-		if (!isset($this->logger)) {
-			if (!isset(self::$modelLoggers[$this::TABLE])) {
-				self::$modelLoggers[$this::TABLE] = new Logger(LOG_DIR.'models/', $this::TABLE);
-			}
-			$this->logger = self::$modelLoggers[$this::TABLE];
-		}
-		return $this->logger;
 	}
 
 	/**
@@ -120,7 +110,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @todo: Support mixed primary keys
 	 *
 	 */
-	public static function getPrimaryKey() : string {
+	public static function getPrimaryKey(): string {
 		if (empty(static::$primaryKeys[static::class])) {
 			try {
 				// Try to find a property with a PrimaryKey attribute
@@ -140,12 +130,18 @@ abstract class Model implements JsonSerializable, ArrayAccess
 				$pascal = $reflection->getShortName();
 				$camel = Strings::toCamelCase($reflection->getShortName());
 				$snakeCase = Strings::toSnakeCase($reflection->getShortName());
-				if (property_exists(static::class, 'id_'.$snakeCase) || property_exists(static::class, 'id'.$pascal)) {
-					static::$primaryKeys[static::class] = 'id_'.$snakeCase;
+				if (property_exists(static::class, 'id_' . $snakeCase) || property_exists(
+						static::class,
+						'id' . $pascal
+					)) {
+					static::$primaryKeys[static::class] = 'id_' . $snakeCase;
 					return static::$primaryKeys[static::class];
 				}
-				if (property_exists(static::class, $snakeCase.'_id') || property_exists(static::class, $camel.'Id')) {
-					static::$primaryKeys[static::class] = $snakeCase.'_id';
+				if (property_exists(static::class, $snakeCase . '_id') || property_exists(
+						static::class,
+						$camel . 'Id'
+					)) {
+					static::$primaryKeys[static::class] = $snakeCase . '_id';
 					return static::$primaryKeys[static::class];
 				}
 			} catch (ReflectionException) {
@@ -158,17 +154,6 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	}
 
 	/**
-	 * @return string[]
-	 */
-	protected function getCacheTags() : array {
-		return array_merge(
-			['models', $this::TABLE, $this::TABLE.'/'.$this->id],
-			$this::CACHE_TAGS,
-			$this->cacheTags,
-		);
-	}
-
-	/**
 	 * Fetch model's data from DB
 	 *
 	 * @param bool $refresh
@@ -177,20 +162,20 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @throws ModelNotFoundException
 	 * @throws ValidationException
 	 */
-	public function fetch(bool $refresh = false) : void {
+	public function fetch(bool $refresh = false): void {
 		if (!isset($this->id) || $this->id <= 0) {
 			throw new RuntimeException('Id needs to be set before fetching model\'s data.');
 		}
 		if ($refresh || !isset($this->row)) {
 			/** @var Row|null $row */
 			$row = DB::select($this::TABLE, '*')
-							 ->where('%n = %i', $this::getPrimaryKey(), $this->id)
-							 ->cacheTags(...$this->getCacheTags())
-							 ->fetch();
+				->where('%n = %i', $this::getPrimaryKey(), $this->id)
+				->cacheTags(...$this->getCacheTags())
+				->fetch();
 			$this->row = $row;
 		}
 		if (!isset($this->row)) {
-			throw new ModelNotFoundException(get_class($this).' model of ID '.$this->id.' was not found.');
+			throw new ModelNotFoundException(get_class($this) . ' model of ID ' . $this->id . ' was not found.');
 		}
 		$this->fillFromRow();
 
@@ -204,9 +189,20 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	}
 
 	/**
+	 * @return string[]
+	 */
+	protected function getCacheTags(): array {
+		return array_merge(
+			['models', $this::TABLE, $this::TABLE . '/' . $this->id],
+			$this::CACHE_TAGS,
+			$this->cacheTags,
+		);
+	}
+
+	/**
 	 * @return void
 	 */
-	protected function fillFromRow() : void {
+	protected function fillFromRow(): void {
 		if (!isset($this->row)) {
 			return;
 		}
@@ -245,20 +241,36 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		}
 	}
 
-	protected function setProperty(string $name, mixed $value) : void {
+	protected function setProperty(string $name, mixed $value): void {
 		$property = $this::getPropertyReflection($name);
 		if ($property->hasType()) {
 			// Check enum and date values
 			$type = $property->getType();
 			if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
 				/** @phpstan-ignore-next-line */
-				if ($value instanceof DateInterval && in_array(DateTimeInterface::class, class_implements($type->getName()), true)) {
+				if (
+					$value instanceof DateInterval &&
+					in_array(DateTimeInterface::class, class_implements($type->getName()), true)
+				) {
 					$value = new DateTime($value->format('%H:%i:%s'));
 				}
 				/** @phpstan-ignore-next-line */
 				if (in_array(BackedEnum::class, class_implements($type->getName()), true)) {
 					$enum = $type->getName();
 					$value = $enum::tryFrom($value);
+				}
+			}
+			if ($value === null && $type->isBuiltin() && !$type->allowsNull()) {
+				switch ($type->getName()) {
+					case 'int':
+						$value = 0;
+						break;
+					case 'string':
+						$value = '';
+						break;
+					case 'bool':
+						$value = false;
+						break;
 				}
 			}
 		}
@@ -270,14 +282,14 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 *
 	 * @return ReflectionProperty
 	 */
-	public static function getPropertyReflection(string $name) : ReflectionProperty {
+	public static function getPropertyReflection(string $name): ReflectionProperty {
 		return static::getReflection()->getProperty($name);
 	}
 
 	/**
 	 * @return ReflectionClass<Model>
 	 */
-	protected static function getReflection() : ReflectionClass {
+	protected static function getReflection(): ReflectionClass {
 		if (!isset(static::$reflections[static::class])) {
 			static::$reflections[static::class] = (new ReflectionClass(static::class));
 		}
@@ -287,7 +299,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	/**
 	 * @return ReflectionProperty[]
 	 */
-	public static function getPropertyReflections(?int $filter = null) : array {
+	public static function getPropertyReflections(?int $filter = null): array {
 		return static::getReflection()->getProperties($filter);
 	}
 
@@ -301,7 +313,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @throws ModelNotFoundException
 	 * @throws ValidationException
 	 */
-	protected function processRelations(array $attributes, ReflectionProperty $property, string $propertyName) : void {
+	protected function processRelations(array $attributes, ReflectionProperty $property, string $propertyName): void {
 		foreach ($attributes as $attribute) {
 			/** @var ManyToOne|OneToMany|OneToOne|ManyToMany $attributeClass */
 			$attributeClass = $attribute->newInstance();
@@ -328,7 +340,10 @@ abstract class Model implements JsonSerializable, ArrayAccess
 						break;
 					}
 					try {
-						$this->$propertyName = isset($factory) ? $factory->factoryClass::getById($id, $factory->defaultOptions) : $className::get($id);
+						$this->$propertyName = isset($factory) ? $factory->factoryClass::getById(
+							$id,
+							$factory->defaultOptions
+						) : $className::get($id);
 					} catch (ModelNotFoundException $e) {
 						if (!$info->nullable) {
 							throw $e;
@@ -339,21 +354,21 @@ abstract class Model implements JsonSerializable, ArrayAccess
 				case OneToMany::class:
 					$id = $this->id;
 					$this->$propertyName = $className::query()
-																					 ->where('%n = %i', $foreignKey, $id)
-																					 ->cacheTags($this::TABLE.'/'.$this->id.'/relations')
-																					 ->get();
+						->where('%n = %i', $foreignKey, $id)
+						->cacheTags($this::TABLE . '/' . $this->id . '/relations')
+						->get();
 					break;
 				case ManyToMany::class:
 					$id = $this->id;
 					$this->$propertyName = $className::query()
-																					 ->where(
-																						 '%n IN %sql',
-																						 $foreignKey,
-																						 /* @phpstan-ignore-next-line */
-																						 $attributeClass->getConnectionQuery($id, $className, $this)
-																					 )
-																					 ->cacheTags($this::TABLE.'/'.$this->id.'/relations')
-																					 ->get();
+						->where(
+							'%n IN %sql',
+							$foreignKey,
+							/* @phpstan-ignore-next-line */
+							$attributeClass->getConnectionQuery($id, $className, $this)
+						)
+						->cacheTags($this::TABLE . '/' . $this->id . '/relations')
+						->get();
 					break;
 			}
 		}
@@ -362,7 +377,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	/**
 	 * @return Factory|null
 	 */
-	public static function getFactory() : ?Factory {
+	public static function getFactory(): ?Factory {
 		if (!isset(static::$factory[static::class])) {
 			try {
 				$attributes = static::getReflection()->getAttributes(Factory::class);
@@ -388,14 +403,14 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @throws ModelNotFoundException
 	 * @throws ValidationException
 	 */
-	public static function get(int $id, ?Row $row = null) : static {
+	public static function get(int $id, ?Row $row = null): static {
 		return self::$instances[static::TABLE][$id] ?? new static($id, $row);
 	}
 
 	/**
 	 * @return ModelQuery<static>
 	 */
-	public static function query() : ModelQuery {
+	public static function query(): ModelQuery {
 		return new ModelQuery(static::class);
 	}
 
@@ -406,7 +421,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 *
 	 * @return void
 	 */
-	protected function instantiateProperties() : void {
+	protected function instantiateProperties(): void {
 		$properties = $this::getPropertyReflections();
 		foreach ($properties as $property) {
 			$propertyName = $property->getName();
@@ -419,7 +434,9 @@ abstract class Model implements JsonSerializable, ArrayAccess
 
 			// Check type
 			if (!$property->hasType()) {
-				throw new RuntimeException('Cannot initialize property '.self::class.'::'.$propertyName.' with no type.');
+				throw new RuntimeException(
+					'Cannot initialize property ' . self::class . '::' . $propertyName . ' with no type.'
+				);
 			}
 			/** @var ReflectionNamedType $type */
 			$type = $property->getType();
@@ -427,10 +444,23 @@ abstract class Model implements JsonSerializable, ArrayAccess
 			if (!class_exists($className) || $type->isBuiltin()) {
 				// Built in types are not supported - string, int, float,...
 				// Non-built in types can also be interfaces or traits which is invalid. The type needs to be an instantiable class.
-				throw new RuntimeException('Cannot initialize property '.self::class.'::'.$propertyName.' with type '.$type->getName().'.');
+				throw new RuntimeException(
+					'Cannot initialize property ' . self::class . '::' . $propertyName . ' with type ' . $type->getName(
+					) . '.'
+				);
 			}
 			$this->$propertyName = new $className;
 		}
+	}
+
+	public function getLogger(): Logger {
+		if (!isset($this->logger)) {
+			if (!isset(self::$modelLoggers[$this::TABLE])) {
+				self::$modelLoggers[$this::TABLE] = new Logger(LOG_DIR . 'models/', $this::TABLE);
+			}
+			$this->logger = self::$modelLoggers[$this::TABLE];
+		}
+		return $this->logger;
 	}
 
 	/**
@@ -440,8 +470,10 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 *
 	 * @return bool
 	 */
-	public static function exists(int $id) : bool {
-		$test = DB::select(static::TABLE, 'count(*)')->where('%n = %i', static::getPrimaryKey(), $id)->fetchSingle(cache: false);
+	public static function exists(int $id): bool {
+		$test = DB::select(static::TABLE, 'count(*)')
+		          ->where('%n = %i', static::getPrimaryKey(), $id)
+		          ->fetchSingle(cache: false);
 		return $test > 0;
 	}
 
@@ -451,15 +483,34 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @return static[]
 	 * @throws ValidationException
 	 */
-	public static function getAll() : array {
+	public static function getAll(): array {
 		return static::query()->get();
+	}
+
+	/**
+	 * Clear cache for this model
+	 *
+	 * @return void
+	 */
+	public static function clearModelCache(): void {
+		/** @var Cache $cache */
+		$cache = App::getService('cache');
+		$cache->clean([
+			              CacheParent::Tags => [
+				              static::TABLE,
+			              ],
+		              ]);
+	}
+
+	public static function clearInstances(): void {
+		static::$instances = [];
 	}
 
 	/**
 	 * @return bool
 	 * @throws ValidationException
 	 */
-	public function save() : bool {
+	public function save(): bool {
 		$this->validate();
 		return isset($this->id) ? $this->update() : $this->insert();
 	}
@@ -470,7 +521,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @return void
 	 * @throws ValidationException
 	 */
-	public function validate() : void {
+	public function validate(): void {
 		$properties = $this::getPropertyReflections();
 		foreach ($properties as $property) {
 			$attributes = $property->getAttributes(Validator::class, ReflectionAttribute::IS_INSTANCEOF);
@@ -496,18 +547,18 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @return bool
 	 * @throws ValidationException
 	 */
-	public function update() : bool {
+	public function update(): bool {
 		if (!isset($this->id)) {
 			return false;
 		}
-		$this->logger->info('Updating model - '.$this->id);
+		$this->logger->info('Updating model - ' . $this->id);
 		try {
 			DB::update($this::TABLE, $this->getQueryData(), ['%n = %i', $this::getPrimaryKey(), $this->id]);
 			$this->clearCache();
 		} catch (Exception $e) {
-			$this->logger->error('Error running update query: '.$e->getMessage());
-			$this->logger->debug('Query: '.$e->getSql());
-			$this->logger->debug('Trace: '.$e->getTraceAsString());
+			$this->logger->error('Error running update query: ' . $e->getMessage());
+			$this->logger->debug('Query: ' . $e->getSql());
+			$this->logger->debug('Trace: ' . $e->getTraceAsString());
 			return false;
 		}
 		return true;
@@ -519,7 +570,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @return array<string, mixed>
 	 * @throws ValidationException
 	 */
-	public function getQueryData() : array {
+	public function getQueryData(): array {
 		$data = [];
 
 		$properties = $this::getPropertyReflections(ReflectionProperty::IS_PUBLIC);
@@ -589,59 +640,34 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 *
 	 * @return void
 	 */
-	public function clearCache() : void {
+	public function clearCache(): void {
 		if (isset($this->id)) {
 			/** @var Cache $cache */
 			$cache = App::getService('cache');
 			$cache->clean([
-											CacheParent::Tags => [
-												$this::TABLE.'/query',
-												$this::TABLE.'/'.$this->id,
-												$this::TABLE.'/'.$this->id.'/relations',
-											]
-										]);
+				              CacheParent::Tags => [
+					              $this::TABLE . '/query',
+					              $this::TABLE . '/' . $this->id,
+					              $this::TABLE . '/' . $this->id . '/relations',
+				              ],
+			              ]);
 		}
-	}
-
-	public static function clearQueryCache() : void {
-		/** @var Cache $cache */
-		$cache = App::getService('cache');
-		$cache->clean([
-										CacheParent::Tags => [
-											static::TABLE.'/query',
-										]
-									]);
-	}
-
-	/**
-	 * Clear cache for this model
-	 *
-	 * @return void
-	 */
-	public static function clearModelCache() : void {
-		/** @var Cache $cache */
-		$cache = App::getService('cache');
-		$cache->clean([
-										CacheParent::Tags => [
-											static::TABLE,
-										]
-									]);
 	}
 
 	/**
 	 * @return bool
 	 * @throws ValidationException
 	 */
-	public function insert() : bool {
+	public function insert(): bool {
 		$this->logger->info('Inserting new model');
 		try {
 			DB::insert($this::TABLE, $this->getQueryData());
 			$this->id = DB::getInsertId();
 			$this::clearQueryCache();
 		} catch (Exception $e) {
-			$this->logger->error('Error running insert query: '.$e->getMessage());
-			$this->logger->debug('Query: '.$e->getSql());
-			$this->logger->debug('Trace: '.$e->getTraceAsString());
+			$this->logger->error('Error running insert query: ' . $e->getMessage());
+			$this->logger->debug('Query: ' . $e->getSql());
+			$this->logger->debug('Trace: ' . $e->getTraceAsString());
 			return false;
 		}
 		if (empty($this->id)) {
@@ -652,6 +678,16 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		return true;
 	}
 
+	public static function clearQueryCache(): void {
+		/** @var Cache $cache */
+		$cache = App::getService('cache');
+		$cache->clean([
+			              CacheParent::Tags => [
+				              static::TABLE . '/query',
+			              ],
+		              ]);
+	}
+
 	/**
 	 * Specify data which should be serialized to JSON
 	 *
@@ -659,7 +695,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 * @return array<string, mixed> data which can be serialized by <b>json_encode</b>,
 	 * which is a value of any type other than a resource.
 	 */
-	public function jsonSerialize() : array {
+	public function jsonSerialize(): array {
 		$vars = get_object_vars($this);
 		if (isset($vars['row'])) {
 			unset($vars['row']);
@@ -673,7 +709,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	/**
 	 * @inheritdoc
 	 */
-	public function offsetGet($offset) : mixed {
+	public function offsetGet($offset): mixed {
 		if ($this->offsetExists($offset)) {
 			return $this->$offset;
 		}
@@ -683,14 +719,14 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	/**
 	 * @inheritdoc
 	 */
-	public function offsetExists($offset) : bool {
+	public function offsetExists($offset): bool {
 		return property_exists($this, $offset);
 	}
 
 	/**
 	 * @inheritdoc
 	 */
-	public function offsetSet($offset, $value) : void {
+	public function offsetSet($offset, $value): void {
 		if (isset($offset) && is_string($offset) && $this->offsetExists($offset)) {
 			$this->$offset = $value;
 		}
@@ -699,7 +735,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	/**
 	 * @inheritdoc
 	 */
-	public function offsetUnset($offset) : void {
+	public function offsetUnset($offset): void {
 		// Do nothing
 	}
 
@@ -708,11 +744,11 @@ abstract class Model implements JsonSerializable, ArrayAccess
 	 *
 	 * @return bool
 	 */
-	public function delete() : bool {
+	public function delete(): bool {
 		if (!isset($this->id)) {
 			return false;
 		}
-		$this->logger->info('Delete model: '.$this::TABLE.' of ID: '.$this->id);
+		$this->logger->info('Delete model: ' . $this::TABLE . ' of ID: ' . $this->id);
 		try {
 			DB::delete($this::TABLE, ['%n = %i', $this::getPrimaryKey(), $this->id]);
 			unset(static::$instances[$this::TABLE][$this->id]);

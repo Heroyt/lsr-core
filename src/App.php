@@ -467,6 +467,7 @@ class App
 	 * @throws JsonException
 	 */
 	public static function sendAjaxData(array $data) : never {
+		header('Cache-Control: max-age=3600,no-cache');
 		header('Content-Type: application/json; charset=UTF-8');
 		bdump($data);
 		exit(json_encode($data, JSON_THROW_ON_ERROR));

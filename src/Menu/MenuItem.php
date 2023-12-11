@@ -29,6 +29,9 @@ class MenuItem
 		public int    $order = 0,
 	) {
 		$this->url = App::getLink($this->path);
-		$this->active = Router::comparePaths($this->path);
+		$this->active = Router::comparePaths(array_values($this->path));
+		foreach ($this->children as $child) {
+			$this->active = $this->active || Router::comparePaths($child->path);
+		}
 	}
 }
