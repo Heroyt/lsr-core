@@ -1,7 +1,7 @@
 {
 	"name": "lsr/core",
 	"description": "Laser framework core.",
-	"version": "0.2.27",
+	"version": "0.2.28",
 	"repositories": [
 		{
 			"type": "composer",

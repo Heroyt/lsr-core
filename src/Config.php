@@ -48,6 +48,9 @@ class Config
 		if (!isset(self::$instance)) {
 			self::$instance = new self($cacheDir);
 		}
+		if (!self::$instance->isInitialized()) {
+			self::$instance->init();
+		}
 		return self::$instance;
 	}
 
@@ -139,7 +142,7 @@ class Config
 			return false;
 		}
 		$this->config = $config;
-
+		$this->initialized = true;
 		return true;
 	}
 
