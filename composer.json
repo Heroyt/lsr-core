@@ -1,7 +1,7 @@
 {
 	"name": "lsr/core",
 	"description": "Laser framework core.",
-	"version": "0.2.26",
+	"version": "0.2.27",
 	"repositories": [
 		{
 			"type": "composer",
@@ -51,7 +51,7 @@
 		"nette/caching": "^3.2",
 		"nette/http": "^3.2",
 		"ext-zip": "*",
-		"dibi/dibi": "^4.2",
+		"dibi/dibi": "^5",
 		"lsr/routing": "^0.2",
 		"lsr/request": "^0.2",
 		"vlucas/phpdotenv": "^5.5"
