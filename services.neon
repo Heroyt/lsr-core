@@ -5,6 +5,8 @@ parameters:
 		path: '%constants.tempDir%cache.db'
 	templating:
 		tmpPath: '%constants.tempDir%latte/'
+	config:
+		cacheDir: %constants.tempDir%
 extensions:
 	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
 services:
@@ -12,7 +14,7 @@ services:
 	- Lsr\Core\Links\Generator
 
 	config:
-		create: Lsr\Core\Config::getInstance()
+		create: Lsr\Core\Config::getInstance(%config.cacheDir%)
 		setup:
 			- init()
 	session:
