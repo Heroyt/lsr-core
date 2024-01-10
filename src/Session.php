@@ -28,6 +28,7 @@ class Session implements SessionInterface
 		if (!isset($_SESSION['flash'])) {
 			$_SESSION['flash'] = [];
 		}
+		session_write_close();
 	}
 
 	/**
@@ -83,6 +84,9 @@ class Session implements SessionInterface
 	 * @inheritDoc
 	 */
 	public function set(string $key, mixed $value) : void {
+		if ($this->getStatus() !== PHP_SESSION_ACTIVE) {
+			session_start();
+		}
 		$_SESSION[$key] = $value;
 	}
 
@@ -90,6 +94,9 @@ class Session implements SessionInterface
 	 * @inheritDoc
 	 */
 	public function delete(string $key) : void {
+		if ($this->getStatus() !== PHP_SESSION_ACTIVE) {
+			session_start();
+		}
 		if (isset($_SESSION[$key])) {
 			unset($_SESSION[$key]);
 		}
@@ -118,6 +125,9 @@ class Session implements SessionInterface
 	 * @inheritDoc
 	 */
 	public function flash(string $key, mixed $value) : void {
+		if ($this->getStatus() !== PHP_SESSION_ACTIVE) {
+			session_start();
+		}
 		$_SESSION['flash'][$key] = $value;
 	}
 }
