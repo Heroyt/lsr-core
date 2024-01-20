@@ -3,6 +3,7 @@
 namespace Lsr\Core\Models\Attributes;
 
 use Attribute;
+use Lsr\Core\Models\LoadingType;
 use Lsr\Core\Models\Model;
 
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::IS_REPEATABLE)]
@@ -14,6 +15,7 @@ class ManyToOne extends ModelRelation
 		public string  $foreignKey = '',
 		public string  $localKey = '',
 		public ?string $class = null,
+		public LoadingType $loadingType = LoadingType::EAGER,
 	) {
 	}
 

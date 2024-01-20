@@ -5,6 +5,7 @@ namespace Lsr\Core\Models\Attributes;
 use Attribute;
 use Lsr\Core\DB;
 use Lsr\Core\Dibi\Fluent;
+use Lsr\Core\Models\LoadingType;
 use Lsr\Core\Models\Model;
 
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::IS_REPEATABLE)]
@@ -17,6 +18,7 @@ class ManyToMany extends ModelRelation
 		public string  $foreignKey = '',
 		public string  $localKey = '',
 		public ?string $class = null,
+		public LoadingType $loadingType = LoadingType::EAGER,
 	) {
 	}
 
