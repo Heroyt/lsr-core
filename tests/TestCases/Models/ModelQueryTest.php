@@ -28,7 +28,13 @@ class ModelQueryTest extends TestCase
 	 * @throws Exception
 	 */
 	public function setUp() : void {
-		DB::init();
+		DB::init([
+			         'Database' => [
+				         'DATABASE' => ROOT . "tests/tmp/db.db",
+				         'DRIVER'   => "sqlite",
+				         'PREFIX'   => "",
+			         ],
+		         ]);
 		DB::getConnection()->query("
 			CREATE TABLE models ( 
 			    id_model INTEGER PRIMARY KEY autoincrement NOT NULL, 

@@ -1,9 +1,6 @@
 <component name="ProjectRunConfigurationManager">
     <configuration default="false" name="Tests - core" type="PHPUnitRunConfigurationType" factoryName="PHPUnit">
         <CommandLine>
-            <PhpTestInterpreterSettings>
-                <option name="interpreterName" value="PHP 8.1"/>
-            </PhpTestInterpreterSettings>
             <envs>
                 <env name="XDEBUG_MODE" value="coverage"/>
             </envs>

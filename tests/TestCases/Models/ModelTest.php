@@ -7,9 +7,12 @@
 namespace TestCases\Models;
 
 use Dibi\Row;
+use Lsr\Core\App;
+use Lsr\Core\Caching\Cache;
 use Lsr\Core\DB;
 use Lsr\Core\Exceptions\ModelNotFoundException;
 use Lsr\Core\Exceptions\ValidationException;
+use Lsr\Core\Models\Attributes\Instantiate;
 use Lsr\Core\Models\Attributes\ManyToMany;
 use Lsr\Core\Models\Attributes\ManyToOne;
 use Lsr\Core\Models\Attributes\OneToMany;
@@ -21,6 +24,7 @@ use Lsr\Core\Models\Attributes\Validation\StringLength;
 use Lsr\Core\Models\Attributes\Validation\Uri;
 use Lsr\Core\Models\Attributes\Validation\Url;
 use Lsr\Core\Models\Interfaces\InsertExtendInterface;
+use Lsr\Core\Models\LoadingType;
 use Lsr\Core\Models\Model;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -49,7 +53,13 @@ class ModelTest extends TestCase
 {
 
 	public function setUp() : void {
-		DB::init();
+		DB::init([
+			         'Database' => [
+				         'DATABASE' => ROOT . "tests/tmp/db.db",
+				         'DRIVER'   => "sqlite",
+				         'PREFIX'   => "",
+			         ],
+		         ]);
 		DB::getConnection()->query("
 			CREATE TABLE modelsA ( 
 			    model_a_id INTEGER PRIMARY KEY autoincrement NOT NULL , 
@@ -92,6 +102,13 @@ class ModelTest extends TestCase
 			  	PRIMARY KEY(model_d_id, model_e_id)
 			);
 		");
+		DB::getConnection()->query(
+			"
+			CREATE TABLE model_invalid_instantiate ( 
+			    id_model INTEGER PRIMARY KEY autoincrement NOT NULL
+			);
+		"
+		);
 		$this->refreshData();
 		parent::setUp();
 	}
@@ -102,6 +119,7 @@ class ModelTest extends TestCase
 		DB::delete(ModelC::TABLE, ['1 = 1']);
 		DB::delete(ModelD::TABLE, ['1 = 1']);
 		DB::delete(ModelE::TABLE, ['1 = 1']);
+		DB::delete(ModelInvalidInstantiate::TABLE, ['1 = 1']);
 		DB::delete('modelsD_modelsE', ['1 = 1']);
 
 		DB::insert(ModelA::TABLE, [
@@ -178,6 +196,9 @@ class ModelTest extends TestCase
 			'model_d_id' => 3,
 			'name'       => 'c',
 		]);
+		DB::insert(ModelInvalidInstantiate::TABLE, [
+			'id_model' => 1,
+		]);
 
 		DB::insert('modelsD_modelsE', [
 			'model_d_id' => 1,
@@ -203,11 +224,13 @@ class ModelTest extends TestCase
 			'model_d_id' => 3,
 			'model_e_id' => 1,
 		]);
+		App::getServiceByType(Cache::class)->clean([Cache::All => true]);
 	}
 
 	public function tearDown() : void {
 		DB::close();
 		unlink(TMP_DIR.'db.db');
+		App::getServiceByType(Cache::class)->clean([Cache::All => true]);
 		parent::tearDown();
 	}
 
@@ -273,6 +296,60 @@ class ModelTest extends TestCase
 		self::assertEquals('value2', $model4->data->value2);
 	}
 
+	public function testRelations(): void {
+		$parent = ModelA::get(1);
+
+		self::assertTrue(isset($parent));
+
+		$modelEager = ModelB::get(1);
+		$modelLazy = ModelBLazy::get(1);
+
+		self::assertTrue(isset($modelEager->parent));
+		self::assertFalse(isset($modelLazy->parent));
+
+		self::assertEquals($modelEager->parent, $parent);
+		self::assertEquals($modelLazy->getParent(), $parent);
+		self::assertTrue(isset($modelLazy->parent));
+	}
+
+	public function testRelationsSave(): void {
+		$parent1 = ModelA::get(1);
+		$parent2 = ModelA::get(2);
+
+		self::assertTrue(isset($parent1, $parent2));
+
+		$modelEager = ModelB::get(1);
+		$modelLazy = ModelBLazy::get(2);
+
+		self::assertTrue(isset($modelEager->parent));
+		self::assertFalse(isset($modelLazy->parent));
+
+		// Eager model should update its relation normally
+		$modelEager->parent = $parent2;
+		$data = $modelEager->getQueryData();
+		self::assertEquals(2, $data['model_a_id']);
+		self::assertArrayHasKey('model_a_id', $data);
+		self::assertTrue($modelEager->save());
+		$testId = DB::select(ModelB::TABLE, 'model_a_id')->where('model_b_id = %i', 1)->fetchSingle(cache: false);
+		self::assertEquals(2, $testId);
+
+		// Save without setting any parent (parent parameter is not set) should not change its value
+		$data = $modelLazy->getQueryData();
+		self::assertArrayNotHasKey('model_a_id', $data, json_encode($data));
+		self::assertTrue($modelLazy->save());
+		$testId = DB::select(ModelBLazy::TABLE, 'model_a_id')->where('model_b_id = %i', 2)->fetchSingle(cache: false);
+		self::assertEquals(1, $testId);
+
+		// After setting the value, it should behave as expected
+		$modelLazy->parent = $parent2;
+		$data = $modelLazy->getQueryData();
+		self::assertArrayHasKey('model_a_id', $data);
+		self::assertEquals(2, $data['model_a_id']);
+		self::assertTrue($modelLazy->save());
+		$testId = DB::select(ModelBLazy::TABLE, 'model_a_id')->where('model_b_id = %i', 2)->fetchSingle(cache: false);
+		self::assertEquals(2, $testId);
+	}
+
 	public function testGetAll() : void {
 		$this->refreshData();
 
@@ -326,7 +403,6 @@ class ModelTest extends TestCase
 		self::assertEquals(['value0' => 'a', 'value1' => 'b', 'value2' => 'c'], $model3->getQueryData());
 	}
 
-
 	public function testSave() : void {
 		$model = new ModelA();
 		$model->name = 'test';
@@ -357,7 +433,8 @@ class ModelTest extends TestCase
 		self::assertTrue($model->save());
 
 		// Check DB
-		$row = DB::select(ModelA::TABLE, '*')->where('model_a_id = %i', $model->id)->fetch();
+		$row = DB::select(ModelA::TABLE, '*')->where('model_a_id = %i', $model->id)->fetch(cache: false);
+
 		self::assertNotNull($row);
 		/** @phpstan-ignore-next-line */
 		self::assertEquals($model->id, $row->model_a_id);
@@ -459,12 +536,18 @@ class ModelTest extends TestCase
 	public function testDelete() : void {
 		$this->refreshData();
 		$model = ModelA::get(1);
+		//var_dump($model);
 
 		self::assertTrue($model->delete());
 
-		self::assertNull(DB::select(ModelA::TABLE, '*')->where('%n = %i', ModelA::getPrimaryKey(), 1)->fetch());
+		self::assertNull(
+			DB::select(ModelA::TABLE, '*')->where('%n = %i', ModelA::getPrimaryKey(), 1)->fetch(cache: false)
+		);
+		unset($model);
+
 		$this->expectException(ModelNotFoundException::class);
-		ModelA::get(1);
+		$model = ModelA::get(1);
+		//var_dump($model);
 	}
 
 	public function testDelete2() : void {
@@ -753,6 +836,22 @@ class ModelTest extends TestCase
 		$this->expectException(ValidationException::class);
 		$model->validate();
 	}
+
+	public function testInvalidInstantiate(): void {
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage(
+			'Cannot initialize property ' . ModelInvalidInstantiate::class . '::val with no type.'
+		);
+		ModelInvalidInstantiate::get(1);
+	}
+
+	public function testInvalidInstantiate2(): void {
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage(
+			'Cannot initialize property ' . ModelInvalidInstantiate2::class . '::val with type int.'
+		);
+		ModelInvalidInstantiate2::get(1);
+	}
 }
 
 class ModelValidation extends Model
@@ -807,6 +906,25 @@ class ModelB extends Model
 
 	#[ManyToOne]
 	public ?ModelA $parent = null;
+
+}
+
+#[PrimaryKey('model_b_id')]
+class ModelBLazy extends Model
+{
+
+	public const TABLE = 'modelsB';
+
+	public string $description;
+	public TestEnum $modelType;
+
+	#[ManyToOne(loadingType: LoadingType::LAZY)]
+	public ?ModelA $parent;
+
+	public function getParent(): ?ModelA {
+		$this->parent ??= ModelA::get($this->relationIds['parent'] ?? $this->row->model_a_id ?? 0);
+		return $this->parent;
+	}
 
 }
 
@@ -911,4 +1029,26 @@ final class SimpleData implements InsertExtendInterface
 		$data['value1'] = $this->value1;
 		$data['value2'] = $this->value2;
 	}
+}
+
+#[PrimaryKey('id_model')]
+class ModelInvalidInstantiate extends Model
+{
+
+	public const TABLE = 'model_invalid_instantiate';
+
+	#[Instantiate]
+	public $val;
+
+}
+
+#[PrimaryKey('id_model')]
+class ModelInvalidInstantiate2 extends Model
+{
+
+	public const TABLE = 'model_invalid_instantiate';
+
+	#[Instantiate]
+	public int $val;
+
 }

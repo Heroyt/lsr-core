@@ -90,14 +90,20 @@ class DBTest extends TestCase
 		$this->initSqlite();
 		$count = DB::insert('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		self::assertEquals(1, $count);
 		$this->dropTable();
 	}
 
 	public function initSqlite() : void {
-		DB::init();
+		DB::init([
+			         'Database' => [
+				         'DATABASE' => ROOT . "tests/tmp/db.db",
+				         'DRIVER'   => "sqlite",
+				         'PREFIX'   => "",
+			         ],
+		         ]);
 		$this->initSqliteTable();
 	}
 
@@ -126,18 +132,18 @@ class DBTest extends TestCase
 	public function testInsertMultiple() : void {
 		$this->initSqlite();
 		$count = DB::insert('table1',
-												[
-													'name' => 'test1',
-													'age'  => null
-												],
-												[
-													'name' => 'test2',
-													'age'  => 10
-												],
-												[
-													'name' => 'test3',
-													'age'  => 99
-												]
+		                    [
+			                    'name' => 'test1',
+			                    'age'  => null,
+		                    ],
+		                    [
+			                    'name' => 'test2',
+			                    'age'  => 10,
+		                    ],
+		                    [
+			                    'name' => 'test3',
+			                    'age'  => 99,
+		                    ]
 		);
 		self::assertEquals(3, DB::select('table1', 'count(*)')->fetchSingle());
 		self::assertEquals(3, $count);
@@ -148,13 +154,13 @@ class DBTest extends TestCase
 		$this->initMysql();
 		$count = DB::insert('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		$id = DB::getInsertId();
 		self::assertEquals(1, $count);
 		$count = DB::insertIgnore('table1', [
 			'id'   => $id,
-			'name' => 'test2'
+			'name' => 'test2',
 		]);
 		self::assertEquals(0, $count);
 		$this->dropTable();
@@ -163,16 +169,16 @@ class DBTest extends TestCase
 	public function initMysql() : void {
 		/** @phpstan-ignore-next-line */
 		DB::init([
-							 'Database' => [
-								 'HOST'     => 'localhost',
-								 'USER'     => 'root',
-								 'PASS'     => '',
-								 'DRIVER'   => 'mysqli',
-								 'DATABASE' => 'test',
-								 'PORT'     => 3306,
-								 'COLLATE'  => 'utf8mb4'
-							 ],
-						 ]);
+			         'Database' => [
+				         'HOST'     => 'localhost',
+				         'USER'     => 'root',
+				         'PASS'     => '',
+				         'DRIVER'   => 'mysqli',
+				         'DATABASE' => 'test',
+				         'PORT'     => 3306,
+				         'COLLATE'  => 'utf8mb4',
+			         ],
+		         ]);
 		$this->initMysqlTable();
 	}
 
@@ -201,7 +207,7 @@ class DBTest extends TestCase
 		$this->initMysql();
 		DB::insert('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		self::assertEquals(1, DB::getAffectedRows());
 		$this->dropTable();
@@ -226,39 +232,39 @@ class DBTest extends TestCase
 		$this->expectException(DriverException::class);
 		/** @phpstan-ignore-next-line */
 		DB::init([
-							 'Database' => [
-								 'HOST'     => 'localhost',
-								 'USER'     => 'root',
-								 'PASS'     => 'invalid',
-								 'DRIVER'   => 'mysqli',
-								 'DATABASE' => 'test',
-								 'PORT'     => 3306,
-								 'COLLATE'  => 'utf8mb4'
-							 ],
-						 ]);
+			         'Database' => [
+				         'HOST'     => 'localhost',
+				         'USER'     => 'root',
+				         'PASS'     => 'invalid',
+				         'DRIVER'   => 'mysqli',
+				         'DATABASE' => 'test',
+				         'PORT'     => 3306,
+				         'COLLATE'  => 'utf8mb4',
+			         ],
+		         ]);
 	}
 
 	public function testResetAutoIncrement() : void {
 		$this->initMysql();
 		DB::insert('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		DB::insert('table1', [
 			'name' => 'test2',
-			'age'  => 10
+			'age' => 10,
 		]);
 		DB::delete('table1');
 		DB::insert('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		self::assertEquals(3, DB::getInsertId());
 		DB::delete('table1');
 		DB::resetAutoIncrement('table1');
 		DB::insert('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		self::assertEquals(1, DB::getInsertId());
 		$this->dropTable();
@@ -268,7 +274,7 @@ class DBTest extends TestCase
 		$this->initSqlite();
 		$query = DB::insertGet('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		/** @noinspection UnnecessaryAssertionInspection */
 		self::assertInstanceOf(\Lsr\Core\Dibi\Fluent::class, $query);
@@ -282,15 +288,15 @@ class DBTest extends TestCase
 		$this->initSqlite();
 		DB::insert('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		$id = DB::getInsertId();
 		$count = DB::update('table1', [
-			'name' => 'hello!'
+			'name' => 'hello!',
 		],                  [
-													'id = %i',
-													$id
-												]);
+			                    'id = %i',
+			                    $id,
+		                    ]);
 		self::assertIsInt($count);
 		self::assertEquals(1, $count);
 		/** @var Row|null $row */
@@ -303,7 +309,7 @@ class DBTest extends TestCase
 
 		/** @var Fluent $query */
 		$query = DB::update('table1', [
-			'name' => 'hello!'
+			'name' => 'hello!',
 		]);
 		self::assertInstanceOf(\Lsr\Core\Dibi\Fluent::class, $query);
 		$query->execute();
@@ -320,7 +326,7 @@ class DBTest extends TestCase
 		$this->initSqlite();
 		DB::insert('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		$id = DB::getInsertId();
 		/** @var Result $query */
@@ -333,7 +339,7 @@ class DBTest extends TestCase
 		$this->initSqlite();
 		DB::insert('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		$id = DB::getInsertId();
 		$count = DB::delete('table1', ['id = %i', $id]);
@@ -345,7 +351,7 @@ class DBTest extends TestCase
 		$this->initMysql();
 		DB::insert('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		$id = DB::getInsertId();
 		DB::replace('table1', [
@@ -372,16 +378,16 @@ class DBTest extends TestCase
 				'id'   => $id + 1,
 				'name' => 'abc',
 				'age'  => 30,
-				'date' => new DateTime('now')
+				'date' => new DateTime('now'),
 			],
 		]);
-		$row = DB::select('table1', '*')->where('id = %i', $id)->fetch();
+		$row = DB::select('table1', '*')->where('id = %i', $id)->fetch(cache: false);
 		self::assertNotNull($row);
 		/** @phpstan-ignore-next-line */
 		self::assertEquals('name2', $row->name);
 		/** @phpstan-ignore-next-line */
 		self::assertEquals(12, $row->age);
-		$row = DB::select('table1', '*')->where('id = %i', $id + 1)->fetch();
+		$row = DB::select('table1', '*')->where('id = %i', $id + 1)->fetch(cache: false);
 		self::assertNotNull($row);
 		/** @phpstan-ignore-next-line */
 		self::assertEquals('abc', $row->name);
@@ -398,12 +404,12 @@ class DBTest extends TestCase
 		$this->initMysql();
 		DB::insert('table1', [
 			'name' => 'test1',
-			'age'  => null
+			'age' => null,
 		]);
 		$id1 = DB::getInsertId();
 		DB::insert('table1', [
 			'name' => 'test2',
-			'age'  => 12
+			'age' => 12,
 		]);
 		$id2 = DB::getInsertId();
 		DB::insert('table2', [
@@ -418,14 +424,14 @@ class DBTest extends TestCase
 		$id4 = DB::getInsertId();
 
 		// Simple select
-		$rows = DB::select('table1', '*')->fetchAll();
+		$rows = DB::select('table1', '*')->fetchAll(cache: false);
 		self::assertCount(2, $rows);
 
 		// Join select with alias
 		$rows = DB::select(['table1', 'a'], 'a.id, a.name, a.age, b.name as value')
-							->join('table2', 'b')
-							->on('a.id = b.table_1_id')
-							->fetchAll();
+			->join('table2', 'b')
+			->on('a.id = b.table_1_id')
+			->fetchAll(cache: false);
 		self::assertCount(1, $rows);
 		/** @var Row $row */
 		$row = first($rows);

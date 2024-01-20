@@ -1,6 +1,10 @@
 <?php
 /** @noinspection AutoloadingIssuesInspection */
+
 /** @noinspection PhpIllegalPsrClassPathInspection */
+
+use Lsr\Core\App;
+use Lsr\Core\Caching\Cache;
 
 define('ROOT', dirname(__DIR__).'/');
 const PRIVATE_DIR = ROOT.'tests/private/';
@@ -14,6 +18,8 @@ const CHECK_TRANSLATIONS = true;
 const PRODUCTION = true;
 const ASSETS_DIR = ROOT.'assets/';
 
+ini_set('open_basedir', ROOT);
+
 require_once ROOT.'vendor/autoload.php';
 
 /**
@@ -26,3 +32,11 @@ enum TestEnum: string
 	case C = 'C';
 	case D = 'D';
 }
+
+if (!file_exists(ROOT . "tests/tmp/db.db")) {
+	touch(ROOT . "tests/tmp/db.db");
+}
+
+App::init();
+
+App::getServiceByType(Cache::class)->clean([Cache::All => true]);
