@@ -1,14 +1,18 @@
-includes:
-	- ../../../config/constants.php
 parameters:
+	constants:
+		debug: true
+		appDir: './'
+		tempDir: './tmp/'
 	cache:
 		path: '%constants.tempDir%cache.db'
+		journal: '%constants.tempDir%journal.db'
 	templating:
 		tmpPath: '%constants.tempDir%latte/'
 	config:
 		cacheDir: %constants.tempDir%
 extensions:
 	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
+	caching: Nette\Bridges\CacheDI\CacheExtension(%constants.tempDir%)
 services:
 	- Lsr\Core\Menu\MenuBuilder
 	- Lsr\Core\Links\Generator
@@ -22,6 +26,7 @@ services:
 		setup:
 			- init()
 	cache.storage: Nette\Caching\Storages\SQLiteStorage(%cache.path%)
+	caching.journal: Nette\Caching\Storages\SQLiteJournal(%cache.journal%)
 	cache: Lsr\Core\Caching\Cache(@cache.storage, null, %constants.debug%)
 	cache.extension.latte: Nette\Bridges\CacheLatte\CacheExtension(@cache.storage)
 	templating.latte.extension:
@@ -42,10 +47,10 @@ services:
 			- templating
 search:
 	controllers:
-		in: %constants.appDir%/src/Controllers
+		in: %constants.appDir%src/Controllers
 		extends:
-			- Lsr\Core\Controller
-			- Lsr\Core\ApiController
-			- Lsr\Core\CliController
+			- Lsr\Core\Controllers\Controller
+			- Lsr\Core\Controllers\ApiController
+			- Lsr\Core\Controllers\CliController
 		tags:
 			- controllers

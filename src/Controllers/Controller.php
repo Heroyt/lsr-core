@@ -11,10 +11,11 @@
  * @brief     All page classes
  */
 
-namespace Lsr\Core;
+namespace Lsr\Core\Controllers;
 
 
 use JsonException;
+use Lsr\Core\App;
 use Lsr\Core\Routing\Middleware;
 use Lsr\Core\Templating\Latte;
 use Lsr\Exceptions\TemplateDoesNotExistException;

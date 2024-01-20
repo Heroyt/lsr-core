@@ -11,7 +11,7 @@
  * @brief     All page classes
  */
 
-namespace Lsr\Core;
+namespace Lsr\Core\Controllers;
 
 
 use Lsr\Helpers\Cli\CliHelper;
