@@ -89,7 +89,9 @@ class App
 		self::setupDi();
 
 		// Setup session
-		self::$session = self::getServiceByType(SessionInterface::class);
+		if (PHP_SAPI !== 'cli') {
+			self::$session = self::getServiceByType(SessionInterface::class);
+		}
 
 		// Setup routes
 		self::$router = self::getServiceByType(Router::class);
@@ -138,6 +140,9 @@ class App
 	 * @return void
 	 */
 	protected static function setupDi() : void {
+		if (isset(self::$container)) {
+			return;
+		}
 		Timer::start('core.setup.di');
 		$loader = new ContainerLoader(TMP_DIR.'di/');
 		/** @var Container $class */
@@ -230,10 +235,12 @@ class App
 		if (isset($request, $request->params['lang']) && self::isSupportedLanguage($request->params['lang'])) {
 			return $request->params['lang'];
 		}
-		/** @var string|null $sessLang */
-		$sessLang = self::$session->get('lang');
-		if (isset($sessLang) && self::isSupportedLanguage($sessLang)) {
-			return $sessLang;
+		if (isset(self::$session)) {
+			/** @var string|null $sessLang */
+			$sessLang = self::$session->get('lang');
+			if (isset($sessLang) && self::isSupportedLanguage($sessLang)) {
+				return $sessLang;
+			}
 		}
 		if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
 			$info = explode(';', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
