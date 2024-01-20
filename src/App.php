@@ -166,10 +166,10 @@ class App
 	 *
 	 * @param class-string<T> $type
 	 *
-	 * @return T
+	 * @return T|null
 	 * @throws MissingServiceException
 	 */
-	public static function getServiceByType(string $type) : object {
+	public static function getServiceByType(string $type): ?object {
 		return self::getContainer()->getByType($type);
 	}
 

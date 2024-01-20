@@ -63,9 +63,9 @@ class DB
 	 *
 	 * @since 1.0
 	 */
-	public static function init(array $config = []) : void {
+	public static function init(array $config = []): void {
 		if (empty($config)) {
-			$env = App::getServiceByType(Config::class)->getConfig('ENV');
+			$env = App::getServiceByType(Config::class)?->getConfig('ENV');
 			$config = [
 				'Database' => [
 					'DRIVER'   => $env['DB_DRIVER'] ?? 'mysqli',
@@ -81,10 +81,12 @@ class DB
 		}
 		/**
 		 * @var array{
+		 *         LAZY?: bool,
 		 *         DRIVER?: string,
 		 *         HOST?: string,
 		 *         PORT?: string|int,
 		 *         USER?: string,
+		 *         PASSWORD?: string,
 		 *         PASS?: string,
 		 *         DATABASE?: string,
 		 *         COLLATE?: string,
@@ -94,13 +96,14 @@ class DB
 		$dbConfig = $config['Database'] ?? [];
 		self::$log = new Logger(LOG_DIR, 'db');
 		$options = [
+			'lazy' => !empty($dbConfig['LAZY']),
 			'driver' => $dbConfig['DRIVER'] ?? 'mysqli',
 		];
 		if (!empty($dbConfig['HOST'])) {
 			$options['host'] = $dbConfig['HOST'];
 		}
 		if (!empty($dbConfig['PORT'])) {
-			$options['port'] = (int) $dbConfig['PORT'];
+			$options['port'] = (int)$dbConfig['PORT'];
 		}
 		if (!empty($dbConfig['USER'])) {
 			$options['username'] = $dbConfig['USER'];
@@ -119,7 +122,7 @@ class DB
 		}
 		if ($options['driver'] === 'sqlite') {
 			/** @var string $dbFile */
-			$dbFile = $options['database'] ?? TMP_DIR.'db.db';
+			$dbFile = $options['database'] ?? TMP_DIR . 'db.db';
 			if (!file_exists($dbFile)) {
 				touch($dbFile);
 			}
@@ -138,7 +141,7 @@ class DB
 	 *
 	 * @since 1.0
 	 */
-	public static function close() : void {
+	public static function close(): void {
 		if (isset(self::$db)) {
 			self::$db->disconnect();
 		}
@@ -156,7 +159,7 @@ class DB
 	 * @throws Exception
 	 * @since 1.0
 	 */
-	public static function update(string $table, array $args, array $where = null) : Fluent|int {
+	public static function update(string $table, array $args, array $where = null): Fluent|int {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
@@ -179,7 +182,7 @@ class DB
 	 *
 	 * @since 1.0
 	 */
-	public static function insertGet(string $table, iterable $args) : Fluent {
+	public static function insertGet(string $table, iterable $args): Fluent {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
@@ -197,18 +200,16 @@ class DB
 	 *
 	 * @since 1.0
 	 */
-	public static function insert(string $table, array ...$args) : int {
+	public static function insert(string $table, array ...$args): int {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
 		if (count($args) > 1) {
 			/** @phpstan-ignore-next-line */
-			return self::$db
-				->command()
-				->insert()
-				->into('%n', $table, '(%n)', array_keys($args[0]))
-				->values('%l'.str_repeat(', %l', count($args) - 1), ...$args)
-				->execute(dibi::AFFECTED_ROWS);
+			return self::$db->command()->insert()->into('%n', $table, '(%n)', array_keys($args[0]))->values(
+				   '%l' . str_repeat(', %l', count($args) - 1),
+				...$args
+			)->execute(dibi::AFFECTED_ROWS);
 		}
 		/** @phpstan-ignore-next-line */
 		return self::$db->insert($table, ...$args)->execute(dibi::AFFECTED_ROWS);
@@ -223,7 +224,7 @@ class DB
 	 * @return int
 	 * @throws Exception
 	 */
-	public static function insertIgnore(string $table, iterable $args) : int {
+	public static function insertIgnore(string $table, iterable $args): int {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
@@ -240,7 +241,7 @@ class DB
 	 *
 	 * @since 1.0
 	 */
-	public static function deleteGet(string $table) : Fluent {
+	public static function deleteGet(string $table): Fluent {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
@@ -257,7 +258,7 @@ class DB
 	 * @throws Exception
 	 * @since 1.0
 	 */
-	public static function delete(string $table, array $where = []) : int {
+	public static function delete(string $table, array $where = []): int {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
@@ -276,7 +277,7 @@ class DB
 	 *
 	 * @since 1.0
 	 */
-	public static function getConnection() : Connection {
+	public static function getConnection(): Connection {
 		return self::$db;
 	}
 
@@ -287,7 +288,7 @@ class DB
 	 * @throws Exception
 	 * @since 1.0
 	 */
-	public static function getInsertId() : int {
+	public static function getInsertId(): int {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
@@ -306,7 +307,7 @@ class DB
 	 *
 	 * @since 1.0
 	 */
-	public static function select(array|string $table, ...$args) : Fluent {
+	public static function select(array|string $table, ...$args): Fluent {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
@@ -328,7 +329,7 @@ class DB
 	 * @return Result
 	 * @throws Exception
 	 */
-	public static function resetAutoIncrement(string $table) : Result {
+	public static function resetAutoIncrement(string $table): Result {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
@@ -342,7 +343,7 @@ class DB
 	 * @return int
 	 * @throws Exception
 	 */
-	public static function replace(string $table, array $values) : int {
+	public static function replace(string $table, array $values): int {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
@@ -369,7 +370,7 @@ class DB
 					$row[$key2] = self::getEscapeType($val);
 					$valueArgs[] = $val;
 				}
-				$rows[] = '('.implode(', ', $row).')';
+				$rows[] = '(' . implode(', ', $row) . ')';
 				continue;
 			}
 			$queryKeys[$key] = '%n';
@@ -378,22 +379,22 @@ class DB
 			$valueArgs[] = $data;
 		}
 		if (!$multiple) {
-			$rows[] = '('.implode(', ', $row).')';
+			$rows[] = '(' . implode(', ', $row) . ')';
 		}
 		$args = array_merge($args, $valueArgs);
 
 		// Split for debugging
-		$sql = "REPLACE INTO %n (".implode(', ', $queryKeys).") VALUES ".implode(', ', $rows).";";
+		$sql = "REPLACE INTO %n (" . implode(', ', $queryKeys) . ") VALUES " . implode(', ', $rows) . ";";
 		return self::$db->query($sql, $table, ...array_values($args))->count();
 	}
 
-	private static function getEscapeType(mixed $value) : string {
+	private static function getEscapeType(mixed $value): string {
 		return match (true) {
-			is_int($value) => '%i',
-			is_float($value) => '%f',
+			is_int($value)    => '%i',
+			is_float($value)  => '%f',
 			is_string($value) => '%s',
 			$value instanceof DateTimeInterface => '%dt',
-			default => '%s',
+			default           => '%s',
 		};
 	}
 
@@ -404,7 +405,7 @@ class DB
 	 * @throws Exception
 	 * @since 1.0
 	 */
-	public static function getAffectedRows() : int {
+	public static function getAffectedRows(): int {
 		if (!isset(self::$db)) {
 			throw new RuntimeException('Database is not connected');
 		}
