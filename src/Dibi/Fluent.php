@@ -13,9 +13,7 @@ use Throwable;
 /**
  * SQL builder via fluent interfaces.
  *
- * @method Fluent select(...$field)
  * @method Fluent distinct()
- * @method Fluent from($table, ...$args = null)
  * @method Fluent where(...$cond)
  * @method Fluent groupBy(...$field)
  * @method Fluent having(...$cond)
@@ -32,39 +30,90 @@ use Throwable;
  * @method Fluent and (...$cond)
  * @method Fluent or (...$cond)
  * @method Fluent using(...$cond)
- * @method Fluent update(...$cond)
- * @method Fluent insert(...$cond)
- * @method Fluent delete(...$cond)
  * @method Fluent into(...$cond)
  * @method Fluent values(...$cond)
  * @method Fluent set(...$args)
  * @method Fluent asc()
  * @method Fluent desc()
- * @method Result execute(string $return = null)
+ * @method Result|int|null execute(string $return = null)
  */
 class Fluent
 {
 
+	protected const CACHE_EXPIRE = '1 hours';
 	protected ?string $queryHash = null;
 
 	protected Cache $cache;
 
 	/** @var string[] */
 	protected array $cacheTags = [];
+	private string $table;
+	private string $method;
 
 	public function __construct(public DibiFluent $fluent) {
 	}
 
-	public function __clone() : void {
-		$this->fluent = clone $this->fluent;
-	}
-
-	public static function __callStatic($name, $arguments) : mixed {
+	/**
+	 * @param string $name
+	 * @param array  $arguments
+	 *
+	 * @return mixed
+	 * @noinspection PhpMissingParamTypeInspection
+	 */
+	public static function __callStatic($name, $arguments): mixed {
 		return DibiFluent::$name(...$arguments);
 	}
 
-	public function __toString() {
-		return $this->fluent->__toString();
+	public function select(mixed ...$field): Fluent {
+		foreach ($field as $key => $arg) {
+			if ($arg instanceof Fluent) {
+				$field[$key] = $arg->fluent;
+			}
+		}
+		$this->method = 'select';
+		$this->fluent->select(...$field);
+		$this->queryHash = null;
+		return $this;
+	}
+
+	public function delete(mixed ...$cond): Fluent {
+		foreach ($cond as $key => $arg) {
+			if ($arg instanceof Fluent) {
+				$cond[$key] = $arg->fluent;
+			}
+		}
+		$this->method = 'delete';
+		$this->fluent->delete(...$cond);
+		$this->queryHash = null;
+		return $this;
+	}
+
+	public function update(mixed ...$cond): Fluent {
+		foreach ($cond as $key => $arg) {
+			if ($arg instanceof Fluent) {
+				$cond[$key] = $arg->fluent;
+			}
+		}
+		$this->method = 'update';
+		$this->fluent->update(...$cond);
+		$this->queryHash = null;
+		return $this;
+	}
+
+	public function insert(mixed ...$cond): Fluent {
+		foreach ($cond as $key => $arg) {
+			if ($arg instanceof Fluent) {
+				$cond[$key] = $arg->fluent;
+			}
+		}
+		$this->method = 'insert';
+		$this->fluent->insert(...$cond);
+		$this->queryHash = null;
+		return $this;
+	}
+
+	public function __clone() : void {
+		$this->fluent = clone $this->fluent;
 	}
 
 	/**
@@ -72,19 +121,18 @@ class Fluent
 	 *
 	 * @return Row|null|array<string,mixed>
 	 */
-	public function fetch(bool $cache = true) : Row|array|null {
+	public function fetch(bool $cache = true): Row|array|null {
 		if (!$cache) {
 			return $this->fluent->fetch();
 		}
 		try {
 			/** @phpstan-ignore-next-line */
-			return $this->getCache()->load('sql/'.$this->getQueryHash().'/fetch', function(array &$dependencies) {
-				$dependencies[CacheParent::EXPIRE] = '1 hours';
-				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
-					'sql',
-				]);
+			return $this->getCache()->load('sql/' . $this->getQueryHash() . '/fetch', function() {
 				return $this->fluent->fetch();
-			});
+			},                             [
+				                               CacheParent::Expire => $this::CACHE_EXPIRE,
+				                               CacheParent::Tags   => $this->getCacheTags(),
+			                               ]);
 		} catch (Throwable) {
 			return $this->fluent->fetch();
 		}
@@ -92,14 +140,11 @@ class Fluent
 
 	/**
 	 * @return Cache
-	 * @noinspection PhpFieldAssignmentTypeMismatchInspection
 	 */
 	public function getCache() : Cache {
 		if (!isset($this->cache)) {
-			/** @phpstan-ignore-next-line */
-			$this->cache = App::getService('cache');
+			$this->cache = App::getServiceByType(Cache::class);
 		}
-		/** @phpstan-ignore-next-line */
 		return $this->cache;
 	}
 
@@ -108,6 +153,22 @@ class Fluent
 			$this->queryHash = md5($this->fluent->__toString());
 		}
 		return $this->queryHash;
+	}
+
+	public function __toString() {
+		return $this->fluent->__toString();
+	}
+
+	/**
+	 * @return string[]
+	 */
+	private function getCacheTags(): array {
+		$tags = $this->cacheTags;
+		$tags[] = 'sql';
+		if (isset($this->table)) {
+			$tags[] = 'sql/' . $this->table;
+		}
+		return $tags;
 	}
 
 	public function cacheTags(string ...$tags) : static {
@@ -126,7 +187,7 @@ class Fluent
 		}
 		try {
 			return $this->getCache()->load('sql/'.$this->getQueryHash().'/fetchSingle', function(array &$dependencies) {
-				$dependencies[CacheParent::EXPIRE] = '1 hours';
+				$dependencies[CacheParent::EXPIRE] = $this::CACHE_EXPIRE;
 				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
 					'sql',
 				]);
@@ -135,6 +196,18 @@ class Fluent
 		} catch (Throwable) {
 			return $this->fluent->fetchSingle();
 		}
+	}
+
+	public function from(string $table, mixed ...$args): Fluent {
+		foreach ($args as $key => $arg) {
+			if ($arg instanceof Fluent) {
+				$args[$key] = $arg->fluent;
+			}
+		}
+		$this->table = $table;
+		$this->fluent->from($table, ...$args);
+		$this->queryHash = null;
+		return $this;
 	}
 
 	/**
@@ -148,13 +221,16 @@ class Fluent
 		}
 		try {
 			/** @phpstan-ignore-next-line */
-			return $this->getCache()->load('sql/'.$this->getQueryHash().'/fetchAll/'.$offset.'/'.$limit, function(array &$dependencies) use ($offset, $limit) {
-				$dependencies[CacheParent::EXPIRE] = '1 hours';
-				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
-					'sql',
-				]);
-				return $this->fluent->fetchAll($offset, $limit);
-			});
+			return $this->getCache()
+			            ->load(
+				            'sql/' . $this->getQueryHash() . '/fetchAll/' . $offset . '/' . $limit,
+				            function () use ($offset, $limit) {
+					            return $this->fluent->fetchAll($offset, $limit);
+				            },
+				            [
+					            CacheParent::Expire => $this::CACHE_EXPIRE,
+					            CacheParent::Tags   => $this->getCacheTags(),
+				            ]);
 		} catch (Throwable) {
 			return $this->fluent->fetchAll($offset, $limit);
 		}
@@ -173,13 +249,15 @@ class Fluent
 		}
 		try {
 			/** @phpstan-ignore-next-line */
-			return $this->getCache()->load('sql/'.$this->getQueryHash().'/fetchAssoc/'.$assoc, function(array &$dependencies) use ($assoc) {
-				$dependencies[CacheParent::EXPIRE] = '1 hours';
-				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
-					'sql',
-				]);
+			return $this->getCache()->load(
+				'sql/' . $this->getQueryHash() . '/fetchAssoc/' . $assoc,
+				function () use ($assoc) {
 				return $this->fluent->fetchAssoc($assoc);
-			});
+				},
+				[
+					CacheParent::Expire => $this::CACHE_EXPIRE,
+					CacheParent::Tags   => $this->getCacheTags(),
+				]);
 		} catch (Throwable) {
 			return $this->fluent->fetchAssoc($assoc);
 		}
@@ -196,13 +274,16 @@ class Fluent
 		}
 		try {
 			/** @phpstan-ignore-next-line */
-			return $this->getCache()->load('sql/'.$this->getQueryHash().'/fetchPairs/'.$key.'/'.$value, function(array &$dependencies) use ($key, $value) {
-				$dependencies[CacheParent::EXPIRE] = '1 hours';
-				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
-					'sql',
-				]);
-				return $this->fluent->fetchPairs($key, $value);
-			});
+			return $this->getCache()
+			            ->load(
+				            'sql/' . $this->getQueryHash() . '/fetchPairs/' . $key . '/' . $value,
+				            function () use ($key, $value) {
+					            return $this->fluent->fetchPairs($key, $value);
+				            },
+				            [
+					            CacheParent::Expire => $this::CACHE_EXPIRE,
+					            CacheParent::Tags   => $this->getCacheTags(),
+				            ]);
 		} catch (Throwable) {
 			return $this->fluent->fetchPairs($key, $value);
 		}
@@ -221,13 +302,12 @@ class Fluent
 		}
 		try {
 			/** @phpstan-ignore-next-line */
-			return $this->getCache()->load('sql/'.$this->getQueryHash().'/count', function(array &$dependencies) {
-				$dependencies[CacheParent::EXPIRE] = '1 hours';
-				$dependencies[CacheParent::Tags] = array_merge($this->cacheTags, [
-					'sql',
-				]);
+			return $this->getCache()->load('sql/' . $this->getQueryHash() . '/count', function (): int {
 				return $this->fluent->count();
-			});
+			},                             [
+				                               CacheParent::Expire => '1 hours',
+				                               CacheParent::Tags   => $this->getCacheTags(),
+			                               ]);
 		} catch (Throwable) {
 			return $this->fluent->count();
 		}

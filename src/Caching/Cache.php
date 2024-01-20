@@ -106,7 +106,6 @@ class Cache extends \Nette\Caching\Cache
 			self::$miss++;
 			$this->getStorage()->lock($storageKey);
 			try {
-				$dependencies = [];
 				$data = $generator(...[&$dependencies]);
 			} catch (Throwable $e) {
 				$this->getStorage()->remove($storageKey);
