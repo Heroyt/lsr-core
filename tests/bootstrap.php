@@ -40,3 +40,8 @@ if (!file_exists(ROOT . "tests/tmp/db.db")) {
 App::init();
 
 App::getServiceByType(Cache::class)->clean([Cache::All => true]);
+
+// Clear model cache
+foreach (glob(TMP_DIR . 'models/*') as $file) {
+	unlink($file);
+}

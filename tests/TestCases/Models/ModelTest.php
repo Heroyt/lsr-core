@@ -110,6 +110,11 @@ class ModelTest extends TestCase
 		"
 		);
 		$this->refreshData();
+
+		foreach (glob(TMP_DIR . 'models/*') as $file) {
+			unlink($file);
+		}
+
 		parent::setUp();
 	}
 
@@ -275,6 +280,9 @@ class ModelTest extends TestCase
 
 		self::assertEquals('model1', $model1->name);
 		self::assertEquals(20, $model1->age);
+
+		// Check if DB is correctly initialized
+		self::assertEquals(2, DB::select(ModelB::TABLE, '*')->where('model_a_id = %i', 1)->count(cache: false));
 		self::assertCount(2, $model1->children);
 
 		$model2 = ModelB::get(1);

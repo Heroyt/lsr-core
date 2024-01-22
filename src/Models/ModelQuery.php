@@ -153,14 +153,14 @@ class ModelQuery
 		$pk = $this->className::getPrimaryKey();
 		$rows = $this->query->fetchAll();
 		$className = $this->className;
-		$model = [];
+		$models = [];
 		foreach ($rows as $row) {
 			try {
-				$model[$row->{$pk}] = $className::get($row->$pk, $row);
+				$models[$row->{$pk}] = $className::get($row->$pk, $row);
 			} catch (ModelNotFoundException) {
 			}
 		}
-		return $model;
+		return $models;
 	}
 
 }

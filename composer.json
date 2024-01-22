@@ -54,7 +54,8 @@
 		"dibi/dibi": "^5",
 		"lsr/routing": "^0.2",
 		"lsr/request": "^0.2",
-		"vlucas/phpdotenv": "^5.5"
+    "vlucas/phpdotenv": "^5.5",
+    "nette/php-generator": "^4.1"
 	},
 	"config": {
 		"allow-plugins": {
