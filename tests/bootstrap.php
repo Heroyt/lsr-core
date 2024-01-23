@@ -36,6 +36,9 @@ enum TestEnum: string
 if (!file_exists(ROOT . "tests/tmp/db.db")) {
 	touch(ROOT . "tests/tmp/db.db");
 }
+if (!file_exists(ROOT . "tests/tmp/dbc.db")) {
+	touch(ROOT . "tests/tmp/dbc.db");
+}
 
 App::init();
 

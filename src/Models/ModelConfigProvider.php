@@ -59,10 +59,40 @@ trait ModelConfigProvider
 	 */
 	public static function getPrimaryKey(): string {
 		// Prevent infinite loop due to cyclic relations
-		if (!isset(self::$modelConfig[static::class]) && self::$generatingConfig !== static::class) {
+		if (!static::canUseConfig()) {
 			return static::findPrimaryKey();
 		}
 		return static::getModelConfig()->primaryKey;
+	}
+
+	private static function canUseConfig(): bool {
+		if (isset(self::$modelConfig[static::class]) || !isset(self::$generatingConfig)) {
+			return true;
+		}
+		if (file_exists(static::getCacheFileName())) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Get generated config file path
+	 *
+	 * @return string Absolute path to the generated PHP file
+	 */
+	protected static function getCacheFileName(): string {
+		self::$cacheFileName[static::class] ??= TMP_DIR . 'models/' . static::getCacheClassName() . '.php';
+		return self::$cacheFileName[static::class];
+	}
+
+	/**
+	 * Get generated config class name
+	 *
+	 * @return string
+	 */
+	public static function getCacheClassName(): string {
+		self::$cacheClassName[static::class] ??= str_replace('\\', '_', static::class) . '_Config';
+		return self::$cacheClassName[static::class];
 	}
 
 	/**
@@ -130,26 +160,6 @@ trait ModelConfigProvider
 
 		self::$modelConfig[static::class] = require static::getCacheFileName();
 		return self::$modelConfig[static::class];
-	}
-
-	/**
-	 * Get generated config file path
-	 *
-	 * @return string Absolute path to the generated PHP file
-	 */
-	protected static function getCacheFileName(): string {
-		self::$cacheFileName[static::class] ??= TMP_DIR . 'models/' . static::getCacheClassName() . '.php';
-		return self::$cacheFileName[static::class];
-	}
-
-	/**
-	 * Get generated config class name
-	 *
-	 * @return string
-	 */
-	public static function getCacheClassName(): string {
-		self::$cacheClassName[static::class] ??= str_replace('\\', '_', static::class) . '_Config';
-		return self::$cacheClassName[static::class];
 	}
 
 	/**
@@ -297,7 +307,7 @@ trait ModelConfigProvider
 	 */
 	protected static function getProperties(): array {
 		// Prevent infinite loop due to cyclic relations
-		if (!isset(self::$modelConfig[static::class]) && self::$generatingConfig !== static::class) {
+		if (!static::canUseConfig()) {
 			return static::findProperties();
 		}
 		return static::getModelConfig()->properties;
@@ -322,7 +332,7 @@ trait ModelConfigProvider
 	 */
 	public static function getFactory(): ?Factory {
 		// Prevent infinite loop due to cyclic relations
-		if (!isset(self::$modelConfig[static::class]) && self::$generatingConfig !== static::class) {
+		if (!static::canUseConfig()) {
 			return static::findFactory();
 		}
 		return static::getModelConfig()->getFactory();
