@@ -1,7 +1,7 @@
 {
 	"name": "lsr/core",
 	"description": "Laser framework core.",
-  "version": "0.2.32",
+  "version": "0.2.33",
 	"repositories": [
 		{
 			"type": "composer",
@@ -55,8 +55,9 @@
 		"lsr/routing": "^0.2",
 		"lsr/request": "^0.2",
     "vlucas/phpdotenv": "^5.5",
-    "nette/php-generator": "^4.1"
-	},
+    "nette/php-generator": "^4.1",
+    "ext-redis": "*"
+  },
 	"config": {
 		"allow-plugins": {
 			"phpstan/extension-installer": true
