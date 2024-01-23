@@ -76,6 +76,7 @@ class DB
 					'DATABASE' => $env['DB_DATABASE'] ?? '',
 					'COLLATE'  => $env['DB_COLLATE'] ?? 'utf8mb4',
 					'PREFIX'   => $env['DB_PREFIX'] ?? '',
+					'LAZY' => $env['DB_LAZY'] ?? '',
 				],
 			];
 		}
