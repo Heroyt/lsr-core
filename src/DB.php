@@ -54,6 +54,7 @@ class DB
 	 *         DATABASE?: string,
 	 *         COLLATE?: string,
 	 *         PREFIX?: string,
+	 *         LAZY?: string|bool,
 	 *     }
 	 * } $config
 	 *
@@ -92,6 +93,7 @@ class DB
 		 *         DATABASE?: string,
 		 *         COLLATE?: string,
 		 *         PREFIX?: string,
+		 *         LAZY?: string|bool,
 		 *     } $dbConfig
 		 */
 		$dbConfig = $config['Database'] ?? [];
