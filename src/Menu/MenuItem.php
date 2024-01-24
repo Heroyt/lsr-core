@@ -29,9 +29,28 @@ class MenuItem
 		public int    $order = 0,
 	) {
 		$this->url = App::getLink($this->path);
+		$this->checkActive();
+	}
+
+	/**
+	 * Check if this menu item is currently active
+	 *
+	 * @return bool
+	 */
+	public function checkActive(): bool {
 		$this->active = Router::comparePaths(array_values($this->path));
 		foreach ($this->children as $child) {
 			$this->active = $this->active || Router::comparePaths($child->path);
 		}
+		return $this->active;
+	}
+
+	/**
+	 * If menu items are serialized, it should still check if it is active
+	 *
+	 * @return void
+	 */
+	public function __wakeup(): void {
+		$this->checkActive();
 	}
 }
