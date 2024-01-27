@@ -98,7 +98,7 @@ class Cache extends \Nette\Caching\Cache
 	 * @return mixed
 	 * @throws Throwable
 	 */
-	public function load($key, ?callable $generator = null, ?array $dependencies = null) : mixed {
+	public function load(mixed $key, ?callable $generator = null, ?array $dependencies = null): mixed {
 		$storageKey = $this->generateKey($key);
 		$data = $this->getStorage()->read($storageKey);
 		if ($data === null && $generator) {
@@ -106,6 +106,7 @@ class Cache extends \Nette\Caching\Cache
 			self::$miss++;
 			$this->getStorage()->lock($storageKey);
 			try {
+				$dependencies ??= [];
 				$data = $generator(...[&$dependencies]);
 			} catch (Throwable $e) {
 				$this->getStorage()->remove($storageKey);

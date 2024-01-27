@@ -115,7 +115,7 @@ class RedisStorage implements Storage, BulkReader
 	 * @inheritDoc
 	 */
 	public function remove(string $key): void {
-		$this->redis->delete(urlencode($this->prefix . $key));
+		$this->redis->del(urlencode($this->prefix . $key));
 	}
 
 	/**
