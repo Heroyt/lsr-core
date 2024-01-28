@@ -84,7 +84,9 @@ class RedisJournal implements Journal
 
 		$allTagsKeys = array_map(fn(string $key) => $this::REVERSE_TAG_PREFIX . $key, $keys);
 		$allTags = $this->redis->sUnion(...array_map(fn(string $tag) => $this::TAG_PREFIX . $tag, $allTagsKeys));
-		$this->redis->del(...$allTags);
+		if (!empty($allTags)) {
+			$this->redis->del(...$allTags);
+		}
 
 		return $keys;
 	}

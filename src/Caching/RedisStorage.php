@@ -132,7 +132,7 @@ class RedisStorage implements Storage, BulkReader
 		if ($this->journal) {
 			$keys = $this->journal->clean($conditions);
 			if ($keys) {
-				$this->redis->delete(...$keys);
+				$this->redis->del(...$keys);
 			}
 		}
 	}
