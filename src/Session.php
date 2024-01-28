@@ -28,7 +28,9 @@ class Session implements SessionInterface
 		if (!isset($_SESSION['flash'])) {
 			$_SESSION['flash'] = [];
 		}
-		session_write_close();
+		if (defined('SESSION_AUTO_CLOSE') && SESSION_AUTO_CLOSE) {
+			session_write_close();
+		}
 	}
 
 	/**
