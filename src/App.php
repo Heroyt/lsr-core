@@ -189,7 +189,7 @@ class App
 	 * @since   1.0
 	 */
 	public static function isSecure() : bool {
-		return !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+		return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (443 === (int)($_SERVER['SERVER_PORT'] ?? '80'));
 	}
 
 	/**
