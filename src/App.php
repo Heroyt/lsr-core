@@ -13,12 +13,14 @@ namespace Lsr\Core;
 
 use Gettext\Languages\Language;
 use JsonException;
+use Lsr\Core\DataObjects\PageInfoDto;
 use Lsr\Core\Links\Generator;
 use Lsr\Core\Menu\MenuBuilder;
 use Lsr\Core\Menu\MenuItem;
 use Lsr\Core\Requests\CliRequest;
+use Lsr\Core\Requests\Exceptions\RouteNotFoundException;
 use Lsr\Core\Requests\Request;
-use Lsr\Core\Requests\Uri;
+use Lsr\Core\Requests\RequestFactory;
 use Lsr\Core\Routing\CliRoute;
 use Lsr\Core\Routing\Route;
 use Lsr\Core\Routing\Router;
@@ -34,6 +36,7 @@ use Nette\DI\ContainerLoader;
 use Nette\DI\Extensions\ExtensionsExtension;
 use Nette\DI\MissingServiceException;
 use Nette\Http\Url;
+use Psr\Http\Message\ServerRequestInterface;
 use ReflectionException;
 
 /**
@@ -71,6 +74,7 @@ class App
 	private static Router           $router;
 	private static SessionInterface $session;
 	private static Config           $config;
+	private static ?RouteInterface $route;
 
 	/**
 	 * Initialization function
@@ -82,7 +86,7 @@ class App
 	 * @throws JsonException
 	 * @throws ReflectionException
 	 */
-	public static function init() : void {
+	public static function init(): void {
 		Timer::start('core.setup');
 		self::$logger = new Logger(LOG_DIR, 'app');
 
@@ -98,39 +102,6 @@ class App
 		self::$router->setup();
 
 		self::$config = self::getServiceByType(Config::class);
-
-		if (PHP_SAPI === "cli") {
-			global $argv;
-			self::$request = new CliRequest($argv[1] ?? '');
-		}
-		else {
-			self::$request = new Request(
-				new Uri((self::isSecure() ? 'https' : 'http').'://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'])
-			);
-			/** @var string|null $previousRequest */
-			$previousRequest = self::$session->getFlash('fromRequest');
-			if (isset($previousRequest)) {
-				/** @var Request|false $previousRequest */
-				$previousRequest = unserialize(
-					$previousRequest,
-					[
-						'allowed_classes' => [
-							Request::class,
-							CliRequest::class,
-							Route::class,
-							CliRoute::class,
-							Uri::class,
-						],
-					]
-				);
-				if ($previousRequest instanceof RequestInterface) {
-					self::$request->setPreviousRequest($previousRequest);
-				}
-			}
-		}
-
-		// Set language and translations
-		self::setupLanguage();
 		Timer::stop('core.setup');
 	}
 
@@ -139,17 +110,17 @@ class App
 	 *
 	 * @return void
 	 */
-	protected static function setupDi() : void {
+	protected static function setupDi(): void {
 		if (isset(self::$container)) {
 			return;
 		}
 		Timer::start('core.setup.di');
-		$loader = new ContainerLoader(TMP_DIR.'di/');
+		$loader = new ContainerLoader(TMP_DIR . 'di/');
 		/** @var Container $class */
-		$class = $loader->load(function(Compiler $compiler) {
+		$class = $loader->load(function (Compiler $compiler) {
 			$compiler->addExtension('extensions', new ExtensionsExtension());
 			/** @var string[] $configs */
-			$configs = require ROOT.'config/services.php';
+			$configs = require ROOT . 'config/services.php';
 			// This will load all found services.neon files in the whole application that are cached in one PHP file
 			foreach ($configs as $config) {
 				$compiler->loadConfig($config);
@@ -176,20 +147,8 @@ class App
 	/**
 	 * @return Container
 	 */
-	public static function getContainer() : Container {
+	public static function getContainer(): Container {
 		return self::$container;
-	}
-
-	/**
-	 * Get if https is enabled
-	 *
-	 * @return bool
-	 *
-	 * @version 1.0
-	 * @since   1.0
-	 */
-	public static function isSecure() : bool {
-		return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (443 === (int)($_SERVER['SERVER_PORT'] ?? '80'));
 	}
 
 	/**
@@ -197,7 +156,7 @@ class App
 	 *
 	 * @return void
 	 */
-	protected static function setupLanguage() : void {
+	protected static function setupLanguage(): void {
 		// Load language info
 		self::$language = Language::getById(self::getDesiredLanguageCode());
 
@@ -208,18 +167,33 @@ class App
 			self::$activeLanguageCode = self::$language->id;
 			if (isset($supported[self::$language->id])) {
 				/* @phpstan-ignore-next-line */
-				self::$activeLanguageCode .= '_'.$supported[self::$language->id];
+				self::$activeLanguageCode .= '_' . $supported[self::$language->id];
 			}
 
 			// Set target language
-			putenv('LANG='.self::$activeLanguageCode);
-			putenv('LC_ALL='.self::$activeLanguageCode);
+			putenv('LANG=' . self::$activeLanguageCode);
+			putenv('LC_ALL=' . self::$activeLanguageCode);
 			setlocale(LC_ALL, '0');
-			setlocale(LC_ALL, self::$activeLanguageCode, self::$activeLanguageCode.'.UTF8', self::$activeLanguageCode.'.UTF-8', self::$activeLanguageCode.'.utf-8', self::$language->name);
-			setlocale(LC_MESSAGES, self::$activeLanguageCode, self::$activeLanguageCode.'.UTF8', self::$activeLanguageCode.'.UTF-8', self::$activeLanguageCode.'.utf-8', self::$language->name);
+			setlocale(
+				LC_ALL,
+				self::$activeLanguageCode,
+				self::$activeLanguageCode . '.UTF8',
+				self::$activeLanguageCode . '.UTF-8',
+				self::$activeLanguageCode . '.utf-8',
+				self::$language->name
+			);
+			setlocale(
+				LC_MESSAGES,
+				self::$activeLanguageCode,
+				self::$activeLanguageCode . '.UTF8',
+				self::$activeLanguageCode . '.UTF-8',
+				self::$activeLanguageCode . '.utf-8',
+				self::$language->name
+			);
 			bindtextdomain(LANGUAGE_FILE_NAME, substr(LANGUAGE_DIR, 0, -1));
 			textdomain(LANGUAGE_FILE_NAME);
 			bind_textdomain_codeset(LANGUAGE_FILE_NAME, "UTF-8");
+			header('Content-Language: ' . self::$activeLanguageCode);
 		}
 	}
 
@@ -230,11 +204,13 @@ class App
 	 *
 	 * @return string Language code
 	 */
-	protected static function getDesiredLanguageCode() : string {
+	protected static function getDesiredLanguageCode(): string {
 		$request = self::getRequest();
-		if (isset($request, $request->params['lang']) && self::isSupportedLanguage($request->params['lang'])) {
-			return $request->params['lang'];
+		$lang = $request->getParam('lang');
+		if (isset($lang) && self::isSupportedLanguage($lang)) {
+			return $lang;
 		}
+
 		if (isset(self::$session)) {
 			/** @var string|null $sessLang */
 			$sessLang = self::$session->get('lang');
@@ -242,12 +218,16 @@ class App
 				return $sessLang;
 			}
 		}
-		if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
-			$info = explode(';', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
-			$languages = explode(',', $info[0]);
-			foreach ($languages as $language) {
-				if (self::isSupportedLanguage($language)) {
-					return $language;
+
+		if ($request->hasHeader('Accept-Language')) {
+			$header = $request->getHeader('Accept-Language');
+			foreach ($header as $value) {
+				$info = explode(';', $value);
+				$languages = explode(',', $info[0]);
+				foreach ($languages as $language) {
+					if (self::isSupportedLanguage($language)) {
+						return $language;
+					}
 				}
 			}
 		}
@@ -257,13 +237,45 @@ class App
 	/**
 	 * Get the request array
 	 *
-	 * @return RequestInterface|null
+	 * @return RequestInterface
 	 *
 	 * @version 1.0
 	 * @since   1.0
 	 */
-	public static function getRequest() : ?RequestInterface {
-		return self::$request ?? null;
+	public static function getRequest(): RequestInterface {
+		if (!isset(self::$request)) {
+			if (PHP_SAPI === "cli") {
+				global $argv;
+				self::$request = new CliRequest($argv[1] ?? '');
+			}
+			else {
+				try {
+					self::$request = RequestFactory::getHttpRequest();
+				} catch (JsonException $e) {
+
+				}
+
+				/** @var string|null $previousRequest */
+				$previousRequest = self::$session->getFlash('fromRequest');
+				if (isset($previousRequest)) {
+					/** @var Request|false $previousRequest */
+					$previousRequest = unserialize(
+						$previousRequest, [
+							                'allowed_classes' => [
+								                Request::class,
+								                CliRequest::class,
+								                Route::class,
+								                CliRoute::class,
+							                ],
+						                ]
+					);
+					if ($previousRequest instanceof RequestInterface) {
+						self::$request->setPreviousRequest($previousRequest);
+					}
+				}
+			}
+		}
+		return self::$request;
 	}
 
 	/**
@@ -273,7 +285,7 @@ class App
 	 *
 	 * @return bool
 	 */
-	protected static function isSupportedLanguage(string $language) : bool {
+	protected static function isSupportedLanguage(string $language): bool {
 		preg_match('/([a-z]{2})[\-_]?/', $language, $matches);
 		$id = $matches[1];
 		return self::isValidLanguage($language) && isset(self::getSupportedLanguages()[$id]);
@@ -286,7 +298,7 @@ class App
 	 *
 	 * @return bool
 	 */
-	protected static function isValidLanguage(string $language) : bool {
+	protected static function isValidLanguage(string $language): bool {
 		return Language::getById($language) !== null;
 	}
 
@@ -295,7 +307,7 @@ class App
 	 *
 	 * @return array<string, string|Language|null>
 	 */
-	public static function getSupportedLanguages(bool $returnObjects = false) : array {
+	public static function getSupportedLanguages(bool $returnObjects = false): array {
 		if (empty(self::$supportedLanguages)) {
 			// Load configured languages
 			$languages = self::$config->getConfig('languages');
@@ -330,30 +342,30 @@ class App
 	}
 
 	/**
-	 * @return string
-	 */
-	public static function getTimezone() : string {
-		if (empty(self::$timezone)) {
-			self::$timezone = (string) (self::$config->getConfig('General')['TIMEZONE'] ?? 'Europe/Prague');
-		}
-		return self::$timezone;
-	}
-
-	/**
 	 * Get parsed config.ini file
 	 *
 	 * @return array<string,array<string,string|numeric>|numeric|string>
 	 *
 	 * @deprecated Use DI for loading config instead
 	 */
-	public static function getConfig() : array {
+	public static function getConfig(): array {
 		return self::$config->getConfig();
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function getTimezone(): string {
+		if (empty(self::$timezone)) {
+			self::$timezone = (string)(self::$config->getConfig('General')['TIMEZONE'] ?? 'Europe/Prague');
+		}
+		return self::$timezone;
 	}
 
 	/**
 	 * @return string[]
 	 */
-	public static function getSupportedCountries() : array {
+	public static function getSupportedCountries(): array {
 		if (empty(self::$supportedCountries)) {
 			/** @var string $country */
 			foreach (self::getSupportedLanguages() as $country) {
@@ -371,7 +383,7 @@ class App
 	 * @version 1.0
 	 * @since   1.0
 	 */
-	public static function uglyUrl() : void {
+	public static function uglyUrl(): void {
 		self::$prettyUrl = false;
 	}
 
@@ -381,7 +393,7 @@ class App
 	 * @version 1.0
 	 * @since   1.0
 	 */
-	public static function prettyUrl() : void {
+	public static function prettyUrl(): void {
 		self::$prettyUrl = true;
 	}
 
@@ -393,15 +405,19 @@ class App
 	 * @version 1.0
 	 * @since   1.0
 	 */
-	public static function getCss() : string {
+	public static function getCss(): string {
 		/** @var string[] $files */
-		$files = glob(ROOT.'dist/*.css');
+		$files = glob(ROOT . 'dist/*.css');
 		$return = '';
 		foreach ($files as $file) {
 			if (!str_contains($file, '.min') && in_array(str_replace('.css', '.min.css', $file), $files, true)) {
 				continue;
 			}
-			$return .= '<link rel="stylesheet" href="'.str_replace(ROOT, self::getUrl(), $file).'?v='.self::getCacheVersion().'" />'.PHP_EOL;
+			$return .= '<link rel="stylesheet" href="' . str_replace(
+					ROOT,
+					self::getUrl(),
+					$file
+				) . '?v=' . self::getCacheVersion() . '" />' . PHP_EOL;
 		}
 		return $return;
 	}
@@ -413,15 +429,25 @@ class App
 	 *
 	 * @return ($returnObject is true ? Url : string)
 	 */
-	public static function getUrl(bool $returnObject = false) : Url|string {
+	public static function getUrl(bool $returnObject = false): Url|string {
 		$url = new Url();
-		$url
-			->setScheme(self::isSecure() ? 'https' : 'http')
-			->setHost($_SERVER['HTTP_HOST'] ?? 'localhost');
+		$url->setScheme(self::isSecure() ? 'https' : 'http')->setHost($_SERVER['HTTP_HOST'] ?? 'localhost');
 		if ($returnObject) {
 			return $url;
 		}
-		return (string) $url;
+		return (string)$url;
+	}
+
+	/**
+	 * Get if https is enabled
+	 *
+	 * @return bool
+	 *
+	 * @version 1.0
+	 * @since   1.0
+	 */
+	public static function isSecure(): bool {
+		return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (443 === (int)($_SERVER['SERVER_PORT'] ?? '80'));
 	}
 
 	/**
@@ -429,8 +455,8 @@ class App
 	 *
 	 * @return int
 	 */
-	public static function getCacheVersion() : int {
-		return (int) (self::$config->getConfig('General')['CACHE_VERSION'] ?? 1);
+	public static function getCacheVersion(): int {
+		return (int)(self::$config->getConfig('General')['CACHE_VERSION'] ?? 1);
 	}
 
 	/**
@@ -441,17 +467,48 @@ class App
 	 * @version 1.0
 	 * @since   1.0
 	 */
-	public static function getJs() : string {
+	public static function getJs(): string {
 		/** @var string[] $files */
-		$files = glob(ROOT.'dist/*.js');
+		$files = glob(ROOT . 'dist/*.js');
 		$return = '';
 		foreach ($files as $file) {
 			if (!str_contains($file, '.min') && in_array(str_replace('.js', '.min.js', $file), $files, true)) {
 				continue;
 			}
-			$return .= '<script src="'.str_replace(ROOT, self::getUrl(), $file).'?v='.self::getCacheVersion().'"></script>'.PHP_EOL;
+			$return .= '<script src="' . str_replace(ROOT, self::getUrl(), $file) . '?v=' . self::getCacheVersion(
+				) . '"></script>' . PHP_EOL;
 		}
 		return $return;
+	}
+
+	/**
+	 * Get page info for the current request.
+	 *
+	 * Used for passing to JS.
+	 *
+	 * @return PageInfoDto
+	 */
+	public static function getPageInfo(): PageInfoDto {
+		$request = self::getRequest();
+		$params = [];
+		return new PageInfoDto(
+			$request->getType(), self::getRoute($params)?->getName(), $request->getPath(),
+		);
+	}
+
+	/**
+	 * Get route for current Request
+	 *
+	 * @param array $params
+	 *
+	 * @return RouteInterface|null
+	 * @see Router::getRoute()
+	 *
+	 * @see App::getRequest()
+	 */
+	public static function getRoute(array &$params): ?RouteInterface {
+		self::$route ??= Router::getRoute(self::getRequest()->getType(), self::getRequest()->getPath(), $params);
+		return self::$route;
 	}
 
 	/**
@@ -461,8 +518,37 @@ class App
 	 * @since   1.0
 	 * @version 1.0
 	 */
-	public static function run() : void {
-		self::$request->handle();
+	public static function run(): void {
+		$params = [];
+		$request = self::getRequest();
+
+		// Serve static file
+		// This is a fallback handler, because normally a HTTP server should handle static files.
+		if ($request instanceof Request && $request->isStaticFile()) {
+			header('Content-Type: ' . $request->getStaticFileMime());
+			$filePath = urldecode(ROOT . substr($request->getUri()->getPath(), 1));
+			readfile($filePath);
+			exit();
+		}
+
+		$route = self::getRoute($params);
+
+		if (!isset($route)) {
+			throw new RouteNotFoundException($request);
+		}
+
+		if ($request instanceof ServerRequestInterface) {
+			foreach ($params as $key => $value) {
+				$request = $request->withAttribute($key, $value);
+			}
+			// Update immutable request
+			self::$request = $request;
+		}
+		$request->setParams($params);
+
+		self::setupLanguage();
+
+		$route->handle($request);
 	}
 
 	/**
@@ -473,7 +559,7 @@ class App
 	 * @return never
 	 * @throws JsonException
 	 */
-	public static function sendAjaxData(array $data) : never {
+	public static function sendAjaxData(array $data): never {
 		header('Cache-Control: max-age=3600,no-cache');
 		header('Content-Type: application/json; charset=UTF-8');
 		bdump($data);
@@ -485,7 +571,7 @@ class App
 	 *
 	 * @return bool
 	 */
-	public static function isProduction() : bool {
+	public static function isProduction(): bool {
 		return !(self::$config->getConfig('General')['DEBUG'] ?? false);
 	}
 
@@ -497,7 +583,7 @@ class App
 	 *
 	 * @noreturn
 	 */
-	public static function redirect(Url|RouteInterface|array|string $to, ?RequestInterface $from = null) : never {
+	public static function redirect(Url|RouteInterface|array|string $to, ?RequestInterface $from = null): never {
 		$link = '';
 		if ($to instanceof RouteInterface) {
 			$link = self::getLink($to->getPath());
@@ -521,7 +607,7 @@ class App
 		if (isset($from)) {
 			self::$session->flash('fromRequest', serialize($from));
 		}
-		header('Location: '.$link);
+		header('Location: ' . $link);
 		exit;
 	}
 
@@ -540,7 +626,7 @@ class App
 	 * @version 1.0
 	 * @since   1.0
 	 */
-	public static function getLink(array $request = [], bool $returnObject = false) : Url|string {
+	public static function getLink(array $request = [], bool $returnObject = false): Url|string {
 		$generator = self::getServiceByType(Generator::class);
 
 		if ($returnObject) {
@@ -557,14 +643,14 @@ class App
 	 * @version 1.0
 	 * @since   1.0
 	 */
-	public static function isPrettyUrl() : bool {
+	public static function isPrettyUrl(): bool {
 		return self::$prettyUrl;
 	}
 
 	/**
 	 * @return Logger
 	 */
-	public static function getLogger() : Logger {
+	public static function getLogger(): Logger {
 		if (!isset(self::$logger)) {
 			/** @var Logger $logger */
 			$logger = self::getService('logger');
@@ -580,7 +666,7 @@ class App
 	 *
 	 * @return object
 	 */
-	public static function getService(string $name) : object {
+	public static function getService(string $name): object {
 		return self::getContainer()->getService($name);
 	}
 
@@ -590,16 +676,16 @@ class App
 	 * @return MenuItem[]
 	 * @throws FileException
 	 */
-	public static function getMenu(string $type = 'menu') : array {
+	public static function getMenu(string $type = 'menu'): array {
 		return self::getServiceByType(MenuBuilder::class)->getMenu($type);
 	}
 
-	public static function getShortLanguageCode() : string {
+	public static function getShortLanguageCode(): string {
 		return explode('_', self::$activeLanguageCode)[0];
 	}
 
-	public static function getAppName() : string {
-		return (string) (self::$config->getConfig('ENV')['APP_NAME'] ?? '');
+	public static function getAppName(): string {
+		return (string)(self::$config->getConfig('ENV')['APP_NAME'] ?? '');
 	}
 
 }
