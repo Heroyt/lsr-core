@@ -16,11 +16,13 @@ namespace Lsr\Core\Controllers;
 
 use JsonException;
 use Lsr\Core\App;
+use Lsr\Core\Requests\Response;
 use Lsr\Core\Routing\Middleware;
 use Lsr\Core\Templating\Latte;
 use Lsr\Exceptions\TemplateDoesNotExistException;
 use Lsr\Interfaces\ControllerInterface;
 use Lsr\Interfaces\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * @class   Page
@@ -118,24 +120,14 @@ abstract class Controller implements ControllerInterface
 	 * @return never
 	 * @throws JsonException
 	 */
-	public function respond(string|array|object $data, int $code = 200, array $headers = []) : never {
-		http_response_code($code);
+	protected function respond(string|array|object $data, int $code = 200, array $headers = []): ResponseInterface {
+		$response = new Response(new \Nyholm\Psr7\Response($code, $headers));
 
 		if (is_string($data)) {
-			$dataNormalized = $data;
-		}
-		else {
-			$dataNormalized = json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-			$headers['Content-Type'] = 'application/json';
+			return $response->withStringBody($data);
 		}
 
-
-		foreach ($headers as $name => $value) {
-			header($name.': '.$value);
-		}
-
-		echo $dataNormalized;
-		exit;
+		return $response->withJsonBody($data);
 	}
 
 	/**
@@ -144,8 +136,8 @@ abstract class Controller implements ControllerInterface
 	 * @return void
 	 * @throws TemplateDoesNotExistException
 	 */
-	protected function view(string $template) : void {
-		$this->latte->view($template, $this->params);
+	protected function view(string $template): ResponseInterface {
+		return $this->respond($this->latte->viewToString($template, $this->params));
 	}
 
 }

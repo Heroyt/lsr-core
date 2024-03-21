@@ -21,7 +21,7 @@ use Lsr\Core\Requests\CliRequest;
 use Lsr\Core\Requests\Exceptions\RouteNotFoundException;
 use Lsr\Core\Requests\Request;
 use Lsr\Core\Requests\RequestFactory;
-use Lsr\Core\Routing\CliRoute;
+use Lsr\Core\Requests\Response;
 use Lsr\Core\Routing\Route;
 use Lsr\Core\Routing\Router;
 use Lsr\Exceptions\FileException;
@@ -36,6 +36,7 @@ use Nette\DI\ContainerLoader;
 use Nette\DI\Extensions\ExtensionsExtension;
 use Nette\DI\MissingServiceException;
 use Nette\Http\Url;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use ReflectionException;
 
@@ -263,9 +264,7 @@ class App
 						$previousRequest, [
 							                'allowed_classes' => [
 								                Request::class,
-								                CliRequest::class,
 								                Route::class,
-								                CliRoute::class,
 							                ],
 						                ]
 					);
@@ -499,7 +498,7 @@ class App
 	/**
 	 * Get route for current Request
 	 *
-	 * @param array $params
+	 * @param array<string,mixed> $params
 	 *
 	 * @return RouteInterface|null
 	 * @see Router::getRoute()
@@ -518,7 +517,7 @@ class App
 	 * @since   1.0
 	 * @version 1.0
 	 */
-	public static function run(): void {
+	public static function run(): ResponseInterface {
 		$params = [];
 		$request = self::getRequest();
 
@@ -548,22 +547,38 @@ class App
 
 		self::setupLanguage();
 
-		$route->handle($request);
+		return $route->handle($request);
 	}
 
-	/**
-	 * Echo json-encoded data and exits
-	 *
-	 * @param array<string, mixed> $data
-	 *
-	 * @return never
-	 * @throws JsonException
-	 */
-	public static function sendAjaxData(array $data): never {
-		header('Cache-Control: max-age=3600,no-cache');
-		header('Content-Type: application/json; charset=UTF-8');
-		bdump($data);
-		exit(json_encode($data, JSON_THROW_ON_ERROR));
+	public static function sendResponse(ResponseInterface $response): never {
+		// Check if something is not already sent
+		if (headers_sent()) {
+			throw new \RuntimeException('Headers were already sent. The response could not be emitted!');
+		}
+
+		// Status code
+		http_response_code($response->getStatusCode());
+
+		// Send headers
+		foreach ($response->getHeaders() as $name => $values) {
+			header(sprintf('%s: %s', $name, $response->getHeaderLine($name)), false);
+		}
+
+		// Send body
+		$stream = $response->getBody();
+
+		if (!$stream->isReadable()) {
+			exit;
+		}
+
+		if ($stream->isSeekable()) {
+			$stream->rewind();
+		}
+
+		while (!$stream->eof()) {
+			echo $stream->read(8192);
+		}
+		exit;
 	}
 
 	/**
@@ -583,7 +598,7 @@ class App
 	 *
 	 * @noreturn
 	 */
-	public static function redirect(Url|RouteInterface|array|string $to, ?RequestInterface $from = null): never {
+	public static function redirect(Url|RouteInterface|array|string $to, ?RequestInterface $from = null, int $type = 302): Response {
 		$link = '';
 		if ($to instanceof RouteInterface) {
 			$link = self::getLink($to->getPath());
@@ -607,8 +622,8 @@ class App
 		if (isset($from)) {
 			self::$session->flash('fromRequest', serialize($from));
 		}
-		header('Location: ' . $link);
-		exit;
+
+		return new Response(new \Nyholm\Psr7\Response($type, headers: ['Location' => $link]));
 	}
 
 	/**
@@ -616,23 +631,33 @@ class App
 	 *
 	 * @param array<string|int> $request      request array
 	 *                                        * Ex: ['user', 'login', 'view' => 1, 'type' => 'company']: http(s)://host.cz/user/login?view=1&type=company
-	 * @param bool              $returnObject if set to true, return Url object
 	 *
-	 * @return ($returnObject is true ? Url : string)
-	 *
+	 * @return string
 	 * @warning Should use the new \Lsr\Core\Links\Generator class to generate links
 	 * @see     Generator
 	 *
 	 * @version 1.0
 	 * @since   1.0
 	 */
-	public static function getLink(array $request = [], bool $returnObject = false): Url|string {
-		$generator = self::getServiceByType(Generator::class);
+	public static function getLink(array $request = []): string {
+		return self::getServiceByType(Generator::class)?->getLink($request) ?? '';
+	}
 
-		if ($returnObject) {
-			return $generator->getLinkObject($request);
-		}
-		return $generator->getLink($request);
+	/**
+	 * Get url to request location
+	 *
+	 * @param array<string|int> $request      request array
+	 *                                        * Ex: ['user', 'login', 'view' => 1, 'type' => 'company']: http(s)://host.cz/user/login?view=1&type=company
+	 *
+	 * @return Url
+	 * @warning Should use the new \Lsr\Core\Links\Generator class to generate links
+	 * @see     Generator
+	 *
+	 * @version 1.0
+	 * @since   1.0
+	 */
+	public static function getLinkObject(array $request = []): Url {
+		return self::getServiceByType(Generator::class)?->getLinkObject($request);
 	}
 
 	/**
@@ -677,7 +702,7 @@ class App
 	 * @throws FileException
 	 */
 	public static function getMenu(string $type = 'menu'): array {
-		return self::getServiceByType(MenuBuilder::class)->getMenu($type);
+		return self::getServiceByType(MenuBuilder::class)?->getMenu($type) ?? [];
 	}
 
 	public static function getShortLanguageCode(): string {
