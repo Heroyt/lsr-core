@@ -51,6 +51,5 @@ search:
 		extends:
 			- Lsr\Core\Controllers\Controller
 			- Lsr\Core\Controllers\ApiController
-			- Lsr\Core\Controllers\CliController
 		tags:
 			- controllers

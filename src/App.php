@@ -17,7 +17,6 @@ use Lsr\Core\DataObjects\PageInfoDto;
 use Lsr\Core\Links\Generator;
 use Lsr\Core\Menu\MenuBuilder;
 use Lsr\Core\Menu\MenuItem;
-use Lsr\Core\Requests\CliRequest;
 use Lsr\Core\Requests\Exceptions\RouteNotFoundException;
 use Lsr\Core\Requests\Request;
 use Lsr\Core\Requests\RequestFactory;
@@ -245,32 +244,20 @@ class App
 	 */
 	public static function getRequest(): RequestInterface {
 		if (!isset(self::$request)) {
-			if (PHP_SAPI === "cli") {
-				global $argv;
-				self::$request = new CliRequest($argv[1] ?? '');
+
+			try {
+				self::$request = RequestFactory::getHttpRequest();
+			} catch (JsonException $e) {
+
 			}
-			else {
-				try {
-					self::$request = RequestFactory::getHttpRequest();
-				} catch (JsonException $e) {
 
-				}
-
-				/** @var string|null $previousRequest */
-				$previousRequest = self::$session->getFlash('fromRequest');
-				if (isset($previousRequest)) {
-					/** @var Request|false $previousRequest */
-					$previousRequest = unserialize(
-						$previousRequest, [
-							                'allowed_classes' => [
-								                Request::class,
-								                Route::class,
-							                ],
-						                ]
-					);
-					if ($previousRequest instanceof RequestInterface) {
-						self::$request->setPreviousRequest($previousRequest);
-					}
+			/** @var string|null $previousRequest */
+			$previousRequest = self::$session->getFlash('fromRequest');
+			if (isset($previousRequest)) {
+				/** @var Request|false $previousRequest */
+				$previousRequest = unserialize($previousRequest, ['allowed_classes' => true,]);
+				if ($previousRequest instanceof RequestInterface) {
+					self::$request->setPreviousRequest($previousRequest);
 				}
 			}
 		}
@@ -595,7 +582,9 @@ class App
 	 *
 	 * @param string[]|string|RouteInterface|Url $to
 	 * @param RequestInterface|null              $from
+	 * @param int $type
 	 *
+	 * @return Response
 	 * @noreturn
 	 */
 	public static function redirect(Url|RouteInterface|array|string $to, ?RequestInterface $from = null, int $type = 302): Response {
@@ -711,6 +700,17 @@ class App
 
 	public static function getAppName(): string {
 		return (string)(self::$config->getConfig('ENV')['APP_NAME'] ?? '');
+	}
+
+	public static function setRequest(RequestInterface $request): void {
+		self::$request = $request;
+	}
+
+	public static function getLanguage(): ?Language {
+		if (!isset(self::$language)) {
+			self::setupLanguage();
+		}
+		return self::$language;
 	}
 
 }
