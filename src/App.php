@@ -83,7 +83,6 @@ class App
 	 * @post Routes are set
 	 * @post Request is parsed
 	 * @post Latte macros are set
-	 * @throws JsonException
 	 * @throws ReflectionException
 	 */
 	public static function init(): void {
@@ -94,14 +93,17 @@ class App
 
 		// Setup session
 		if (PHP_SAPI !== 'cli') {
-			self::$session = self::getServiceByType(SessionInterface::class);
+			// @phpstan-ignore-next-line
+			self::$session = self::getService('session');
 		}
 
 		// Setup routes
-		self::$router = self::getServiceByType(Router::class);
+		// @phpstan-ignore-next-line
+		self::$router = self::getService('routing');
 		self::$router->setup();
 
-		self::$config = self::getServiceByType(Config::class);
+		// @phpstan-ignore-next-line
+		self::$config = self::getService('config');
 		Timer::stop('core.setup');
 	}
 
@@ -131,17 +133,14 @@ class App
 	}
 
 	/**
-	 * Resolves service by type.
+	 * Gets the service object by name.
 	 *
-	 * @template T of object
+	 * @param string $name
 	 *
-	 * @param class-string<T> $type
-	 *
-	 * @return T|null
-	 * @throws MissingServiceException
+	 * @return object
 	 */
-	public static function getServiceByType(string $type): ?object {
-		return self::getContainer()->getByType($type);
+	public static function getService(string $name): object {
+		return self::getContainer()->getService($name);
 	}
 
 	/**
@@ -152,140 +151,18 @@ class App
 	}
 
 	/**
-	 * Setup language for translations to work
-	 *
-	 * @return void
+	 * @return string[]
 	 */
-	protected static function setupLanguage(): void {
-		// Load language info
-		self::$language = Language::getById(self::getDesiredLanguageCode());
-
-		date_default_timezone_set(self::getTimezone());
-
-		if (isset(self::$language)) {
-			$supported = self::getSupportedLanguages();
-			self::$activeLanguageCode = self::$language->id;
-			if (isset($supported[self::$language->id])) {
-				/* @phpstan-ignore-next-line */
-				self::$activeLanguageCode .= '_' . $supported[self::$language->id];
-			}
-
-			// Set target language
-			putenv('LANG=' . self::$activeLanguageCode);
-			putenv('LC_ALL=' . self::$activeLanguageCode);
-			setlocale(LC_ALL, '0');
-			setlocale(
-				LC_ALL,
-				self::$activeLanguageCode,
-				self::$activeLanguageCode . '.UTF8',
-				self::$activeLanguageCode . '.UTF-8',
-				self::$activeLanguageCode . '.utf-8',
-				self::$language->name
-			);
-			setlocale(
-				LC_MESSAGES,
-				self::$activeLanguageCode,
-				self::$activeLanguageCode . '.UTF8',
-				self::$activeLanguageCode . '.UTF-8',
-				self::$activeLanguageCode . '.utf-8',
-				self::$language->name
-			);
-			bindtextdomain(LANGUAGE_FILE_NAME, substr(LANGUAGE_DIR, 0, -1));
-			textdomain(LANGUAGE_FILE_NAME);
-			bind_textdomain_codeset(LANGUAGE_FILE_NAME, "UTF-8");
-			header('Content-Language: ' . self::$activeLanguageCode);
-		}
-	}
-
-	/**
-	 * Get desired language for the page
-	 *
-	 * Checks request parameters, session and HTTP headers in this order.
-	 *
-	 * @return string Language code
-	 */
-	protected static function getDesiredLanguageCode(): string {
-		$request = self::getRequest();
-		$lang = $request->getParam('lang');
-		if (isset($lang) && self::isSupportedLanguage($lang)) {
-			return $lang;
-		}
-
-		if (isset(self::$session)) {
-			/** @var string|null $sessLang */
-			$sessLang = self::$session->get('lang');
-			if (isset($sessLang) && self::isSupportedLanguage($sessLang)) {
-				return $sessLang;
-			}
-		}
-
-		if ($request->hasHeader('Accept-Language')) {
-			$header = $request->getHeader('Accept-Language');
-			foreach ($header as $value) {
-				$info = explode(';', $value);
-				$languages = explode(',', $info[0]);
-				foreach ($languages as $language) {
-					if (self::isSupportedLanguage($language)) {
-						return $language;
-					}
+	public static function getSupportedCountries(): array {
+		if (empty(self::$supportedCountries)) {
+			/** @var string $country */
+			foreach (self::getSupportedLanguages() as $country) {
+				if (isset(Constants::COUNTRIES[$country])) {
+					self::$supportedCountries[$country] = Constants::COUNTRIES[$country];
 				}
 			}
 		}
-		return DEFAULT_LANGUAGE;
-	}
-
-	/**
-	 * Get the request array
-	 *
-	 * @return RequestInterface
-	 *
-	 * @version 1.0
-	 * @since   1.0
-	 */
-	public static function getRequest(): RequestInterface {
-		if (!isset(self::$request)) {
-
-			try {
-				self::$request = RequestFactory::getHttpRequest();
-			} catch (JsonException $e) {
-
-			}
-
-			/** @var string|null $previousRequest */
-			$previousRequest = self::$session->getFlash('fromRequest');
-			if (isset($previousRequest)) {
-				/** @var Request|false $previousRequest */
-				$previousRequest = unserialize($previousRequest, ['allowed_classes' => true,]);
-				if ($previousRequest instanceof RequestInterface) {
-					self::$request->setPreviousRequest($previousRequest);
-				}
-			}
-		}
-		return self::$request;
-	}
-
-	/**
-	 * Test if the language code is valid and if the language is supported
-	 *
-	 * @param string $language Language code
-	 *
-	 * @return bool
-	 */
-	protected static function isSupportedLanguage(string $language): bool {
-		preg_match('/([a-z]{2})[\-_]?/', $language, $matches);
-		$id = $matches[1];
-		return self::isValidLanguage($language) && isset(self::getSupportedLanguages()[$id]);
-	}
-
-	/**
-	 * Check if the language exists
-	 *
-	 * @param string $language
-	 *
-	 * @return bool
-	 */
-	protected static function isValidLanguage(string $language): bool {
-		return Language::getById($language) !== null;
+		return self::$supportedCountries;
 	}
 
 	/**
@@ -336,31 +213,6 @@ class App
 	 */
 	public static function getConfig(): array {
 		return self::$config->getConfig();
-	}
-
-	/**
-	 * @return string
-	 */
-	public static function getTimezone(): string {
-		if (empty(self::$timezone)) {
-			self::$timezone = (string)(self::$config->getConfig('General')['TIMEZONE'] ?? 'Europe/Prague');
-		}
-		return self::$timezone;
-	}
-
-	/**
-	 * @return string[]
-	 */
-	public static function getSupportedCountries(): array {
-		if (empty(self::$supportedCountries)) {
-			/** @var string $country */
-			foreach (self::getSupportedLanguages() as $country) {
-				if (isset(Constants::COUNTRIES[$country])) {
-					self::$supportedCountries[$country] = Constants::COUNTRIES[$country];
-				}
-			}
-		}
-		return self::$supportedCountries;
 	}
 
 	/**
@@ -483,6 +335,40 @@ class App
 	}
 
 	/**
+	 * Get the request array
+	 *
+	 * @return RequestInterface
+	 *
+	 * @version 1.0
+	 * @since   1.0
+	 */
+	public static function getRequest(): RequestInterface {
+		if (!isset(self::$request)) {
+
+			try {
+				self::$request = RequestFactory::getHttpRequest();
+			} catch (JsonException $e) {
+
+			}
+
+			/** @var string|null $previousRequest */
+			$previousRequest = self::$session->getFlash('fromRequest');
+			if (isset($previousRequest)) {
+				/** @var Request|false $previousRequest */
+				$previousRequest = unserialize($previousRequest, ['allowed_classes' => true,]);
+				if ($previousRequest instanceof RequestInterface) {
+					self::$request->setPreviousRequest($previousRequest);
+				}
+			}
+		}
+		return self::$request;
+	}
+
+	public static function setRequest(RequestInterface $request): void {
+		self::$request = $request;
+	}
+
+	/**
 	 * Get route for current Request
 	 *
 	 * @param array<string,mixed> $params
@@ -535,6 +421,112 @@ class App
 		self::setupLanguage();
 
 		return $route->handle($request);
+	}
+
+	/**
+	 * Setup language for translations to work
+	 *
+	 * @return void
+	 */
+	protected static function setupLanguage(): void {
+		// Load language info
+		self::$language = Language::getById(self::getDesiredLanguageCode());
+
+		date_default_timezone_set(self::getTimezone());
+
+		if (isset(self::$language)) {
+			$supported = self::getSupportedLanguages();
+			self::$activeLanguageCode = self::$language->id;
+			if (isset($supported[self::$language->id])) {
+				/* @phpstan-ignore-next-line */
+				self::$activeLanguageCode .= '_' . $supported[self::$language->id];
+			}
+
+			// Set target language
+			putenv('LANG=' . self::$activeLanguageCode);
+			putenv('LC_ALL=' . self::$activeLanguageCode);
+			setlocale(LC_ALL, '0');
+			setlocale(
+				LC_ALL,
+				self::$activeLanguageCode,
+				self::$activeLanguageCode . '.UTF8',
+				self::$activeLanguageCode . '.UTF-8',
+				self::$activeLanguageCode . '.utf-8',
+				self::$language->name
+			);
+			setlocale(
+				LC_MESSAGES,
+				self::$activeLanguageCode,
+				self::$activeLanguageCode . '.UTF8',
+				self::$activeLanguageCode . '.UTF-8',
+				self::$activeLanguageCode . '.utf-8',
+				self::$language->name
+			);
+			bindtextdomain(LANGUAGE_FILE_NAME, substr(LANGUAGE_DIR, 0, -1));
+			textdomain(LANGUAGE_FILE_NAME);
+			bind_textdomain_codeset(LANGUAGE_FILE_NAME, "UTF-8");
+			header('Content-Language: ' . self::$activeLanguageCode);
+		}
+	}
+
+	/**
+	 * Get desired language for the page
+	 *
+	 * Checks request parameters, session and HTTP headers in this order.
+	 *
+	 * @return string Language code
+	 */
+	protected static function getDesiredLanguageCode(): string {
+		$request = self::getRequest();
+		$lang = $request->getParam('lang');
+		if (isset($lang) && self::isSupportedLanguage($lang)) {
+			return $lang;
+		}
+
+		if (isset(self::$session)) {
+			/** @var string|null $sessLang */
+			$sessLang = self::$session->get('lang');
+			if (isset($sessLang) && self::isSupportedLanguage($sessLang)) {
+				return $sessLang;
+			}
+		}
+
+		if ($request->hasHeader('Accept-Language')) {
+			$header = $request->getHeader('Accept-Language');
+			foreach ($header as $value) {
+				$info = explode(';', $value);
+				$languages = explode(',', $info[0]);
+				foreach ($languages as $language) {
+					if (self::isSupportedLanguage($language)) {
+						return $language;
+					}
+				}
+			}
+		}
+		return DEFAULT_LANGUAGE;
+	}
+
+	/**
+	 * Test if the language code is valid and if the language is supported
+	 *
+	 * @param string $language Language code
+	 *
+	 * @return bool
+	 */
+	protected static function isSupportedLanguage(string $language): bool {
+		preg_match('/([a-z]{2})[\-_]?/', $language, $matches);
+		$id = $matches[1];
+		return isset(self::getSupportedLanguages()[$id]);
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function getTimezone(): string {
+		if (empty(self::$timezone)) {
+			self::$timezone = (string)(self::$config->getConfig('General')['TIMEZONE'] ?? 'Europe/Prague');
+		}
+		return self::$timezone;
 	}
 
 	public static function sendResponse(ResponseInterface $response): never {
@@ -629,7 +621,9 @@ class App
 	 * @since   1.0
 	 */
 	public static function getLink(array $request = []): string {
-		return self::getServiceByType(Generator::class)?->getLink($request) ?? '';
+		/** @var Generator|null $generator */
+		$generator = self::getService('links.generator');
+		return $generator?->getLink($request) ?? '';
 	}
 
 	/**
@@ -646,7 +640,9 @@ class App
 	 * @since   1.0
 	 */
 	public static function getLinkObject(array $request = []): Url {
-		return self::getServiceByType(Generator::class)?->getLinkObject($request);
+		/** @var Generator|null $generator */
+		$generator = self::getService('links.generator');
+		return $generator?->getLinkObject($request);
 	}
 
 	/**
@@ -674,24 +670,29 @@ class App
 	}
 
 	/**
-	 * Gets the service object by name.
-	 *
-	 * @param string $name
-	 *
-	 * @return object
-	 */
-	public static function getService(string $name): object {
-		return self::getContainer()->getService($name);
-	}
-
-	/**
 	 * @param string $type
 	 *
 	 * @return MenuItem[]
 	 * @throws FileException
 	 */
 	public static function getMenu(string $type = 'menu'): array {
-		return self::getServiceByType(MenuBuilder::class)?->getMenu($type) ?? [];
+		/** @var MenuBuilder|null $menuBuilder */
+		$menuBuilder = self::getService('menu.builder');
+		return $menuBuilder?->getMenu($type) ?? [];
+	}
+
+	/**
+	 * Resolves service by type.
+	 *
+	 * @template T of object
+	 *
+	 * @param class-string<T> $type
+	 *
+	 * @return T|null
+	 * @throws MissingServiceException
+	 */
+	public static function getServiceByType(string $type): ?object {
+		return self::getContainer()->getByType($type);
 	}
 
 	public static function getShortLanguageCode(): string {
@@ -702,15 +703,22 @@ class App
 		return (string)(self::$config->getConfig('ENV')['APP_NAME'] ?? '');
 	}
 
-	public static function setRequest(RequestInterface $request): void {
-		self::$request = $request;
-	}
-
 	public static function getLanguage(): ?Language {
 		if (!isset(self::$language)) {
 			self::setupLanguage();
 		}
 		return self::$language;
+	}
+
+	/**
+	 * Check if the language exists
+	 *
+	 * @param string $language
+	 *
+	 * @return bool
+	 */
+	protected static function isValidLanguage(string $language): bool {
+		return Language::getById($language) !== null;
 	}
 
 }

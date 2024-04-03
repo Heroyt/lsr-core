@@ -14,8 +14,8 @@ extensions:
 	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
 	caching: Nette\Bridges\CacheDI\CacheExtension(%constants.tempDir%)
 services:
-	- Lsr\Core\Menu\MenuBuilder
-	- Lsr\Core\Links\Generator
+	menu.builder: Lsr\Core\Menu\MenuBuilder
+	links.generator: Lsr\Core\Links\Generator
 
 	config:
 		create: Lsr\Core\Config::getInstance(%config.cacheDir%)

@@ -143,7 +143,7 @@ class Fluent
 	 */
 	public function getCache() : Cache {
 		if (!isset($this->cache)) {
-			$this->cache = App::getServiceByType(Cache::class);
+			$this->cache = App::getService('cache');
 		}
 		return $this->cache;
 	}
