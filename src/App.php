@@ -69,12 +69,12 @@ class App
 	/**
 	 * @var string
 	 */
-	private static mixed            $timezone;
-	private static Container        $container;
-	private static Router           $router;
-	private static SessionInterface $session;
-	private static Config           $config;
-	private static ?RouteInterface $route;
+	protected static mixed            $timezone;
+	protected static Container        $container;
+	protected static Router           $router;
+	protected static SessionInterface $session;
+	protected static Config           $config;
+	protected static ?RouteInterface  $route;
 
 	/**
 	 * Initialization function
@@ -268,12 +268,63 @@ class App
 	 * @return ($returnObject is true ? Url : string)
 	 */
 	public static function getUrl(bool $returnObject = false): Url|string {
+		$requestUri = self::getRequest()->getUri();
 		$url = new Url();
-		$url->setScheme(self::isSecure() ? 'https' : 'http')->setHost($_SERVER['HTTP_HOST'] ?? 'localhost');
+		$url->setScheme($requestUri->getScheme())
+		    ->setHost($requestUri->getHost());
+		if (($port = $requestUri->getPort()) !== null) {
+			$url->setPort($port);
+		}
 		if ($returnObject) {
 			return $url;
 		}
 		return (string)$url;
+	}
+
+	/**
+	 * Get the request array
+	 *
+	 * @return RequestInterface
+	 *
+	 * @version 1.0
+	 * @since   1.0
+	 */
+	public static function getRequest(): RequestInterface {
+		if (!isset(self::$request)) {
+
+			try {
+				self::$request = RequestFactory::getHttpRequest();
+			} catch (JsonException $e) {
+
+			}
+
+			if (isset(self::$session)) {
+				/** @var string|null $previousRequest */
+				$previousRequest = self::$session->getFlash('fromRequest');
+				if (isset($previousRequest)) {
+					/** @var Request|false $previousRequest */
+					$previousRequest = unserialize($previousRequest, ['allowed_classes' => true,]);
+					if ($previousRequest instanceof RequestInterface) {
+						self::$request->setPreviousRequest($previousRequest);
+					}
+				}
+			}
+		}
+		return self::$request;
+	}
+
+	public static function setRequest(RequestInterface $request): void {
+		self::$request = $request;
+		self::$route = null;
+	}
+
+	/**
+	 * Gets the FE cache version from config.ini
+	 *
+	 * @return int
+	 */
+	public static function getCacheVersion(): int {
+		return (int)(self::$config->getConfig('General')['CACHE_VERSION'] ?? 1);
 	}
 
 	/**
@@ -286,15 +337,6 @@ class App
 	 */
 	public static function isSecure(): bool {
 		return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (443 === (int)($_SERVER['SERVER_PORT'] ?? '80'));
-	}
-
-	/**
-	 * Gets the FE cache version from config.ini
-	 *
-	 * @return int
-	 */
-	public static function getCacheVersion(): int {
-		return (int)(self::$config->getConfig('General')['CACHE_VERSION'] ?? 1);
 	}
 
 	/**
@@ -332,40 +374,6 @@ class App
 		return new PageInfoDto(
 			$request->getType(), self::getRoute($params)?->getName(), $request->getPath(),
 		);
-	}
-
-	/**
-	 * Get the request array
-	 *
-	 * @return RequestInterface
-	 *
-	 * @version 1.0
-	 * @since   1.0
-	 */
-	public static function getRequest(): RequestInterface {
-		if (!isset(self::$request)) {
-
-			try {
-				self::$request = RequestFactory::getHttpRequest();
-			} catch (JsonException $e) {
-
-			}
-
-			/** @var string|null $previousRequest */
-			$previousRequest = self::$session->getFlash('fromRequest');
-			if (isset($previousRequest)) {
-				/** @var Request|false $previousRequest */
-				$previousRequest = unserialize($previousRequest, ['allowed_classes' => true,]);
-				if ($previousRequest instanceof RequestInterface) {
-					self::$request->setPreviousRequest($previousRequest);
-				}
-			}
-		}
-		return self::$request;
-	}
-
-	public static function setRequest(RequestInterface $request): void {
-		self::$request = $request;
 	}
 
 	/**

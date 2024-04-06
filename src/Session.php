@@ -33,6 +33,10 @@ class Session implements SessionInterface
 		}
 	}
 
+	public function close(): void {
+		session_write_close();
+	}
+
 	/**
 	 * Get session Cookie parameters
 	 *
@@ -86,7 +90,7 @@ class Session implements SessionInterface
 	 * @inheritDoc
 	 */
 	public function set(string $key, mixed $value) : void {
-		if ($this->getStatus() !== PHP_SESSION_ACTIVE) {
+		if ($this->isInitialized()) {
 			session_start();
 		}
 		$_SESSION[$key] = $value;
@@ -96,7 +100,7 @@ class Session implements SessionInterface
 	 * @inheritDoc
 	 */
 	public function delete(string $key) : void {
-		if ($this->getStatus() !== PHP_SESSION_ACTIVE) {
+		if ($this->isInitialized()) {
 			session_start();
 		}
 		if (isset($_SESSION[$key])) {
@@ -127,9 +131,13 @@ class Session implements SessionInterface
 	 * @inheritDoc
 	 */
 	public function flash(string $key, mixed $value) : void {
-		if ($this->getStatus() !== PHP_SESSION_ACTIVE) {
+		if ($this->isInitialized()) {
 			session_start();
 		}
 		$_SESSION['flash'][$key] = $value;
+	}
+
+	public function isInitialized(): bool {
+		return $this->getStatus() === PHP_SESSION_ACTIVE;
 	}
 }
