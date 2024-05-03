@@ -28,6 +28,7 @@ class Session implements SessionInterface
 		if (!isset($_SESSION['flash'])) {
 			$_SESSION['flash'] = [];
 		}
+		/** @noinspection PhpUndefinedConstantInspection */
 		if (defined('SESSION_AUTO_CLOSE') && SESSION_AUTO_CLOSE) {
 			session_write_close();
 		}
@@ -43,7 +44,6 @@ class Session implements SessionInterface
 	 * @return array{lifetime:int,path:string,domain:string,secure:bool,httponly:bool}
 	 */
 	public function getParams() : array {
-		// @phpstan-ignore-next-line
 		return session_get_cookie_params();
 	}
 
@@ -55,9 +55,12 @@ class Session implements SessionInterface
 		$httponly = $httponly ?? $defaults['httponly'];
 
 		if ($this->getStatus() === PHP_SESSION_ACTIVE) {
+			/**
+			 * @noinspection PhpArgumentWithoutNamedIdentifierInspection
+			 */
 			return setcookie(
-				session_name(),
-				session_id(),
+				session_name(), // @phpstan-ignore-line
+				session_id(),   // @phpstan-ignore-line
 				$lifetime,
 				$path,
 				$domain,

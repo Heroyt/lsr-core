@@ -8,10 +8,10 @@ use Latte\Loaders\StringLoader;
 use Latte\Sandbox\SecurityPolicy;
 use Lsr\Exceptions\TemplateDoesNotExistException;
 
-class Latte
+readonly class Latte
 {
 
-	public function __construct(private readonly Engine $engine) {
+	public function __construct(private Engine $engine) {
 		$sandbox = SecurityPolicy::createSafePolicy();
 		$sandbox->allowTags(['svgIcon', 'link', 'getUrl', 'lang']);
 		$sandbox->allowFilters($sandbox::ALL);
@@ -28,7 +28,7 @@ class Latte
 	 *
 	 * @throws TemplateDoesNotExistException
 	 */
-	public function view(string $template, array $params = []) : void {
+	public function view(string $template, array $params = []): void {
 		$this->engine->render($this->getTemplate($template), $params);
 	}
 
@@ -44,18 +44,18 @@ class Latte
 	 * @version 0.1
 	 * @since   0.1
 	 */
-	public function getTemplate(string $name) : string {
-		if (!file_exists(TEMPLATE_DIR.$name.'.latte')) {
-			throw new TemplateDoesNotExistException('Cannot find latte template file ('.$name.')');
+	public function getTemplate(string $name): string {
+		if (!file_exists(TEMPLATE_DIR . $name . '.latte')) {
+			throw new TemplateDoesNotExistException('Cannot find latte template file (' . $name . ')');
 		}
-		return TEMPLATE_DIR.$name.'.latte';
+		return TEMPLATE_DIR . $name . '.latte';
 	}
 
 	/**
 	 * Renders a view from a latte template
 	 *
-	 * @param string $template Template name
-	 * @param array<string, mixed> $params Template parameters
+	 * @param string               $template Template name
+	 * @param array<string, mixed> $params   Template parameters
 	 *
 	 * @return string Can be empty if $return is false
 	 * @throws TemplateDoesNotExistException
@@ -69,6 +69,7 @@ class Latte
 	 *
 	 * @param string $template
 	 * @param array<string,mixed> $params
+	 *
 	 * @return void
 	 * @throws TemplateDoesNotExistException
 	 */
@@ -83,6 +84,7 @@ class Latte
 	 *
 	 * @param string $template
 	 * @param array<string,mixed> $params
+	 *
 	 * @return string
 	 * @throws TemplateDoesNotExistException
 	 */
@@ -98,6 +100,7 @@ class Latte
 	 *
 	 * @param string $latte
 	 * @param array<string,mixed> $params
+	 *
 	 * @return void
 	 */
 	public function sandboxFromString(string $latte, array $params): void {
@@ -113,6 +116,7 @@ class Latte
 	 *
 	 * @param string $latte
 	 * @param array<string, mixed> $params
+	 *
 	 * @return string
 	 */
 	public function sandboxFromStringToString(string $latte, array $params): string {

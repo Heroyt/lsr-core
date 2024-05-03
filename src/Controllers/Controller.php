@@ -117,7 +117,7 @@ abstract class Controller implements ControllerInterface
 	 * @param int                                $code
 	 * @param string[]                           $headers
 	 *
-	 * @return never
+	 * @return ResponseInterface
 	 * @throws JsonException
 	 */
 	protected function respond(string|array|object $data, int $code = 200, array $headers = []): ResponseInterface {
@@ -133,7 +133,8 @@ abstract class Controller implements ControllerInterface
 	/**
 	 * @param string $template
 	 *
-	 * @return void
+	 * @return ResponseInterface
+	 * @throws JsonException
 	 * @throws TemplateDoesNotExistException
 	 */
 	protected function view(string $template): ResponseInterface {

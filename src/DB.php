@@ -66,9 +66,9 @@ class DB
 	 */
 	public static function init(array $config = []): void {
 		if (empty($config)) {
-			/** @var Config|null $configClass */
+			/** @var Config $configClass */
 			$configClass = App::getService('config');
-			$env = $configClass?->getConfig('ENV');
+			$env = $configClass->getConfig('ENV');
 			$config = [
 				'Database' => [
 					'DRIVER'   => $env['DB_DRIVER'] ?? 'mysqli',

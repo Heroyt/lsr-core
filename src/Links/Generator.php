@@ -6,14 +6,14 @@ use Lsr\Core\App;
 use Lsr\Core\Routing\Router;
 use Nette\Http\Url;
 
-class Generator
+readonly class Generator
 {
 
-	private readonly Url  $baseUrl;
-	private readonly bool $prettyUrl;
+	private Url  $baseUrl;
+	private bool $prettyUrl;
 
 	public function __construct(
-		private readonly Router $router
+		private Router $router
 	) {
 		$this->baseUrl = App::getUrl(true);
 		$this->prettyUrl = App::isPrettyUrl();

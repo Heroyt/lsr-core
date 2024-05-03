@@ -38,6 +38,7 @@ use Nette\Http\Url;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use ReflectionException;
+use RuntimeException;
 
 /**
  * @class   App
@@ -173,6 +174,7 @@ class App
 	public static function getSupportedLanguages(bool $returnObjects = false): array {
 		if (empty(self::$supportedLanguages)) {
 			// Load configured languages
+			/** @var string[] $languages */
 			$languages = self::$config->getConfig('languages');
 			if (empty($languages)) {
 				// By default, load all languages in language directory
@@ -270,8 +272,7 @@ class App
 	public static function getUrl(bool $returnObject = false): Url|string {
 		$requestUri = self::getRequest()->getUri();
 		$url = new Url();
-		$url->setScheme($requestUri->getScheme())
-		    ->setHost($requestUri->getHost());
+		$url->setScheme($requestUri->getScheme())->setHost($requestUri->getHost());
 		if (($port = $requestUri->getPort()) !== null) {
 			$url->setPort($port);
 		}
@@ -294,7 +295,7 @@ class App
 
 			try {
 				self::$request = RequestFactory::getHttpRequest();
-			} catch (JsonException $e) {
+			} catch (JsonException) {
 
 			}
 
@@ -403,7 +404,7 @@ class App
 		$request = self::getRequest();
 
 		// Serve static file
-		// This is a fallback handler, because normally a HTTP server should handle static files.
+		// This is a fallback handler, because normally an HTTP server should handle static files.
 		if ($request instanceof Request && $request->isStaticFile()) {
 			header('Content-Type: ' . $request->getStaticFileMime());
 			$filePath = urldecode(ROOT . substr($request->getUri()->getPath(), 1));
@@ -417,6 +418,7 @@ class App
 			throw new RouteNotFoundException($request);
 		}
 
+		/** @noinspection PhpConditionAlreadyCheckedInspection */
 		if ($request instanceof ServerRequestInterface) {
 			foreach ($params as $key => $value) {
 				$request = $request->withAttribute($key, $value);
@@ -486,6 +488,7 @@ class App
 	 */
 	protected static function getDesiredLanguageCode(): string {
 		$request = self::getRequest();
+		/** @var string|null $lang */
 		$lang = $request->getParam('lang');
 		if (isset($lang) && self::isSupportedLanguage($lang)) {
 			return $lang;
@@ -540,7 +543,7 @@ class App
 	public static function sendResponse(ResponseInterface $response): never {
 		// Check if something is not already sent
 		if (headers_sent()) {
-			throw new \RuntimeException('Headers were already sent. The response could not be emitted!');
+			throw new RuntimeException('Headers were already sent. The response could not be emitted!');
 		}
 
 		// Status code
@@ -609,7 +612,9 @@ class App
 			}
 		}
 		if (isset($from)) {
-			self::$session->flash('fromRequest', serialize($from));
+			/** @var Session $session */
+			$session = self::getService('session');
+			$session->flash('fromRequest', serialize($from));
 		}
 
 		return new Response(new \Nyholm\Psr7\Response($type, headers: ['Location' => $link]));
@@ -618,8 +623,8 @@ class App
 	/**
 	 * Get url to request location
 	 *
-	 * @param array<string|int> $request      request array
-	 *                                        * Ex: ['user', 'login', 'view' => 1, 'type' => 'company']: http(s)://host.cz/user/login?view=1&type=company
+	 * @param array<string|int, string> $request request array
+	 *                                           * Ex: ['user', 'login', 'view' => 1, 'type' => 'company']: http(s)://host.cz/user/login?view=1&type=company
 	 *
 	 * @return string
 	 * @warning Should use the new \Lsr\Core\Links\Generator class to generate links
@@ -629,15 +634,15 @@ class App
 	 * @since   1.0
 	 */
 	public static function getLink(array $request = []): string {
-		/** @var Generator|null $generator */
+		/** @var Generator $generator */
 		$generator = self::getService('links.generator');
-		return $generator?->getLink($request) ?? '';
+		return $generator->getLink($request);
 	}
 
 	/**
 	 * Get url to request location
 	 *
-	 * @param array<string|int> $request      request array
+	 * @param array<string|int, string> $request request array
 	 *                                        * Ex: ['user', 'login', 'view' => 1, 'type' => 'company']: http(s)://host.cz/user/login?view=1&type=company
 	 *
 	 * @return Url
@@ -648,9 +653,9 @@ class App
 	 * @since   1.0
 	 */
 	public static function getLinkObject(array $request = []): Url {
-		/** @var Generator|null $generator */
+		/** @var Generator $generator */
 		$generator = self::getService('links.generator');
-		return $generator?->getLinkObject($request);
+		return $generator->getLinkObject($request);
 	}
 
 	/**
@@ -684,9 +689,9 @@ class App
 	 * @throws FileException
 	 */
 	public static function getMenu(string $type = 'menu'): array {
-		/** @var MenuBuilder|null $menuBuilder */
+		/** @var MenuBuilder $menuBuilder */
 		$menuBuilder = self::getService('menu.builder');
-		return $menuBuilder?->getMenu($type) ?? [];
+		return $menuBuilder->getMenu($type);
 	}
 
 	/**
@@ -698,6 +703,7 @@ class App
 	 *
 	 * @return T|null
 	 * @throws MissingServiceException
+	 * @noinspection PhpDocSignatureInspection
 	 */
 	public static function getServiceByType(string $type): ?object {
 		return self::getContainer()->getByType($type);

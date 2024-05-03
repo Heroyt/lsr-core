@@ -42,6 +42,8 @@ class Config
 	}
 
 	/**
+	 * @param string $cacheDir
+	 *
 	 * @return Config
 	 */
 	public static function getInstance(string $cacheDir = TMP_DIR) : Config {
@@ -176,6 +178,7 @@ class Config
 	 * @return void
 	 */
 	public function extendEnvDefault(array $defaults) : void {
+		/** @phpstan-ignore-next-line */
 		$this->config['ENV'] = array_merge($this->config['ENV'], $defaults);
 	}
 

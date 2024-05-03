@@ -678,14 +678,14 @@ abstract class Model implements JsonSerializable, ArrayAccess
 		if (!isset($this->id)) {
 			return false;
 		}
-		$this->logger->info('Delete model: ' . $this::TABLE . ' of ID: ' . $this->id);
+		$this->getLogger()->info('Delete model: ' . $this::TABLE . ' of ID: ' . $this->id);
 		try {
 			DB::delete($this::TABLE, ['%n = %i', $this::getPrimaryKey(), $this->id]);
 			unset(static::$instances[$this::class][$this->id]);
 			$this->clearCache();
 		} catch (Exception $e) {
-			$this->logger->error($e->getMessage());
-			$this->logger->debug($e->getTraceAsString());
+			$this->getLogger()->error($e->getMessage());
+			$this->getLogger()->debug($e->getTraceAsString());
 			return false;
 		}
 		return true;

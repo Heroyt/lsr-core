@@ -8,12 +8,10 @@ use Lsr\Exceptions\FileException;
 use Lsr\Interfaces\AuthInterface;
 use Nette\DI\MissingServiceException;
 
-class MenuBuilder
+readonly class MenuBuilder
 {
 
-	public function __construct(
-		private readonly Router $router
-	) {
+	public function __construct(private Router $router) {
 	}
 
 	/**
@@ -22,11 +20,11 @@ class MenuBuilder
 	 * @return MenuItem[]
 	 * @throws FileException
 	 */
-	public function getMenu(string $type = 'menu') : array {
-		if (!file_exists(ROOT.'config/nav/'.$type.'.php')) {
-			throw new FileException('Menu configuration file "'.$type.'.php" does not exist.');
+	public function getMenu(string $type = 'menu'): array {
+		if (!file_exists(ROOT . 'config/nav/' . $type . '.php')) {
+			throw new FileException('Menu configuration file "' . $type . '.php" does not exist.');
 		}
-		$config = require ROOT.'config/nav/'.$type.'.php';
+		$config = require ROOT . 'config/nav/' . $type . '.php';
 		$menu = [];
 		foreach ($config as $item) {
 			if (!self::checkAccess($item)) {
@@ -38,7 +36,12 @@ class MenuBuilder
 			else {
 				$path = $item['path'] ?? ['E404'];
 			}
-			$menuItem = new MenuItem(name: $item['name'], icon: $item['icon'] ?? '', path: $path, order: $item['order'] ?? 0);
+			$menuItem = new MenuItem(
+				name : $item['name'],
+				icon : $item['icon'] ?? '',
+				path : $path,
+				order: $item['order'] ?? 0
+			);
 			foreach ($item['children'] ?? [] as $child) {
 				if (!self::checkAccess($child)) {
 					continue;
@@ -49,7 +52,12 @@ class MenuBuilder
 				else {
 					$path = $child['path'] ?? ['E404'];
 				}
-				$menuItem->children[] = new MenuItem(name: $child['name'], icon: $child['icon'] ?? '', path: $path, order: $item['order'] ?? 0);
+				$menuItem->children[] = new MenuItem(
+					name : $child['name'],
+					icon : $child['icon'] ?? '',
+					path : $path,
+					order: $item['order'] ?? 0
+				);
 			}
 			if (!empty($menuItem->children)) {
 				$this->sortItems($menuItem->children);
@@ -61,14 +69,6 @@ class MenuBuilder
 	}
 
 	/**
-	 * @param MenuItem[] $items
-	 * @return void
-	 */
-	private function sortItems(array &$items): void {
-		usort($items, static fn(MenuItem $a, MenuItem $b) => $a->order - $b->order);
-	}
-
-	/**
 	 * @param array{
 	 *   access:string[]|null|string,
 	 *   loggedInOnly:bool|null,
@@ -77,9 +77,10 @@ class MenuBuilder
 	 *
 	 * @return bool
 	 */
-	private static function checkAccess(array $item) : bool {
+	private static function checkAccess(array $item): bool {
 		try {
-			$auth = App::getServiceByType(AuthInterface::class);
+			/** @var AuthInterface $auth */
+			$auth = App::getService('auth');
 		} catch (MissingServiceException) {
 			return true;
 		}
@@ -108,6 +109,15 @@ class MenuBuilder
 		}
 
 		return true;
+	}
+
+	/**
+	 * @param MenuItem[] $items
+	 *
+	 * @return void
+	 */
+	private function sortItems(array &$items): void {
+		usort($items, static fn(MenuItem $a, MenuItem $b) => $a->order - $b->order);
 	}
 
 }
