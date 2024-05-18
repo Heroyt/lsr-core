@@ -7,13 +7,32 @@ use Lsr\Core\Models\Attributes\ModelRelation;
 use Lsr\Core\Models\Interfaces\FactoryInterface;
 
 /**
- * @phpstan-type FactoryConfig array{factoryClass: class-string<FactoryInterface<Model>>, defaultOptions: array<string,
- *   mixed>}
- * @phpstan-type RelationConfig array{type:class-string<ModelRelation>, instance: string, class: class-string<Model>,
- *   factory: class-string|null, foreignKey: string, localKey: string, loadingType: LoadingType}
- * @phpstan-type PropertyConfig array{name:string, isPrimaryKey: bool, allowsNull: bool, isBuiltin: bool, isExtend:
- *   bool, isEnum: bool, isDateTime: bool, instantiate: bool, noDb: bool, type: class-string|string,
- *   relation:null|RelationConfig}
+ * @phpstan-type FactoryConfig array{
+ *     factoryClass: class-string<FactoryInterface<Model>>,
+ *     defaultOptions: array<string,mixed>
+ * }
+ * @phpstan-type RelationConfig array{
+ *     type:class-string<ModelRelation>,
+ *     instance: string,
+ *     class: class-string<Model>,
+ *     factory: class-string|null,
+ *     foreignKey: string,
+ *     localKey: string,
+ *     loadingType: LoadingType
+ * }
+ * @phpstan-type PropertyConfig array{
+ *     name:string,
+ *     isPrimaryKey: bool,
+ *     allowsNull: bool,
+ *     isBuiltin: bool,
+ *     isExtend: bool,
+ *     isEnum: bool,
+ *     isDateTime: bool,
+ *     instantiate: bool,
+ *     noDb: bool,
+ *     type: class-string|string,
+ *     relation:null|RelationConfig
+ * }
  */
 abstract class ModelConfig
 {

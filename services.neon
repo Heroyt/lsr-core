@@ -14,9 +14,7 @@ extensions:
 	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
 	caching: Nette\Bridges\CacheDI\CacheExtension(%constants.tempDir%)
 services:
-	app:
-		type: Lsr\Core\App
-
+	app: Lsr\Core\App
 	translations: Lsr\Core\Translations
 
 	menu.builder: Lsr\Core\Menu\MenuBuilder

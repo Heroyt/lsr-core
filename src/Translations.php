@@ -2,7 +2,11 @@
 
 namespace Lsr\Core;
 
+use Gettext\Generator\MoGenerator;
+use Gettext\Generator\PoGenerator;
 use Gettext\Languages\Language;
+use Gettext\Loader\PoLoader;
+use Gettext\Translation;
 use Lsr\Core\Exceptions\InvalidLanguageException;
 use Lsr\Helpers\Tools\Timer;
 use Lsr\Helpers\Tracy\TranslationTracyPanel;
@@ -18,6 +22,13 @@ class Translations implements Translator
     public readonly array $supportedCountries;
     private string $lang;
     private Language $language;
+
+    private PoLoader $poLoader;
+
+    /** @var array<string,array<string,\Gettext\Translations>> */
+    private array $translations = [];
+    private bool $loadedAllTranslations = false;
+    private bool $translationsChanged = false;
 
     /**
      * @param  Config  $config
@@ -100,6 +111,54 @@ class Translations implements Translator
         return $this->language;
     }
 
+    public function updateTranslations() : void {
+        if (!$this->translationsChanged) {
+            return;
+        }
+        Timer::startIncrementing('translation.update');
+        $poGenerator = new PoGenerator();
+        $moGenerator = new MoGenerator();
+        $templates = [];
+        foreach ($this->translations as $lang => $langTranslations) {
+            foreach ($langTranslations as $domain => $translation) {
+                if (!isset($templates[$domain])) {
+                    $templates[$domain] = clone $translation;
+                }
+                $poGenerator->generateFile($translation, LANGUAGE_DIR.$lang.'/LC_MESSAGES/'.$domain.'.po');
+                $moGenerator->generateFile($translation, LANGUAGE_DIR.$lang.'/LC_MESSAGES/'.$domain.'.mo');
+            }
+        }
+        foreach ($templates as $domain => $template) {
+            foreach ($template->getTranslations() as $string) {
+                $string->translate('');
+                $pluralCount = count($string->getPluralTranslations());
+                if ($pluralCount > 0) {
+                    $plural = [];
+                    for ($i = 0; $i < $pluralCount; $i++) {
+                        $plural[] = '';
+                    }
+                    $string->translatePlural(...$plural);
+                }
+                $poGenerator->generateFile($template, LANGUAGE_DIR.$domain.'.pot');
+            }
+        }
+        Timer::stop('translation.update');
+        $this->translationsChanged = false;
+    }
+
+    private function getTranslations(string $lang, string $domain = LANGUAGE_FILE_NAME) : \Gettext\Translations {
+        $this->translations[$lang] ??= [];
+        if (!isset($this->translations[$lang][$domain])) {
+            if (!isset($this->poLoader)) {
+                $this->poLoader = new PoLoader();
+            }
+
+            $file = LANGUAGE_DIR.$lang.'/LC_MESSAGES/'.$domain.'.po';
+            $this->translations[$lang][$domain] = $this->poLoader->loadFile($file);
+        }
+        return $this->translations[$lang][$domain];
+    }
+
     public function translate(string | Stringable $message, mixed ...$params) : string {
         if (empty($message)) {
             return '';
@@ -107,10 +166,11 @@ class Translations implements Translator
 
         Timer::startIncrementing('translation');
 
+        $context = $params['context'] ?? '';
         $msgTmp = $message;
         // Add context
-        if (!empty($params['context'])) {
-            $message = $params['context']."\004".$message;
+        if (!empty($context)) {
+            $message = $context."\004".$message;
         }
 
         $plural = (string) ($params['plural'] ?? $message);
@@ -132,6 +192,30 @@ class Translations implements Translator
     }
 
     private function translateModular(string $message, string $plural, int $num, string $domain) : string {
+        /** @phpstan-ignore-next-line */
+        if (!PRODUCTION && CHECK_TRANSLATIONS) {
+            $split = explode("\004", $message);
+            if (count($split) === 2) {
+                [$context, $msgTmp] = $split;
+            }
+            else {
+                $msgTmp = $message;
+                $context = null;
+            }
+            foreach ($this->getAllTranslations() as $langTranslations) {
+                foreach ($langTranslations as $translations) {
+                    if (!($translation = $translations->find($context, $msgTmp))) {
+                        $translation = Translation::create($context, $msgTmp);
+                        if ($plural !== null) {
+                            $translation->setPlural($plural);
+                        }
+                        $translations->add($translation);
+                        $this->translationsChanged = true;
+                    }
+                }
+            }
+        }
+
         if ($domain === LANGUAGE_FILE_NAME) {
             if ($num === 1) {
                 return gettext($message);
@@ -183,4 +267,20 @@ class Translations implements Translator
         textdomain(LANGUAGE_FILE_NAME);
     }
 
+    /**
+     * @return \Gettext\Translations[][]
+     */
+    private function getAllTranslations() : array {
+        if (!$this->loadedAllTranslations) {
+            foreach ($this->supportedLanguages as $lang => $country) {
+                $langConcat = $lang.'_'.$country;
+                $this->translations[$langConcat][LANGUAGE_FILE_NAME] = $this->getTranslations($langConcat);
+                foreach ($this->textDomains as $textdomain) {
+                    $this->translations[$langConcat][$textdomain] = $this->getTranslations($langConcat, $textdomain);
+                }
+            }
+            $this->loadedAllTranslations = true;
+        }
+        return $this->translations;
+    }
 }
