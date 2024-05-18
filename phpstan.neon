@@ -9,5 +9,3 @@ parameters:
 		- src
 		- tests
 	tmpDir: temp
-	universalObjectCratesClasses:
-		- Dibi\Row

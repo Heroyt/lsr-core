@@ -10,14 +10,13 @@ use Lsr\Core\Models\Model;
 class Factory
 {
 
-	/**
-	 * @param class-string<FactoryInterface<Model>> $factoryClass
-	 * @param array<string, mixed>                  $defaultOptions
-	 */
-	public function __construct(
-		public string $factoryClass,
-		public array  $defaultOptions = [],
-	) {
-	}
+    /**
+     * @param  class-string<FactoryInterface<Model>>  $factoryClass
+     * @param  array<string, mixed>  $defaultOptions
+     */
+    public function __construct(
+      public string $factoryClass,
+      public array  $defaultOptions = [],
+    ) {}
 
 }

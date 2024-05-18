@@ -58,7 +58,7 @@ class DBTest extends TestCase
 
 	public function testUninitializedDelete() : void {
 		$this->expectException(RuntimeException::class);
-		DB::delete('table1', []);
+      DB::delete('table1');
 	}
 
 	public function testUninitializedDeleteGet() : void {
@@ -302,9 +302,7 @@ class DBTest extends TestCase
 		/** @var Row|null $row */
 		$row = DB::select('table1', '*')->where('id = %i', $id)->fetch();
 		self::assertNotNull($row);
-		/** @phpstan-ignore-next-line */
 		self::assertEquals('hello!', $row->name);
-		/** @phpstan-ignore-next-line */
 		self::assertEquals(null, $row->age);
 
 		/** @var Fluent $query */
@@ -362,9 +360,7 @@ class DBTest extends TestCase
 		/** @var Row|null $row */
 		$row = DB::select('table1', '*')->where('id = %i', $id)->fetch();
 		self::assertNotNull($row);
-		/** @phpstan-ignore-next-line */
 		self::assertEquals('name', $row->name);
-		/** @phpstan-ignore-next-line */
 		self::assertEquals(1, $row->age);
 		/** @phpstan-ignore-next-line */
 		DB::replace('table1', [
@@ -411,17 +407,17 @@ class DBTest extends TestCase
 			'name' => 'test2',
 			'age' => 12,
 		]);
-		$id2 = DB::getInsertId();
+      //$id2 = DB::getInsertId();
 		DB::insert('table2', [
 			'name'       => 'test3',
 			'table_1_id' => $id1,
 		]);
-		$id3 = DB::getInsertId();
+      //$id3 = DB::getInsertId();
 		DB::insert('table2', [
 			'name'       => 'test4',
 			'table_1_id' => null,
 		]);
-		$id4 = DB::getInsertId();
+      //$id4 = DB::getInsertId();
 
 		// Simple select
 		$rows = DB::select('table1', '*')->fetchAll(cache: false);

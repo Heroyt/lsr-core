@@ -40,11 +40,15 @@ if (!file_exists(ROOT . "tests/tmp/dbc.db")) {
 	touch(ROOT . "tests/tmp/dbc.db");
 }
 
-App::init();
+App::setupDi();
 
-App::getServiceByType(Cache::class)->clean([Cache::All => true]);
+/** @var Cache $cache */
+$cache = App::getService('cache');
+$cache->clean([Cache::All => true]);
 
 // Clear model cache
-foreach (glob(TMP_DIR . 'models/*') as $file) {
+/** @var string[] $files */
+$files = glob(TMP_DIR.'models/*');
+foreach ($files as $file) {
 	unlink($file);
 }

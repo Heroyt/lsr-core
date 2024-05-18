@@ -44,6 +44,12 @@ abstract class Controller implements ControllerInterface
      * @var array<string, mixed> $params Parameters added to latte template
      */
     public array $params = [];
+
+	/** @var Latte Injected property */
+	protected Latte $latte;
+
+	/** @var App Injected property */
+	protected App $app;
     /**
      * @var string $title Page name
      */
@@ -67,13 +73,12 @@ abstract class Controller implements ControllerInterface
     protected string $description = '';
     protected RequestInterface $request;
 
-    public function __construct(protected Latte $latte) {
-    }
+	public function __construct() {}
 
 	/**
 	 * Initialization function
 	 *
-	 * @param RequestInterface $request
+	 * @param  RequestInterface  $request
 	 *
 	 * @version 1.0
 	 * @since   1.0
@@ -97,7 +102,11 @@ abstract class Controller implements ControllerInterface
 	 * @since   1.0
 	 */
 	public function getTitle() : string {
-        return App::getAppName() . (!empty($this->title) ? ' - ' . sprintf(lang($this->title, context: 'pageTitles'), ...$this->titleParams) : '');
+		return $this->app->getAppName().(!empty($this->title) ? ' - '.sprintf(
+					lang($this->title, context: 'pageTitles'),
+					...
+					$this->titleParams
+				) : '');
 	}
 
 	/**
@@ -112,15 +121,38 @@ abstract class Controller implements ControllerInterface
         return sprintf(lang($this->description, context: 'pageDescription'), ...$this->descriptionParams);
 	}
 
+	public function injectLatte(Latte $latte) : void {
+		$this->latte = $latte;
+	}
+
+	public function injectApp(App $app) : void {
+		$this->app = $app;
+	}
+
 	/**
-	 * @param string|array<string, mixed>|object $data
-	 * @param int                                $code
-	 * @param string[]                           $headers
+	 * @param  string  $template
+	 *
+	 * @return ResponseInterface
+	 * @throws JsonException
+	 * @throws TemplateDoesNotExistException
+	 */
+	protected function view(string $template) : ResponseInterface {
+		return $this->respond($this->latte->viewToString($template, $this->params));
+	}
+
+	/**
+	 * @param  string|array<string, mixed>|object  $data
+	 * @param  int  $code
+	 * @param  string[]  $headers
 	 *
 	 * @return ResponseInterface
 	 * @throws JsonException
 	 */
-	protected function respond(string|array|object $data, int $code = 200, array $headers = []): ResponseInterface {
+	protected function respond(
+		string | array | object $data,
+		int                     $code = 200,
+		array                   $headers = []
+	) : ResponseInterface {
 		$response = new Response(new \Nyholm\Psr7\Response($code, $headers));
 
 		if (is_string($data)) {
@@ -128,17 +160,6 @@ abstract class Controller implements ControllerInterface
 		}
 
 		return $response->withJsonBody($data);
-	}
-
-	/**
-	 * @param string $template
-	 *
-	 * @return ResponseInterface
-	 * @throws JsonException
-	 * @throws TemplateDoesNotExistException
-	 */
-	protected function view(string $template): ResponseInterface {
-		return $this->respond($this->latte->viewToString($template, $this->params));
 	}
 
 }

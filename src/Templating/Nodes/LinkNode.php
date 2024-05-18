@@ -2,46 +2,59 @@
 
 namespace Lsr\Core\Templating\Nodes;
 
+use InvalidArgumentException;
 use Latte\CompileException;
 use Latte\Compiler\Node;
+use Latte\Compiler\NodeHelpers;
 use Latte\Compiler\Nodes\Php\Expression\ArrayNode;
+use Latte\Compiler\Nodes\Php\ModifierNode;
+use Latte\Compiler\Nodes\Php\Scalar\StringNode;
 use Latte\Compiler\Nodes\StatementNode;
 use Latte\Compiler\PrintContext;
 use Latte\Compiler\Tag;
+use Lsr\Core\App;
+use Lsr\Core\Links\Generator;
 
 class LinkNode extends StatementNode
 {
-	/**
-	 * @var ArrayNode
-	 */
-	private ArrayNode $args;
+    public ModifierNode $modifier;
+    public ArrayNode $args;
 
-	/**
-	 * @param Tag $tag
-	 *
-	 * @return Node
-	 * @throws CompileException
-	 */
-	public static function create(Tag $tag) : Node {
-		$tag->expectArguments();
-		$node = new self();
-		$node->args = $tag->parser->parseArguments();
-		return $node;
-	}
+    /**
+     * @param  Tag  $tag
+     *
+     * @return Node
+     * @throws CompileException
+     */
+    public static function create(Tag $tag) : Node {
+        $tag->expectArguments();
+        $args = $tag->parser->parseArguments();
 
-	public function print(PrintContext $context) : string {
-		return $context->format(
-			<<<'XX'
-			echo \Lsr\Core\App::getServiceByType(\Lsr\Core\Links\Generator::class)->getLink(%args) %line;
+        try {
+            /** @var array<array<string|int,string>|string> $constArgs */
+            $constArgs = NodeHelpers::toValue($args, constants: true);
+            /** @var Generator $generator */
+            $generator = App::getService('links.generator');
+            return new StringNode($generator->getLink(...$constArgs));
+        } catch (InvalidArgumentException) {
+        }
+
+        $node = new self();
+        $node->args = $args;
+        return $node;
+    }
+
+    public function print(PrintContext $context) : string {
+        return $context->format(
+          <<<'XX'
+			echo \Lsr\Core\App::getService('links.generator')->getLink(%args) %line;
 			XX,
-			$this->args,
-			$this->position,
-		);
-	}
+          $this->args,
+          $this->position,
+        );
+    }
 
-	public function &getIterator() : \Generator {
-		if (false) {
-			yield;
-		}
-	}
+    public function &getIterator() : \Generator {
+        yield $this;
+    }
 }

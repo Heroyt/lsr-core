@@ -5,7 +5,7 @@ namespace Lsr\Core\Models;
 enum LoadingType
 {
 
-	case EAGER;
-	case LAZY;
+    case EAGER;
+    case LAZY;
 
 }

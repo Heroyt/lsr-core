@@ -10,9 +10,11 @@ use Nette\Utils\Validators;
 class Url implements Validator
 {
 
-	public function validateValue(mixed $value, string|object $class, string $property) : void {
-		if (!is_string($value) || !Validators::isUrl($value)) {
-			throw new ValidationException('Property '.(is_string($class) ? $class : $class::class).'::'.$property.' must be a valid URL.');
-		}
-	}
+    public function validateValue(mixed $value, string | object $class, string $property) : void {
+        if (!is_string($value) || !Validators::isUrl($value)) {
+            throw new ValidationException(
+              'Property '.(is_string($class) ? $class : $class::class).'::'.$property.' must be a valid URL.'
+            );
+        }
+    }
 }

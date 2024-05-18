@@ -2,7 +2,9 @@
 
 namespace Lsr\Core\Exceptions;
 
-class UndefinedPropertyException extends \RuntimeException
+use RuntimeException;
+
+class UndefinedPropertyException extends RuntimeException
 {
 
 }

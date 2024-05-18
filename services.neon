@@ -14,6 +14,11 @@ extensions:
 	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
 	caching: Nette\Bridges\CacheDI\CacheExtension(%constants.tempDir%)
 services:
+	app:
+		type: Lsr\Core\App
+
+	translations: Lsr\Core\Translations
+
 	menu.builder: Lsr\Core\Menu\MenuBuilder
 	links.generator: Lsr\Core\Links\Generator
 
@@ -33,11 +38,16 @@ services:
 		create: Lsr\Core\Templating\LatteExtension()
 		tags:
 			- templating
+	templating.latte.translatorExtension:
+		create: Lsr\Core\Templating\TranslatorExtension(@translations)
+		tags:
+			- templating
 	templating.latte.engine:
 		create: Latte\Engine()
 		setup:
 			- setTempDirectory(%templating.tmpPath%)
 			- addExtension(@templating.latte.extension)
+			- addExtension(@templating.latte.translatorExtension)
 			- addExtension(@cache.extension.latte)
 		tags:
 			- templating
@@ -47,9 +57,10 @@ services:
 			- templating
 search:
 	controllers:
-		in: %constants.appDir%src/Controllers
+		in: '%constants.appDir%src/Controllers'
 		extends:
 			- Lsr\Core\Controllers\Controller
 			- Lsr\Core\Controllers\ApiController
 		tags:
 			- controllers
+		inject: true

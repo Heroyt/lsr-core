@@ -186,7 +186,6 @@ class ModelQueryTest extends TestCase
 		$model = TestingModel::query()->first();
 		self::assertNotNull($model);
 		self::assertInstanceOf(TestingModel::class, $model);
-		/** @phpstan-ignore-next-line */
 		self::assertEquals(1, $model->id);
 	}
 

@@ -9,20 +9,22 @@ use Lsr\Core\Exceptions\ValidationException;
 class Required implements Validator
 {
 
-	public function validateValue(mixed $value, string|object $class, string $property) : void {
-		if (is_null($value)) {
-			$this->throw($class, $property);
-		}
-	}
+    public function validateValue(mixed $value, string | object $class, string $property) : void {
+        if (is_null($value)) {
+            $this->throw($class, $property);
+        }
+    }
 
-	/**
-	 * @param string|object $class
-	 * @param string        $property
-	 *
-	 * @return void
-	 * @throws ValidationException
-	 */
-	public function throw(string|object $class, string $property) : void {
-		throw new ValidationException('Property '.(is_string($class) ? $class : $class::class).'::'.$property.' is required.');
-	}
+    /**
+     * @param  string|object  $class
+     * @param  string  $property
+     *
+     * @return void
+     * @throws ValidationException
+     */
+    public function throw(string | object $class, string $property) : void {
+        throw new ValidationException(
+          'Property '.(is_string($class) ? $class : $class::class).'::'.$property.' is required.'
+        );
+    }
 }

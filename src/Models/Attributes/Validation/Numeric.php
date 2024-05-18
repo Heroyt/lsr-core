@@ -10,9 +10,12 @@ class Numeric implements Validator
 {
 
 
-	public function validateValue(mixed $value, string|object $class, string $property) : void {
-		if (!is_numeric($value)) {
-			throw new ValidationException('Property '.(is_string($class) ? $class : $class::class).'::'.$property.' must be numeric (string, int or float).');
-		}
-	}
+    public function validateValue(mixed $value, string | object $class, string $property) : void {
+        if (!is_numeric($value)) {
+            throw new ValidationException(
+              'Property '.(is_string($class) ? $class :
+                $class::class).'::'.$property.' must be numeric (string, int or float).'
+            );
+        }
+    }
 }

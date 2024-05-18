@@ -2,7 +2,9 @@
 
 namespace Lsr\Core\Exceptions;
 
-class CyclicDependencyException extends \Exception
+use Exception;
+
+class CyclicDependencyException extends Exception
 {
 
 }

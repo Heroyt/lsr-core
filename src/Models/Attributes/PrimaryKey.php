@@ -8,9 +8,8 @@ use Attribute;
 class PrimaryKey
 {
 
-	public function __construct(
-		public string $column
-	) {
-	}
+    public function __construct(
+      public string $column
+    ) {}
 
 }

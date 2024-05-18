@@ -1,71 +1,70 @@
 {
-	"name": "lsr/core",
-	"description": "Laser framework core.",
-  "version": "0.2.44",
-	"repositories": [
-		{
-			"type": "composer",
-			"url": "https://packages.laserliga.cz"
-		}
-	],
-	"scripts": {
-		"test": "./vendor/bin/phpunit",
-		"docs": "doxygen"
-	},
-	"require-dev": {
-		"roave/security-advisories": "dev-latest",
+  "name": "lsr/core",
+  "description": "Laser framework core.",
+  "version": "0.2.45",
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://packages.laserliga.cz"
+    }
+  ],
+  "scripts": {
+    "test": "./vendor/bin/phpunit",
+    "docs": "doxygen"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-latest",
     "phpunit/phpunit": "^11",
-		"phpstan/phpstan": "^1.10",
-		"phpstan/extension-installer": "^1.2",
-		"phpstan/phpstan-dibi": "^1.0",
-		"phpstan/phpstan-nette": "^1.2"
-	},
-	"autoload": {
-		"psr-4": {
-			"Lsr\\Core\\": "src/"
-		}
-	},
-	"autoload-dev": {
-		"psr-4": {
-			"TestCases\\": "tests/TestCases/"
-		}
-	},
-	"authors": [
-		{
-			"name": "Tomáš Vojík",
-			"email": "vojik@wboy.cz"
-		}
-	],
-	"minimum-stability": "stable",
-	"require": {
-		"lsr/interfaces": "^0.2",
-		"lsr/logging": "^0.2",
-		"ext-fileinfo": "*",
-		"ext-gettext": "*",
-		"ext-simplexml": "*",
-		"ext-ctype": "*",
-		"ext-mbstring": "*",
-		"ext-pdo_sqlite": "*",
-		"latte/latte": "^3.0",
-		"nette/di": "^3.1",
-		"nette/caching": "^3.2",
-		"nette/http": "^3.2",
-		"ext-zip": "*",
-		"dibi/dibi": "^5",
-		"lsr/routing": "^0.2",
-		"lsr/request": "^0.2",
-    "vlucas/phpdotenv": "^5.5",
+    "phpstan/phpstan": "^1.10",
+    "phpstan/extension-installer": "^1.2",
+    "phpstan/phpstan-dibi": "^1.0",
+    "phpstan/phpstan-nette": "^1.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "Lsr\\Core\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "TestCases\\": "tests/TestCases/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Tomáš Vojík",
+      "email": "vojik@wboy.cz"
+    }
+  ],
+  "minimum-stability": "stable",
+  "require": {
+    "lsr/interfaces": "^0.2",
+    "lsr/logging": "^0.2",
+    "ext-fileinfo": "*",
+    "ext-gettext": "*",
+    "ext-simplexml": "*",
+    "ext-ctype": "*",
+    "ext-mbstring": "*",
+    "ext-pdo_sqlite": "*",
+    "latte/latte": "^3.0",
+    "nette/di": "^3.2",
+    "nette/caching": "^3.3",
+    "ext-zip": "*",
+    "dibi/dibi": "^5",
+    "lsr/routing": "^0.2",
+    "lsr/request": "^0.2",
+    "vlucas/phpdotenv": "^5.6",
     "nette/php-generator": "^4.1",
     "ext-redis": "*"
   },
-	"config": {
-		"allow-plugins": {
-			"phpstan/extension-installer": true
-		}
-	},
-	"extra": {
-		"branch-alias": {
-			"v0.2": "0.2.x-dev"
-		}
-	}
+  "config": {
+    "allow-plugins": {
+      "phpstan/extension-installer": true
+    }
+  },
+  "extra": {
+    "branch-alias": {
+      "v0.2": "0.2.x-dev"
+    }
+  }
 }

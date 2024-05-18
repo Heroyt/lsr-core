@@ -11,46 +11,46 @@ use Lsr\Core\Routing\Router;
 class MenuItem
 {
 
-	public bool $active = false;
-	public string $url = '';
+    public bool $active = false;
+    public string $url = '';
 
-	/**
-	 * @param string $name
-	 * @param string $icon
-	 * @param array<string|int> $path
-	 * @param MenuItem[] $children
-	 * @param int $order
-	 */
-	public function __construct(
-		public string $name = '',
-		public string $icon = '',
-		public array  $path = [],
-		public array  $children = [],
-		public int    $order = 0,
-	) {
-		$this->url = App::getLink($this->path);
-		$this->checkActive();
-	}
+    /**
+     * @param  string  $name
+     * @param  string  $icon
+     * @param  array<string|int, string>  $path
+     * @param  MenuItem[]  $children
+     * @param  int  $order
+     */
+    public function __construct(
+      public string $name = '',
+      public string $icon = '',
+      public array  $path = [],
+      public array  $children = [],
+      public int    $order = 0,
+    ) {
+        $this->url = App::getLink($this->path);
+        $this->checkActive();
+    }
 
-	/**
-	 * Check if this menu item is currently active
-	 *
-	 * @return bool
-	 */
-	public function checkActive(): bool {
-		$this->active = Router::comparePaths(array_values($this->path));
-		foreach ($this->children as $child) {
-			$this->active = $this->active || Router::comparePaths($child->path);
-		}
-		return $this->active;
-	}
+    /**
+     * Check if this menu item is currently active
+     *
+     * @return bool
+     */
+    public function checkActive() : bool {
+        $this->active = Router::comparePaths(array_values($this->path));
+        foreach ($this->children as $child) {
+            $this->active = $this->active || Router::comparePaths($child->path);
+        }
+        return $this->active;
+    }
 
-	/**
-	 * If menu items are serialized, it should still check if it is active
-	 *
-	 * @return void
-	 */
-	public function __wakeup(): void {
-		$this->checkActive();
-	}
+    /**
+     * If menu items are serialized, it should still check if it is active
+     *
+     * @return void
+     */
+    public function __wakeup() : void {
+        $this->checkActive();
+    }
 }
