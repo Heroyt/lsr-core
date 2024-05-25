@@ -20,8 +20,12 @@ class Translations implements Translator
     public readonly array $supportedLanguages;
     /** @var array<string, string> */
     public readonly array $supportedCountries;
+
     private string $lang;
     private Language $language;
+
+    private string $langId = '';
+    private string $country = '';
 
     private PoLoader $poLoader;
 
@@ -42,7 +46,7 @@ class Translations implements Translator
       private readonly Config $config,
       string                  $defaultLang = 'cs_CZ',
       array                   $supportedLanguages = [],
-      private readonly array  $textDomains = [],
+      public readonly array   $textDomains = [],
     ) {
         if (empty($supportedLanguages)) {
             /** @var string[] $languages */
@@ -68,7 +72,19 @@ class Translations implements Translator
                 $supportedLanguages[$lang] = $country;
             }
         }
+        else {
+            $modified = [];
+            foreach ($supportedLanguages as $lang => $country) {
+                $split = explode('_', $country);
+                if (count($split) === 2) {
+                    [$lang, $country] = $split;
+                }
+                $modified[$lang] = $country;
+            }
+            $supportedLanguages = $modified;
+        }
         $this->supportedLanguages = $supportedLanguages;
+
         $supportedCountries = [];
         foreach ($this->supportedLanguages as $country) {
             if (isset(Constants::COUNTRIES[$country])) {
@@ -90,18 +106,28 @@ class Translations implements Translator
      * @throws InvalidLanguageException
      */
     public function setLang(string $lang) : Translations {
-        if ($this->lang !== $lang) {
+        if (!isset($this->lang) || $this->lang !== $lang) {
             $language = $this->findLanguage($lang);
             if (!isset($language)) {
                 throw new InvalidLanguageException('Invalid language "'.$lang.'"');
             }
-            if (!isset($this->supportedLanguages[$language->id])) {
-                {
-                    throw new InvalidLanguageException('Unsupported language');
-                }
+            $id = $language->id;
+            $split = explode('_', $id);
+            if (count($split) === 2) {
+                $id = $split[0];
+            }
+            if (!isset($this->supportedLanguages[$id])) {
+                throw new InvalidLanguageException(
+                  'Unsupported language '.$lang.' ('.$id.'). Supported languages are: '.implode(
+                    ',',
+                    array_keys($this->supportedLanguages)
+                  )
+                );
             }
             $this->language = $language;
-            $this->lang = $language->id.'_'.$this->supportedLanguages[$language->id];
+            $this->lang = $id.'_'.$this->supportedLanguages[$id];
+            $this->langId = $id;
+            $this->country = $this->supportedLanguages[$id];
             $this->initLanguage();
         }
         return $this;
@@ -113,6 +139,8 @@ class Translations implements Translator
 
     public function updateTranslations() : void {
         if (!$this->translationsChanged) {
+            var_dump('No translations changed');
+            var_dump(CHECK_TRANSLATIONS);
             return;
         }
         Timer::startIncrementing('translation.update');
@@ -139,8 +167,8 @@ class Translations implements Translator
                     }
                     $string->translatePlural(...$plural);
                 }
-                $poGenerator->generateFile($template, LANGUAGE_DIR.$domain.'.pot');
             }
+            $poGenerator->generateFile($template, LANGUAGE_DIR.$domain.'.pot');
         }
         Timer::stop('translation.update');
         $this->translationsChanged = false;
@@ -167,13 +195,12 @@ class Translations implements Translator
         Timer::startIncrementing('translation');
 
         $context = $params['context'] ?? '';
-        $msgTmp = $message;
         // Add context
         if (!empty($context)) {
             $message = $context."\004".$message;
         }
 
-        $plural = (string) ($params['plural'] ?? $message);
+        $plural = (string) ($params['plural'] ?? '');
         $num = (int) ($params['num'] ?? 1);
         $domain = (string) ($params['domain'] ?? LANGUAGE_FILE_NAME);
 
@@ -183,6 +210,10 @@ class Translations implements Translator
         $split = explode("\004", $translated);
         if (count($split) === 2) {
             $translated = $this->translateModular($split[1], $plural, $num, $domain);
+        }
+
+        if (!empty($params['format']) && is_array($params['format'])) {
+            $translated = sprintf($translated, ...$params['format']);
         }
 
         TranslationTracyPanel::incrementTranslations();
@@ -202,16 +233,19 @@ class Translations implements Translator
                 $msgTmp = $message;
                 $context = null;
             }
-            foreach ($this->getAllTranslations() as $langTranslations) {
-                foreach ($langTranslations as $translations) {
-                    if (!($translation = $translations->find($context, $msgTmp))) {
-                        $translation = Translation::create($context, $msgTmp);
-                        if ($plural !== null) {
-                            $translation->setPlural($plural);
-                        }
-                        $translations->add($translation);
-                        $this->translationsChanged = true;
+            foreach ($this->getAllTranslations() as $lang => $langTranslations) {
+                if (!isset($langTranslations[$domain])) {
+                    $langTranslations[$domain] = \Gettext\Translations::create($domain, $lang);
+                }
+
+                $translations = $langTranslations[$domain];
+                if (!($translations->find($context, $msgTmp))) {
+                    $translation = Translation::create($context, $msgTmp);
+                    if ($plural !== '') {
+                        $translation->setPlural($plural);
                     }
+                    $translations->add($translation);
+                    $this->translationsChanged = true;
                 }
             }
         }
@@ -229,6 +263,31 @@ class Translations implements Translator
         }
 
         return dngettext($domain, $message, $plural, $num);
+    }
+
+    /**
+     * @return \Gettext\Translations[][]
+     */
+    private function getAllTranslations() : array {
+        if (!$this->loadedAllTranslations) {
+            foreach ($this->supportedLanguages as $lang => $country) {
+                $langConcat = $lang.'_'.$country;
+                $this->translations[$langConcat][LANGUAGE_FILE_NAME] = $this->getTranslations($langConcat);
+                foreach ($this->textDomains as $textdomain) {
+                    $this->translations[$langConcat][$textdomain] = $this->getTranslations($langConcat, $textdomain);
+                }
+            }
+            $this->loadedAllTranslations = true;
+        }
+        return $this->translations;
+    }
+
+    public function getLangId() : string {
+        return $this->langId;
+    }
+
+    public function getCountry() : string {
+        return $this->country;
     }
 
     private function findLanguage(string $lang) : ?Language {
@@ -267,20 +326,5 @@ class Translations implements Translator
         textdomain(LANGUAGE_FILE_NAME);
     }
 
-    /**
-     * @return \Gettext\Translations[][]
-     */
-    private function getAllTranslations() : array {
-        if (!$this->loadedAllTranslations) {
-            foreach ($this->supportedLanguages as $lang => $country) {
-                $langConcat = $lang.'_'.$country;
-                $this->translations[$langConcat][LANGUAGE_FILE_NAME] = $this->getTranslations($langConcat);
-                foreach ($this->textDomains as $textdomain) {
-                    $this->translations[$langConcat][$textdomain] = $this->getTranslations($langConcat, $textdomain);
-                }
-            }
-            $this->loadedAllTranslations = true;
-        }
-        return $this->translations;
-    }
+
 }

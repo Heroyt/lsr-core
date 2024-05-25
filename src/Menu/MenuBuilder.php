@@ -38,7 +38,7 @@ readonly class MenuBuilder
             $menuItem = new MenuItem(
               name : $item['name'],
               icon : $item['icon'] ?? '',
-              path : $path,
+              path : $path ?? [],
               order: $item['order'] ?? 0
             );
             foreach ($item['children'] ?? [] as $child) {
@@ -54,7 +54,7 @@ readonly class MenuBuilder
                 $menuItem->children[] = new MenuItem(
                   name : $child['name'],
                   icon : $child['icon'] ?? '',
-                  path : $path,
+                  path : $path ?? [],
                   order: $item['order'] ?? 0
                 );
             }

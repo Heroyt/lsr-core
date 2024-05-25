@@ -61,4 +61,3 @@ search:
 			- Lsr\Core\Controllers\ApiController
 		tags:
 			- controllers
-		inject: true

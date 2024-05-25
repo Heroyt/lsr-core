@@ -74,6 +74,7 @@ class App
       public readonly Translations     $translations,
     ) {
         self::$instance = $this;
+        $router->setup();
     }
 
     /**
@@ -344,7 +345,7 @@ class App
      * @return UriInterface
      */
     public function getBaseUrlObject() : UriInterface {
-        return $this->getRequest()->getUri()->withPath('')->withFragment('')->withQuery('');
+        return $this->getRequest()->getUri()->withPath('/')->withFragment('')->withQuery('');
     }
 
     /**
@@ -594,6 +595,11 @@ class App
             if (isset($sessLang) && $this->isSupportedLanguage($sessLang)) {
                 return $sessLang;
             }
+        }
+
+        $cookieLang = $request->getCookieParams()['lang'] ?? null;
+        if (isset($cookieLang) && $this->isSupportedLanguage($cookieLang)) {
+            return $cookieLang;
         }
 
         if ($request->hasHeader('Accept-Language')) {

@@ -10,6 +10,7 @@ use Latte\Compiler\Nodes\Php\Expression\ArrayNode;
 use Latte\Compiler\Nodes\Php\ModifierNode;
 use Latte\Compiler\Nodes\Php\Scalar\StringNode;
 use Latte\Compiler\Nodes\StatementNode;
+use Latte\Compiler\Nodes\TextNode;
 use Latte\Compiler\PrintContext;
 use Latte\Compiler\Tag;
 use Lsr\Core\App;
@@ -20,6 +21,8 @@ class LinkNode extends StatementNode
     public ModifierNode $modifier;
     public ArrayNode $args;
 
+    public ?TextNode $static = null;
+
     /**
      * @param  Tag  $tag
      *
@@ -28,33 +31,53 @@ class LinkNode extends StatementNode
      */
     public static function create(Tag $tag) : Node {
         $tag->expectArguments();
-        $args = $tag->parser->parseArguments();
+
+        $node = $tag->node = new self;
+        $node->args = $args = $tag->parser->parseArguments();
+        $node->modifier = $tag->parser->parseModifier();
+        $node->modifier->escape = true;
 
         try {
             /** @var array<array<string|int,string>|string> $constArgs */
             $constArgs = NodeHelpers::toValue($args, constants: true);
             /** @var Generator $generator */
             $generator = App::getService('links.generator');
-            return new StringNode($generator->getLink(...$constArgs));
+            $node->static = new TextNode($generator->getLink(...$constArgs));
         } catch (InvalidArgumentException) {
         }
-
-        $node = new self();
-        $node->args = $args;
         return $node;
     }
 
     public function print(PrintContext $context) : string {
+        if (isset($this->static)) {
+            return $context->format(
+              <<<'XX'
+					$ʟ_fi = new LR\FilterInfo(%dump);
+					echo %modifyContent(%dump) %line;
+					XX,
+              $context->getEscaper()->export(),
+              $this->modifier,
+              $this->static->content,
+              $this->position,
+            );
+        }
+
         return $context->format(
           <<<'XX'
-			echo \Lsr\Core\App::getService('links.generator')->getLink(%args) %line;
+			$ʟ_fi = new LR\FilterInfo(%dump);
+			echo %modifyContent(\Lsr\Core\App::getService('links.generator')->getLink(%args)) %line;
 			XX,
+          $context->getEscaper()->export(),
+          $this->modifier,
           $this->args,
           $this->position,
         );
     }
 
     public function &getIterator() : \Generator {
-        yield $this;
+        if (isset($this->static)) {
+            yield $this->static;
+        }
+        yield $this->modifier;
     }
 }

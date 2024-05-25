@@ -18,6 +18,12 @@ use Lsr\Helpers\Tools\LogoHelper;
 class LatteExtension extends Extension
 {
 
+    public function __construct(
+      private readonly App $app,
+    ) {
+
+    }
+
     public function getTags() : array {
         return [
           'alert'        => [AlertNode::class, 'create'],
@@ -45,9 +51,9 @@ class LatteExtension extends Extension
     public function getFunctions() : array {
         return [
           'csrf'    => 'formToken',
-          'getUrl'  => [App::class, 'getBaseUrl'],
+          'getUrl'  => [$this->app, 'getBaseUrl'],
           'lang'    => 'lang',
-          'link'    => [App::class, 'getLink'],
+          'link'    => [$this->app, 'getLink'],
           'logo'    => [LogoHelper::class, 'getLogoHtml'],
           'svgIcon' => 'svgIcon',
         ];

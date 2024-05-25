@@ -49,7 +49,7 @@ abstract class Controller implements ControllerInterface
 	protected Latte $latte;
 
 	/** @var App Injected property */
-	protected App $app;
+	public App $app;
     /**
      * @var string $title Page name
      */
@@ -86,6 +86,7 @@ abstract class Controller implements ControllerInterface
 	public function init(RequestInterface $request) : void {
 		$this->request = $request;
 		$this->params['page'] = $this;
+    $this->params['app'] = $this->getApp();
 		$this->params['request'] = $request;
 		/** @phpstan-ignore-next-line */
 		$this->params['errors'] = $request->errors;
@@ -102,7 +103,7 @@ abstract class Controller implements ControllerInterface
 	 * @since   1.0
 	 */
 	public function getTitle() : string {
-		return $this->app->getAppName().(!empty($this->title) ? ' - '.sprintf(
+		return $this->getApp()->getAppName().(!empty($this->title) ? ' - '.sprintf(
 					lang($this->title, context: 'pageTitles'),
 					...
 					$this->titleParams
@@ -125,11 +126,18 @@ abstract class Controller implements ControllerInterface
 		$this->latte = $latte;
 	}
 
-	public function injectApp(App $app) : void {
-		$this->app = $app;
+	public function getApp() : App {
+      if (!isset($this->app)) {
+          $this->app = App::getInstance();
+      }
+      return $this->app;
 	}
 
-	/**
+    public function injectApp(App $app) : void {
+        $this->app = $app;
+    }
+
+    /**
 	 * @param  string  $template
 	 *
 	 * @return ResponseInterface

@@ -21,13 +21,15 @@ class GetUrlNode extends StatementNode
     public function print(PrintContext $context) : string {
         return $context->format(
           <<<'XX'
-			echo \Lsr\Core\App::getInstance()->getUrl() %line;
+			echo \Lsr\Core\App::getInstance()->getBaseUrl() %line;
 			XX,
           $this->position,
         );
     }
 
     public function &getIterator() : Generator {
-        yield $this;
+        if (false) {
+            yield;
+        }
     }
 }

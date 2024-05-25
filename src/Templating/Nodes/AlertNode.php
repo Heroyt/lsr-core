@@ -105,6 +105,8 @@ class AlertNode extends StatementNode
     }
 
     public function &getIterator() : Generator {
-        yield $this;
+        if (false) {
+            yield;
+        }
     }
 }
