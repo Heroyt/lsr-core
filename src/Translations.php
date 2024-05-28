@@ -206,10 +206,9 @@ class Translations implements Translator
 
         $translated = $this->translateModular($message, $plural, $num, $domain);
 
-        // If the translation with the context does not exist, try to translate it without it
         $split = explode("\004", $translated);
         if (count($split) === 2) {
-            $translated = $this->translateModular($split[1], $plural, $num, $domain);
+            $translated = $split[1];
         }
 
         if (!empty($params['format']) && is_array($params['format'])) {
