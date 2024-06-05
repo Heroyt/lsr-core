@@ -182,7 +182,12 @@ class Translations implements Translator
             }
 
             $file = LANGUAGE_DIR.$lang.'/LC_MESSAGES/'.$domain.'.po';
-            $this->translations[$lang][$domain] = $this->poLoader->loadFile($file);
+            if (file_exists($file)) {
+                $this->translations[$lang][$domain] = $this->poLoader->loadFile($file);
+            }
+            else {
+                $this->translations[$lang][$domain] = \Gettext\Translations::create($domain, $lang);
+            }
         }
         return $this->translations[$lang][$domain];
     }
