@@ -420,6 +420,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
           [
             CacheParent::Tags => [
               static::TABLE,
+              static::TABLE.'/query',
             ],
           ]
         );
@@ -574,6 +575,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
             $cache->clean(
               [
                 CacheParent::Tags => [
+                  $this::TABLE,
                   $this::TABLE.'/query',
                   $this::TABLE.'/'.$this->id,
                   $this::TABLE.'/'.$this->id.'/relations',
