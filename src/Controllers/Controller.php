@@ -23,6 +23,7 @@ use Lsr\Exceptions\TemplateDoesNotExistException;
 use Lsr\Interfaces\ControllerInterface;
 use Lsr\Interfaces\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 /**
  * @class   Page
@@ -44,12 +45,10 @@ abstract class Controller implements ControllerInterface
      * @var array<string, mixed> $params Parameters added to latte template
      */
     public array $params = [];
-
-	/** @var Latte Injected property */
-	protected Latte $latte;
-
-	/** @var App Injected property */
-	public App $app;
+    /** @var App Injected property */
+    public App $app;
+    /** @var Latte Injected property */
+    protected Latte $latte;
     /**
      * @var string $title Page name
      */
@@ -73,101 +72,124 @@ abstract class Controller implements ControllerInterface
     protected string $description = '';
     protected RequestInterface $request;
 
-	public function __construct() {}
+    public function __construct() {}
 
-	/**
-	 * Initialization function
-	 *
-	 * @param  RequestInterface  $request
-	 *
-	 * @version 1.0
-	 * @since   1.0
-	 */
-	public function init(RequestInterface $request) : void {
-		$this->request = $request;
-		$this->params['page'] = $this;
-    $this->params['app'] = $this->getApp();
-		$this->params['request'] = $request;
-		/** @phpstan-ignore-next-line */
-		$this->params['errors'] = $request->errors;
-		/** @phpstan-ignore-next-line */
-		$this->params['notices'] = $request->notices;
-	}
+    /**
+     * Initialization function
+     *
+     * @param  RequestInterface  $request
+     *
+     * @version 1.0
+     * @since   1.0
+     */
+    public function init(RequestInterface $request) : void {
+        $this->request = $request;
+        $this->params['page'] = $this;
+        $this->params['app'] = $this->getApp();
+        $this->params['request'] = $request;
+        /** @phpstan-ignore-next-line */
+        $this->params['errors'] = $request->errors;
+        /** @phpstan-ignore-next-line */
+        $this->params['notices'] = $request->notices;
+    }
 
-	/**
-	 * Getter method for page title
-	 *
-	 * @return string
-	 *
-	 * @version 1.0
-	 * @since   1.0
-	 */
-	public function getTitle() : string {
-		return $this->getApp()->getAppName().(!empty($this->title) ? ' - '.sprintf(
-					lang($this->title, context: 'pageTitles'),
-					...
-					$this->titleParams
-				) : '');
-	}
+    public function getApp() : App {
+        if (!isset($this->app)) {
+            $this->app = App::getInstance();
+        }
+        return $this->app;
+    }
 
-	/**
-	 * Getter method for page description
-	 *
-	 * @return string
-	 *
-	 * @version 1.0
-	 * @since   1.0
-	 */
-	public function getDescription() : string {
+    /**
+     * Getter method for page title
+     *
+     * @return string
+     *
+     * @version 1.0
+     * @since   1.0
+     */
+    public function getTitle() : string {
+        return $this->getApp()->getAppName().(!empty($this->title) ? ' - '.sprintf(
+              lang($this->title, context: 'pageTitles'),
+              ...
+              $this->titleParams
+            ) : '');
+    }
+
+    /**
+     * Getter method for page description
+     *
+     * @return string
+     *
+     * @version 1.0
+     * @since   1.0
+     */
+    public function getDescription() : string {
         return sprintf(lang($this->description, context: 'pageDescription'), ...$this->descriptionParams);
-	}
+    }
 
-	public function injectLatte(Latte $latte) : void {
-		$this->latte = $latte;
-	}
-
-	public function getApp() : App {
-      if (!isset($this->app)) {
-          $this->app = App::getInstance();
-      }
-      return $this->app;
-	}
+    public function injectLatte(Latte $latte) : void {
+        $this->latte = $latte;
+    }
 
     public function injectApp(App $app) : void {
         $this->app = $app;
     }
 
     /**
-	 * @param  string  $template
-	 *
-	 * @return ResponseInterface
-	 * @throws JsonException
-	 * @throws TemplateDoesNotExistException
-	 */
-	protected function view(string $template) : ResponseInterface {
-		return $this->respond($this->latte->viewToString($template, $this->params));
-	}
+     * @param  string  $template
+     *
+     * @return ResponseInterface
+     * @throws JsonException
+     * @throws TemplateDoesNotExistException
+     */
+    protected function view(string $template) : ResponseInterface {
+        return $this->respond($this->latte->viewToString($template, $this->params))
+                    ->withHeader('Content-Type', 'text/html; charset=utf-8');
+    }
 
-	/**
-	 * @param  string|array<string, mixed>|object  $data
-	 * @param  int  $code
-	 * @param  string[]  $headers
-	 *
-	 * @return ResponseInterface
-	 * @throws JsonException
-	 */
-	protected function respond(
-		string | array | object $data,
-		int                     $code = 200,
-		array                   $headers = []
-	) : ResponseInterface {
-		$response = new Response(new \Nyholm\Psr7\Response($code, $headers));
+    /**
+     * @param  string|array<string, mixed>|object  $data
+     * @param  int  $code
+     * @param  string[]  $headers
+     *
+     * @return ResponseInterface
+     * @throws JsonException
+     */
+    protected function respond(
+      string | array | object $data,
+      int                     $code = 200,
+      array                   $headers = []
+    ) : ResponseInterface {
+        $response = new Response(new \Nyholm\Psr7\Response($code, $headers));
 
-		if (is_string($data)) {
-			return $response->withStringBody($data);
-		}
+        if (is_string($data)) {
+            return $response->withStringBody($data);
+        }
 
-		return $response->withJsonBody($data);
-	}
+        $acceptTypes = $this->getAcceptTypes($this->request);
+        if (in_array('application/json', $acceptTypes)) {
+            return $response->withJsonBody($data);
+        }
+        if (in_array('application/xml', $acceptTypes)) {
+            return $response->withXmlBody($data);
+        }
+
+        // Default to JSON
+        return $response->withJsonBody($data);
+    }
+
+
+    /**
+     * @param  ServerRequestInterface  $request
+     * @return string[]
+     */
+    protected function getAcceptTypes(ServerRequestInterface $request) : array {
+        $types = [];
+        foreach ($request->getHeader('Accept') as $value) {
+            $types[] = strtolower(trim(explode(';', $value, 2)[0]));
+        }
+        return $types;
+    }
 
 }
