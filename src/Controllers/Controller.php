@@ -44,7 +44,7 @@ abstract class Controller implements ControllerInterface
     /**
      * @var array<string, mixed> $params Parameters added to latte template
      */
-    public array $params = [];
+    public TemplateParameters|array $params = [];
     /** @var App Injected property */
     public App $app;
     /** @var Latte Injected property */
