@@ -12,8 +12,6 @@ use Nette\SmartObject;
 #[AllowDynamicProperties]
 class TemplateParameters implements \ArrayAccess, JsonSerializable
 {
-    use SmartObject;
-
     public Controller $page;
     public App $app;
     public Request $request;
