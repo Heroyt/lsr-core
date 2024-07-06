@@ -7,7 +7,6 @@ use JsonSerializable;
 use Lsr\Core\App;
 use Lsr\Core\Exceptions\UnsupportedOperationException;
 use Lsr\Core\Requests\Request;
-use Nette\SmartObject;
 
 #[AllowDynamicProperties]
 class TemplateParameters implements \ArrayAccess, JsonSerializable
