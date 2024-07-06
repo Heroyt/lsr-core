@@ -19,13 +19,20 @@ class TemplateParameters implements \ArrayAccess, JsonSerializable
     public array $errors = [];
     /** @var array<string|array{title?:string,content:string,type?:string}> */
     public array $notices = [];
+    /** @var string[] */
+    public array $addCss = [];
+    /** @var string[] */
+    public array $addJs = [];
+
+    /** @var array<string,mixed> */
+    protected array $additionalData = [];
 
     /**
      * @param string $offset
      * @return bool
      */
     public function offsetExists($offset) : bool {
-        return isset($this->{$offset});
+        return isset($this->{$offset}) || isset($this->additionalData[$offset]);
     }
 
     /**
@@ -33,7 +40,7 @@ class TemplateParameters implements \ArrayAccess, JsonSerializable
      * @return mixed
      */
     public function offsetGet($offset) : mixed {
-        return $this->{$offset};
+        return $this->{$offset} ?? $this->additionalData[$offset] ?? null;
     }
 
     /**
@@ -42,7 +49,11 @@ class TemplateParameters implements \ArrayAccess, JsonSerializable
      * @return void
      */
     public function offsetSet($offset, $value) : void {
-        $this->{$offset} = $value;
+        if (property_exists($this, $offset)) {
+            $this->{$offset} = $value;
+            return;
+        }
+        $this->additionalData[$offset] = $value;
     }
 
     /**
@@ -56,6 +67,6 @@ class TemplateParameters implements \ArrayAccess, JsonSerializable
     }
 
     public function jsonSerialize() : array {
-        return get_object_vars($this);
+        return array_merge(get_object_vars($this), $this->additionalData);
     }
 }
