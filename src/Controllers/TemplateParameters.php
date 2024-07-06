@@ -2,12 +2,14 @@
 
 namespace Lsr\Core\Controllers;
 
+use AllowDynamicProperties;
 use JsonSerializable;
 use Lsr\Core\App;
 use Lsr\Core\Exceptions\UnsupportedOperationException;
 use Lsr\Core\Requests\Request;
 use Nette\SmartObject;
 
+#[AllowDynamicProperties]
 class TemplateParameters implements \ArrayAccess, JsonSerializable
 {
     use SmartObject;
@@ -24,42 +26,35 @@ class TemplateParameters implements \ArrayAccess, JsonSerializable
     /** @var string[] */
     public array $addJs = [];
 
-    /** @var array<string,mixed> */
-    protected array $additionalData = [];
-
     /**
-     * @param string $offset
+     * @param  string  $offset
      * @return bool
      */
     public function offsetExists($offset) : bool {
-        return isset($this->{$offset}) || isset($this->additionalData[$offset]);
+        return isset($this->{$offset});
     }
 
     /**
-     * @param string $offset
+     * @param  string  $offset
      * @return mixed
      */
     public function offsetGet($offset) : mixed {
-        return $this->{$offset} ?? $this->additionalData[$offset] ?? null;
+        return $this->{$offset};
     }
 
     /**
-     * @param string $offset
-     * @param mixed $value
+     * @param  string  $offset
+     * @param  mixed  $value
      * @return void
      */
     public function offsetSet($offset, $value) : void {
-        if (property_exists($this, $offset)) {
-            $this->{$offset} = $value;
-            return;
-        }
-        $this->additionalData[$offset] = $value;
+        $this->{$offset} = $value;
     }
 
     /**
      * @warning unset() should not be called on template parameters
      * @interal
-     * @param string $offset
+     * @param  string  $offset
      * @return void
      */
     public function offsetUnset($offset) : void {
@@ -67,6 +62,6 @@ class TemplateParameters implements \ArrayAccess, JsonSerializable
     }
 
     public function jsonSerialize() : array {
-        return array_merge(get_object_vars($this), $this->additionalData);
+        return (array) $this;
     }
 }

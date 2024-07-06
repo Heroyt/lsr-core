@@ -6,6 +6,7 @@ use Latte\Engine;
 use Latte\Loaders\FileLoader;
 use Latte\Loaders\StringLoader;
 use Latte\Sandbox\SecurityPolicy;
+use Lsr\Core\Controllers\TemplateParameters;
 use Lsr\Exceptions\TemplateDoesNotExistException;
 
 readonly class Latte
@@ -26,11 +27,11 @@ readonly class Latte
      * Renders a view from a latte template
      *
      * @param  string  $template  Template name
-     * @param  array<string, mixed>  $params  Template parameters
+     * @param  array<string, mixed>|TemplateParameters  $params  Template parameters
      *
      * @throws TemplateDoesNotExistException
      */
-    public function view(string $template, array $params = []) : void {
+    public function view(string $template, array|TemplateParameters $params = []) : void {
         $this->engine->render($this->getTemplate($template), $params);
     }
 
@@ -57,12 +58,12 @@ readonly class Latte
      * Renders a view from a latte template
      *
      * @param  string  $template  Template name
-     * @param  array<string, mixed>  $params  Template parameters
+     * @param  array<string, mixed>|TemplateParameters  $params  Template parameters
      *
      * @return string Can be empty if $return is false
      * @throws TemplateDoesNotExistException
      */
-    public function viewToString(string $template, array $params = []) : string {
+    public function viewToString(string $template, array|TemplateParameters $params = []) : string {
         return $this->engine->renderToString($this->getTemplate($template), $params);
     }
 
@@ -70,12 +71,12 @@ readonly class Latte
      * Render template in sandbox mode
      *
      * @param  string  $template
-     * @param  array<string,mixed>  $params
+     * @param  array<string,mixed>|TemplateParameters  $params
      *
      * @return void
      * @throws TemplateDoesNotExistException
      */
-    public function sandbox(string $template, array $params) : void {
+    public function sandbox(string $template, array|TemplateParameters $params) : void {
         $this->engine->setSandboxMode();
         $this->engine->render($this->getTemplate($template), $params);
         $this->engine->setSandboxMode(false);
@@ -85,12 +86,12 @@ readonly class Latte
      * Render template in sandbox mode.
      *
      * @param  string  $template
-     * @param  array<string,mixed>  $params
+     * @param  array<string,mixed>|TemplateParameters  $params
      *
      * @return string
      * @throws TemplateDoesNotExistException
      */
-    public function sandboxToString(string $template, array $params) : string {
+    public function sandboxToString(string $template, array|TemplateParameters $params) : string {
         $this->engine->setSandboxMode();
         $return = $this->engine->renderToString($this->getTemplate($template), $params);
         $this->engine->setSandboxMode(false);
@@ -101,11 +102,11 @@ readonly class Latte
      * Render template from string in sandbox mode.
      *
      * @param  string  $latte
-     * @param  array<string,mixed>  $params
+     * @param  array<string,mixed>|TemplateParameters  $params
      *
      * @return void
      */
-    public function sandboxFromString(string $latte, array $params) : void {
+    public function sandboxFromString(string $latte, array|TemplateParameters $params) : void {
         $this->engine->setSandboxMode();
         $this->engine->setLoader(new StringLoader);
         $this->engine->render($latte, $params);
@@ -117,11 +118,11 @@ readonly class Latte
      * Render template from string in sandbox mode.
      *
      * @param  string  $latte
-     * @param  array<string, mixed>  $params
+     * @param  array<string, mixed>|TemplateParameters  $params
      *
      * @return string
      */
-    public function sandboxFromStringToString(string $latte, array $params) : string {
+    public function sandboxFromStringToString(string $latte, array|TemplateParameters $params) : string {
         $this->engine->setSandboxMode();
         $this->engine->setLoader(new StringLoader);
         $return = $this->engine->renderToString($latte, $params);
