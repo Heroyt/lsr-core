@@ -245,12 +245,14 @@ class App
      *
      * @param  class-string<T>  $type
      *
-     * @return T|null
-     * @throws MissingServiceException
-     * @noinspection PhpDocSignatureInspection
+     * @return T|T[]|null
      */
-    public static function getServiceByType(string $type) : ?object {
-        return self::getContainer()->getByType($type);
+    public static function getServiceByType(string $type) : null|object|array {
+        $service = self::getContainer()->getByType($type);
+        if (is_array($service)) {
+            return array_map([static::class, 'getService'], $service);
+        }
+        return $service;
     }
 
     /**
