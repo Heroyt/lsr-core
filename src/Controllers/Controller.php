@@ -109,11 +109,14 @@ abstract class Controller implements ControllerInterface
      * @since   1.0
      */
     public function getTitle() : string {
-        return $this->getApp()->getAppName().(!empty($this->title) ? ' - '.sprintf(
+        return $this->getApp()->getAppName().
+          (!empty($this->title) ?
+            ' - '.sprintf(
               lang($this->title, context: 'pageTitles'),
-              ...
-              $this->titleParams
-            ) : '');
+              ...$this->titleParams
+            )
+            : ''
+          );
     }
 
     /**
