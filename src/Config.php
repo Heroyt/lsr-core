@@ -148,6 +148,15 @@ class Config
         return true;
     }
 
+    public function clearCache() : void {
+        $cacheFile = $this->cacheDir.'config.cache';
+        if (file_exists($cacheFile)) {
+            unlink($cacheFile);
+        }
+        $this->initialized = false;
+        $this->init();
+    }
+
     /**
      * @return string Absolute file path or empty string if the file does not exist
      */
