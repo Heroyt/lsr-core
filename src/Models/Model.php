@@ -49,10 +49,6 @@ abstract class Model implements JsonSerializable, ArrayAccess
     public const    CACHE_TAGS = [];
     protected const JSON_EXCLUDE_PROPERTIES = ['row', 'cacheTags', 'logger', 'relationIds'];
 
-    /** @var static[][] Model instance cache */
-    protected static array $instances = [];
-    /** @var array<string, Logger> */
-    protected static array $modelLoggers = [];
     #[NoDB]
     public ?int $id = null;
     protected ?Row $row = null;
@@ -72,9 +68,6 @@ abstract class Model implements JsonSerializable, ArrayAccess
      * @throws ValidationException
      */
     public function __construct(?int $id = null, ?Row $dbRow = null) {
-        if (!isset(self::$instances[$this::class])) {
-            self::$instances[$this::class] = [];
-        }
         $pk = $this::getPrimaryKey();
         if (isset($dbRow->$pk) && !isset($id)) {
             /** @noinspection NullPointerExceptionInspection */
@@ -82,7 +75,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
         }
         if (isset($id) && !empty($this::TABLE)) {
             $this->id = $id;
-            self::$instances[$this::class][$this->id] = $this;
+            ModelRepository::setInstance($this);
             $this->row = $dbRow;
             $this->fetch();
         }
@@ -91,7 +84,6 @@ abstract class Model implements JsonSerializable, ArrayAccess
             $this->fillFromRow();
         }
         $this->instantiateProperties();
-        $this->logger = $this->getLogger();
     }
 
     /**
@@ -279,7 +271,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
      * @throws ValidationException
      */
     public static function get(int $id, ?Row $row = null) : static {
-        return static::$instances[static::class][$id] ?? new static($id, $row);
+        return ModelRepository::getInstance(static::class, $id) ?? new static($id, $row);
     }
 
     /**
@@ -370,21 +362,6 @@ abstract class Model implements JsonSerializable, ArrayAccess
     }
 
     /**
-     * Get logger for this model type
-     *
-     * @return Logger
-     */
-    public function getLogger() : Logger {
-        if (!isset($this->logger)) {
-            if (!isset(self::$modelLoggers[$this::TABLE])) {
-                self::$modelLoggers[$this::TABLE] = new Logger(LOG_DIR.'models/', $this::TABLE);
-            }
-            $this->logger = self::$modelLoggers[$this::TABLE];
-        }
-        return $this->logger;
-    }
-
-    /**
      * Checks if a model with given ID exists in database
      *
      * @param  int  $id
@@ -393,8 +370,8 @@ abstract class Model implements JsonSerializable, ArrayAccess
      */
     public static function exists(int $id) : bool {
         $test = DB::select(static::TABLE, 'count(*)')->where('%n = %i', static::getPrimaryKey(), $id)->fetchSingle(
-          cache: false
-        );
+            cache: false
+          );
         return $test > 0;
     }
 
@@ -430,9 +407,10 @@ abstract class Model implements JsonSerializable, ArrayAccess
      * Clear instance cache
      *
      * @return void
+     * @deprecated Use Lsr\Core\Models\ModelRepository::clearInstances()
      */
     public static function clearInstances() : void {
-        static::$instances = [];
+        ModelRepository::clearInstances(static::class);
     }
 
     /**
@@ -484,17 +462,29 @@ abstract class Model implements JsonSerializable, ArrayAccess
         if (!isset($this->id)) {
             return false;
         }
-        $this->logger->info('Updating model - '.$this->id);
+        $this->getLogger()->info('Updating model - '.$this->id);
         try {
             DB::update($this::TABLE, $this->getQueryData(), ['%n = %i', $this::getPrimaryKey(), $this->id]);
             $this->clearCache();
         } catch (Exception $e) {
-            $this->logger->error('Error running update query: '.$e->getMessage());
-            $this->logger->debug('Query: '.$e->getSql());
-            $this->logger->debug('Trace: '.$e->getTraceAsString());
+            $this->getLogger()->error('Error running update query: '.$e->getMessage());
+            $this->getLogger()->debug('Query: '.$e->getSql());
+            $this->getLogger()->exception($e);
             return false;
         }
         return true;
+    }
+
+    /**
+     * Get logger for this model type
+     *
+     * @return Logger
+     */
+    public function getLogger() : Logger {
+        if (!isset($this->logger)) {
+            $this->logger = ModelRepository::getLogger(static::class);
+        }
+        return $this->logger;
     }
 
     /**
@@ -592,22 +582,22 @@ abstract class Model implements JsonSerializable, ArrayAccess
      * @throws ValidationException
      */
     public function insert() : bool {
-        $this->logger->info('Inserting new model');
+        $this->getLogger()->info('Inserting new model');
         try {
             DB::insert($this::TABLE, $this->getQueryData());
             $this->id = DB::getInsertId();
             $this::clearQueryCache();
         } catch (Exception $e) {
-            $this->logger->error('Error running insert query: '.$e->getMessage());
-            $this->logger->debug('Query: '.$e->getSql());
-            $this->logger->debug('Trace: '.$e->getTraceAsString());
+            $this->getLogger()->error('Error running insert query: '.$e->getMessage());
+            $this->getLogger()->debug('Query: '.$e->getSql());
+            $this->getLogger()->exception($e);
             return false;
         }
         if (empty($this->id)) {
-            $this->logger->error('Insert query passed, but ID was not returned.');
+            $this->getLogger()->error('Insert query passed, but ID was not returned.');
             return false;
         }
-        self::$instances[$this::class][$this->id] = $this;
+        ModelRepository::setInstance($this);
         return true;
     }
 
@@ -692,7 +682,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
         $this->getLogger()->info('Delete model: '.$this::TABLE.' of ID: '.$this->id);
         try {
             DB::delete($this::TABLE, ['%n = %i', $this::getPrimaryKey(), $this->id]);
-            unset(static::$instances[$this::class][$this->id]);
+            ModelRepository::removeInstance($this);
             $this->clearCache();
         } catch (Exception $e) {
             $this->getLogger()->error($e->getMessage());
