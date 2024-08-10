@@ -157,7 +157,6 @@ abstract class Controller implements ControllerInterface
      * @param  string[]  $headers
      *
      * @return ResponseInterface
-     * @throws JsonException
      */
     protected function respond(
       string | array | object $data,
