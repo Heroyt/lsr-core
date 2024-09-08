@@ -10,12 +10,12 @@ use Nette\Utils\AssertionException;
 use Nette\Utils\Validators;
 
 /**
- * @phpstan-type Migration array{order?:numeric,definition:string, modifications?:array<string,string[]>}
+ * @phpstan-import-type MigrationData from Migration
  */
 class MigrationLoader
 {
 
-    /** @var array<string, Migration> */
+    /** @var array<string, MigrationData> */
     public array $migrations = [];
     /** @var array<string,bool> */
     protected array $loadedFiles = [];
@@ -61,7 +61,7 @@ class MigrationLoader
 
         $this->loadedFiles[$file] = true;
 
-        /** @var array{includes?: string[], tables?: array<string,Migration>} $data */
+        /** @var array{includes?: string[], tables?: array<string,MigrationData>} $data */
         $data = Neon::decodeFile($file);
 
         $migrations = [];
@@ -92,13 +92,11 @@ class MigrationLoader
                     $base[] = $val;
                     $index++;
                 }
+                elseif (!is_array($val)) {
+                    $base[$key] = $val;
+                }
                 else {
-                    if (!is_array($val)) {
-                        $base[$key] = $val;
-                    }
-                    else {
-                        $base[$key] = static::merge($val, $base[$key] ?? null);
-                    }
+                    $base[$key] = static::merge($val, $base[$key] ?? null);
                 }
             }
             return $base;
@@ -109,6 +107,18 @@ class MigrationLoader
         }
 
         return $base ?? [];
+    }
+
+    /**
+     * @param  array<string,MigrationData>  $data
+     * @return array<string,Migration>
+     */
+    public static function transformToDto(array $data) : array {
+        $migrations = [];
+        foreach ($data as $table => $migrationData) {
+            $migrations[$table] = Migration::fromArray($table, $migrationData);
+        }
+        return $migrations;
     }
 
 }
