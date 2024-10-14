@@ -8,6 +8,7 @@ use Dibi\Result;
 use Dibi\Row;
 use Lsr\Core\App;
 use Lsr\Core\Caching\Cache;
+use Lsr\Core\Mapper;
 use Nette\Caching\Cache as CacheParent;
 use Throwable;
 
@@ -45,6 +46,7 @@ class Fluent
     protected ?string $queryHash = null;
 
     protected Cache $cache;
+    protected Mapper $mapper;
 
     /** @var string[] */
     protected array $cacheTags = [];
@@ -117,6 +119,37 @@ class Fluent
     }
 
     /**
+     * @template T of object
+     * @param  class-string<T>  $class
+     * @param  bool  $cache
+     * @return T|null
+     * @throws Exception
+     */
+    public function fetchDto(string $class, bool $cache = true) : ?object {
+        if (!$cache) {
+            return $this->fluent->execute()?->setRowClass($class)?->setRowFactory($this->getRowFactory($class))?->fetch(
+            );
+        }
+        try {
+            /** @phpstan-ignore-next-line */
+            return $this->getCache()->load(
+              'sql/'.$this->getQueryHash().'/fetch/'.$class,
+              fn() => $this->fluent->execute()
+                                   ?->setRowClass($class)
+                                   ?->setRowFactory($this->getRowFactory($class))
+                                   ?->fetch(),
+              [
+                CacheParent::Expire => $this::CACHE_EXPIRE,
+                CacheParent::Tags   => $this->getCacheTags(),
+              ]
+            );
+        } catch (Throwable) {
+            return $this->fluent->execute()?->setRowClass($class)?->setRowFactory($this->getRowFactory($class))?->fetch(
+            );
+        }
+    }
+
+    /**
      * Generates, executes SQL query and fetches the single row.
      *
      * @return Row|null|array<string,mixed>
@@ -139,32 +172,6 @@ class Fluent
             );
         } catch (Throwable) {
             return $this->fluent->fetch();
-        }
-    }
-
-    /**
-     * @template T of object
-     * @param  class-string<T>  $class
-     * @param  bool  $cache
-     * @return T|null
-     * @throws Exception
-     */
-    public function fetchDto(string $class, bool $cache = true) : ?object {
-        if (!$cache) {
-            return $this->fluent->execute()?->setRowClass($class)?->fetch();
-        }
-        try {
-            /** @phpstan-ignore-next-line */
-            return $this->getCache()->load(
-              'sql/'.$this->getQueryHash().'/fetch/'.$class,
-              fn() => $this->fluent->execute()?->setRowClass($class)?->fetch(),
-              [
-                CacheParent::Expire => $this::CACHE_EXPIRE,
-                CacheParent::Tags   => $this->getCacheTags(),
-              ]
-            );
-        } catch (Throwable) {
-            return $this->fluent->execute()?->setRowClass($class)?->fetch();
         }
     }
 
@@ -201,6 +208,23 @@ class Fluent
             $tags[] = 'sql/'.$this->table;
         }
         return $tags;
+    }
+
+    /**
+     * @param  class-string  $type
+     * @return callable
+     */
+    public function getRowFactory(string $type) : callable {
+        return fn(mixed $data) : object => $this->getMapper()->map($data, $type);
+    }
+
+    public function getMapper() : Mapper {
+        if (!isset($this->mapper)) {
+            $mapper = App::getService('mapper');
+            assert($mapper instanceof Mapper, 'Invalid DI service');
+            $this->mapper = $mapper;
+        }
+        return $this->mapper;
     }
 
     public function cacheTags(string ...$tags) : static {
@@ -251,6 +275,45 @@ class Fluent
     /**
      * Fetches all records from table.
      *
+     * @template T of object
+     * @param  class-string<T>  $class
+     * @param  int|null  $offset
+     * @param  int|null  $limit
+     * @param  bool  $cache
+     * @return T[]
+     * @throws Exception
+     */
+    public function fetchAllDto(string $class, ?int $offset = null, ?int $limit = null, bool $cache = true) : array {
+        if (!$cache) {
+            return $this->fluent->execute()
+                                ?->setRowClass($class)
+                                ?->setRowFactory($this->getRowFactory($class))
+                                ?->fetchAll();
+        }
+        try {
+            /** @phpstan-ignore-next-line */
+            return $this->getCache()->load(
+              'sql/'.$this->getQueryHash().'/fetchAll/'.$offset.'/'.$limit.'/'.$class,
+              fn() => $this->fluent->execute()
+                                   ?->setRowClass($class)
+                                   ?->setRowFactory($this->getRowFactory($class))
+                                   ?->fetchAll(),
+              [
+                CacheParent::Expire => $this::CACHE_EXPIRE,
+                CacheParent::Tags   => $this->getCacheTags(),
+              ]
+            );
+        } catch (Throwable) {
+            return $this->fluent->execute()
+                                ?->setRowClass($class)
+                                ?->setRowFactory($this->getRowFactory($class))
+                                ?->fetchAll();
+        }
+    }
+
+    /**
+     * Fetches all records from table.
+     *
      * @return Row[]
      */
     public function fetchAll(?int $offset = null, ?int $limit = null, bool $cache = true) : array {
@@ -275,32 +338,41 @@ class Fluent
     }
 
     /**
-     * Fetches all records from table.
+     * Fetches all records from table and returns associative tree.
      *
      * @template T of object
+     *
      * @param  class-string<T>  $class
-     * @param  int|null  $offset
-     * @param  int|null  $limit
-     * @param  bool  $cache
-     * @return T[]
+     * @param  string  $assoc  associative descriptor
+     *
+     * @return array<string, T>|array<int, T>
      * @throws Exception
      */
-    public function fetchAllDto(string $class, ?int $offset = null, ?int $limit = null, bool $cache = true) : array {
+    public function fetchAssocDto(string $class, string $assoc, bool $cache = true) : array {
         if (!$cache) {
-            return $this->fluent->execute()?->setRowClass($class)?->fetchAll();
+            return $this->fluent->execute()
+                                ?->setRowClass($class)
+                                ?->setRowFactory($this->getRowFactory($class))
+                                ?->fetchAssoc($assoc) ?? [];
         }
         try {
             /** @phpstan-ignore-next-line */
             return $this->getCache()->load(
-              'sql/'.$this->getQueryHash().'/fetchAll/'.$offset.'/'.$limit.'/'.$class,
-              fn() => $this->fluent->execute()?->setRowClass($class)?->fetchAll(),
+              'sql/'.$this->getQueryHash().'/fetchAssoc/'.$assoc,
+              fn() => $this->fluent->execute()
+                                   ?->setRowClass($class)
+                                   ?->setRowFactory($this->getRowFactory($class))
+                                   ?->fetchAssoc($assoc) ?? [],
               [
                 CacheParent::Expire => $this::CACHE_EXPIRE,
                 CacheParent::Tags   => $this->getCacheTags(),
               ]
             );
         } catch (Throwable) {
-            return $this->fluent->execute()?->setRowClass($class)?->fetchAll();
+            return $this->fluent->execute()
+                                ?->setRowClass($class)
+                                ?->setRowFactory($this->getRowFactory($class))
+                                ?->fetchAssoc($assoc) ?? [];
         }
     }
 
@@ -329,36 +401,6 @@ class Fluent
             );
         } catch (Throwable) {
             return $this->fluent->fetchAssoc($assoc);
-        }
-    }
-
-    /**
-     * Fetches all records from table and returns associative tree.
-     *
-     * @template T of object
-     *
-     * @param  class-string<T>  $class
-     * @param  string  $assoc  associative descriptor
-     *
-     * @return array<string, T>|array<int, T>
-     * @throws Exception
-     */
-    public function fetchAssocDto(string $class, string $assoc, bool $cache = true) : array {
-        if (!$cache) {
-            return $this->fluent->execute()?->setRowClass($class)?->fetchAssoc($assoc) ?? [];
-        }
-        try {
-            /** @phpstan-ignore-next-line */
-            return $this->getCache()->load(
-              'sql/'.$this->getQueryHash().'/fetchAssoc/'.$assoc,
-              fn() => $this->fluent->execute()?->setRowClass($class)?->fetchAssoc($assoc) ?? [],
-              [
-                CacheParent::Expire => $this::CACHE_EXPIRE,
-                CacheParent::Tags   => $this->getCacheTags(),
-              ]
-            );
-        } catch (Throwable) {
-            return $this->fluent->execute()?->setRowClass($class)?->fetchAssoc($assoc) ?? [];
         }
     }
 
