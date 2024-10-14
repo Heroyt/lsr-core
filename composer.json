@@ -55,7 +55,8 @@
     "lsr/request": "^0.2",
     "vlucas/phpdotenv": "^5.6",
     "nette/php-generator": "^4.1",
-    "ext-redis": "*"
+    "ext-redis": "*",
+    "symfony/serializer": "^7.1"
   },
   "config": {
     "allow-plugins": {

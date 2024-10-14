@@ -1,8 +1,8 @@
+includes:
+	- services.php
 parameters:
 	constants:
 		debug: true
-		appDir: './'
-		tempDir: './tmp/'
 	cache:
 		path: '%constants.tempDir%cache.db'
 		journal: '%constants.tempDir%journal.db'
@@ -53,6 +53,10 @@ services:
 		create: Lsr\Core\Templating\Latte(@templating.latte.engine)
 		tags:
 			- templating
+
+	symfony.normalizer.datetime: Lsr\Core\Serializer\Normalizer\DateTimeNormalizer
+	symfony.normalizer.dibiRow: Lsr\Core\Serializer\Normalizer\DibiRowNormalizer
+	mapper: Lsr\Core\Mapper
 search:
 	controllers:
 		in: '%constants.appDir%src/Controllers'
