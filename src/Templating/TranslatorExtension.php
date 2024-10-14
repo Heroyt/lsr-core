@@ -47,7 +47,6 @@ final class TranslatorExtension extends Extension
 
 
     public function getCacheKey(Engine $engine) : string {
-        var_dump('cache key:'.$this->translator->getLang());
         return $this->translator->getLang();
     }
 

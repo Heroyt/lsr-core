@@ -139,8 +139,6 @@ class Translations implements Translator
 
     public function updateTranslations() : void {
         if (!$this->translationsChanged) {
-            var_dump('No translations changed');
-            var_dump(CHECK_TRANSLATIONS);
             return;
         }
         Timer::startIncrementing('translation.update');
