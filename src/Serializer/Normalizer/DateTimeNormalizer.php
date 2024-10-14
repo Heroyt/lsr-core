@@ -133,6 +133,10 @@ final class DateTimeNormalizer implements NormalizerInterface, DenormalizerInter
             $type = DateTimeImmutable::class;
         }
 
+        if ($data instanceof DateTimeInterface) {
+            return $type::createFromFormat(DateTimeInterface::RFC3339_EXTENDED, $data->format(DateTimeInterface::RFC3339_EXTENDED));
+        }
+
         $timezone = $this->getTimezone($context);
 
         if (is_int($data) || is_float($data)) {
