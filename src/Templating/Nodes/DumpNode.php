@@ -41,6 +41,8 @@ class DumpNode extends StatementNode
     }
 
     public function &getIterator() : Generator {
-        yield $this;
+        foreach ($this->args as $arg) {
+            yield $arg;
+        }
     }
 }

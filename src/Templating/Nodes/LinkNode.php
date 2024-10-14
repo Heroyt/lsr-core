@@ -78,6 +78,11 @@ class LinkNode extends StatementNode
         if (isset($this->static)) {
             yield $this->static;
         }
+        else {
+            foreach ($this->args as $arg) {
+                yield $arg;
+            }
+        }
         yield $this->modifier;
     }
 }

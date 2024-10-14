@@ -41,8 +41,8 @@ class LangNode extends StatementNode
     }
 
     public function &getIterator() : Generator {
-        if (false) {
-            yield;
+        foreach ($this->args as $arg) {
+            yield $arg;
         }
     }
 }

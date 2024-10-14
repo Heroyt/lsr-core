@@ -40,8 +40,6 @@ class CsrfInputNode extends StatementNode
     }
 
     public function &getIterator() : Generator {
-        if (false) {
-            yield;
-        }
+        yield $this->name;
     }
 }
