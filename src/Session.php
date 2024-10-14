@@ -3,8 +3,9 @@
 namespace Lsr\Core;
 
 use Lsr\Interfaces\SessionInterface;
+use Tracy\SessionStorage;
 
-class Session implements SessionInterface
+class Session implements SessionInterface, SessionStorage
 {
 
     private static Session $instance;
@@ -91,8 +92,11 @@ class Session implements SessionInterface
     /**
      * @inheritDoc
      */
-    public function get(string $key, mixed $default = null) : mixed {
-        return $_SESSION[$key] ?? $default;
+    public function &get(string $key, mixed $default = null) : mixed {
+        if (!isset($_SESSION[$key])) {
+            $_SESSION[$key] = $default;
+        }
+        return $_SESSION[$key];
     }
 
     /**
@@ -148,5 +152,13 @@ class Session implements SessionInterface
             session_start();
         }
         $_SESSION['flash'][$key] = $value;
+    }
+
+    public function isAvailable() : bool {
+        return $this->getStatus() === PHP_SESSION_ACTIVE;
+    }
+
+    public function &getData() : array {
+        return $this->get('_tracy', []);
     }
 }
