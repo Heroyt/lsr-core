@@ -124,10 +124,10 @@ final class DateTimeNormalizer implements NormalizerInterface, DenormalizerInter
      * @return DateTimeInterface
      */
     public function denormalize(
-        mixed   $data,
-        string  $type,
-        ?string $format = null,
-        array   $context = []
+      mixed   $data,
+      string  $type,
+      ?string $format = null,
+      array   $context = []
     ): DateTimeInterface {
         if (DateTimeInterface::class === $type) {
             $type = DateTimeImmutable::class;
@@ -153,11 +153,11 @@ final class DateTimeNormalizer implements NormalizerInterface, DenormalizerInter
         if (is_array($data) && array_key_exists('date', $data)) {
             if (!is_string($data['date']) || '' === trim($data['date'])) {
                 throw NotNormalizableValueException::createForUnexpectedDataType(
-                    'The data is either not an string, an empty string, or null; you should pass a string that can be parsed with the passed format or a valid DateTime string.',
-                    $data,
-                    ['string'],
-                    $context['deserialization_path'] ?? null,
-                    true
+                  'The data is either not an string, an empty string, or null; you should pass a string that can be parsed with the passed format or a valid DateTime string.',
+                  $data,
+                  ['string'],
+                  $context['deserialization_path'] ?? null,
+                  true
                 );
             }
 
@@ -169,11 +169,11 @@ final class DateTimeNormalizer implements NormalizerInterface, DenormalizerInter
 
         if (!is_string($data) || '' === trim($data)) {
             throw NotNormalizableValueException::createForUnexpectedDataType(
-                'The data is either not an string, an empty string, or null; you should pass a string that can be parsed with the passed format or a valid DateTime string.',
-                $data,
-                ['string'],
-                $context['deserialization_path'] ?? null,
-                true
+              'The data is either not an string, an empty string, or null; you should pass a string that can be parsed with the passed format or a valid DateTime string.',
+              $data,
+              ['string'],
+              $context['deserialization_path'] ?? null,
+              true
             );
         }
 
@@ -188,10 +188,10 @@ final class DateTimeNormalizer implements NormalizerInterface, DenormalizerInter
      * @return DateTimeInterface
      */
     private function createDateTime(
-        string       $data,
-        string       $type,
-        ?DateTimeZone $timezone,
-        array        $context
+      string       $data,
+      string       $type,
+      ?DateTimeZone $timezone,
+      array        $context
     ): DateTimeInterface {
         try {
             $dateTimeFormat = $context[self::FORMAT_KEY] ?? null;
@@ -204,29 +204,29 @@ final class DateTimeNormalizer implements NormalizerInterface, DenormalizerInter
                 $dateTimeErrors = $type::getLastErrors();
 
                 throw NotNormalizableValueException::createForUnexpectedDataType(
-                    sprintf(
-                        'Parsing datetime string "%s" using format "%s" resulted in %d errors: ',
-                        $data,
-                        $dateTimeFormat,
-                        $dateTimeErrors['error_count'] ?? 1,
-                    ) .
-                    "\n" .
-                    implode("\n", $this->formatDateTimeErrors($dateTimeErrors['errors'] ?? [])),
+                  sprintf(
+                    'Parsing datetime string "%s" using format "%s" resulted in %d errors: ',
                     $data,
-                    ['string'],
-                    $context['deserialization_path'] ?? null,
-                    true
+                    $dateTimeFormat,
+                    $dateTimeErrors['error_count'] ?? 1,
+                  ) .
+                  "\n" .
+                  implode("\n", $this->formatDateTimeErrors($dateTimeErrors['errors'] ?? [])),
+                  $data,
+                  ['string'],
+                  $context['deserialization_path'] ?? null,
+                  true
                 );
             }
 
             $defaultDateTimeFormat = $this->defaultContext[self::FORMAT_KEY] ?? null;
 
             if (
-                (null !== $defaultDateTimeFormat) && false !== $object = $type::createFromFormat(
-                    $defaultDateTimeFormat,
-                    $data,
-                    $timezone
-                )
+              (null !== $defaultDateTimeFormat) && false !== $object = $type::createFromFormat(
+                $defaultDateTimeFormat,
+                $data,
+                $timezone
+              )
             ) {
                 return $object;
             }
@@ -236,13 +236,13 @@ final class DateTimeNormalizer implements NormalizerInterface, DenormalizerInter
             throw $e;
         } catch (Exception $e) {
             throw NotNormalizableValueException::createForUnexpectedDataType(
-                $e->getMessage(),
-                $data,
-                ['string'],
-                $context['deserialization_path'] ?? null,
-                false,
-                $e->getCode(),
-                $e
+              $e->getMessage(),
+              $data,
+              ['string'],
+              $context['deserialization_path'] ?? null,
+              false,
+              $e->getCode(),
+              $e
             );
         }
     }
@@ -272,11 +272,11 @@ final class DateTimeNormalizer implements NormalizerInterface, DenormalizerInter
      * @return bool
      */
     public function supportsDenormalization(
-        mixed   $data,
-        string  $type,
-        ?string $format = null,
-        array   $context = []
+      mixed   $data,
+      string  $type,
+      ?string $format = null,
+      array   $context = []
     ): bool {
-        return isset(self::SUPPORTED_TYPES[$type]);
+        return isset(self::SUPPORTED_TYPES[$type]) || in_array(DateTimeInterface::class, class_implements($type), true);
     }
 }
