@@ -25,7 +25,9 @@ class Session implements SessionInterface, SessionStorage
      * @inheritDoc
      */
     public function init() : void {
-        session_start();
+        if ($this->getStatus() === PHP_SESSION_NONE) {
+            session_start();
+        }
         if (!isset($_SESSION['flash'])) {
             $_SESSION['flash'] = [];
         }
@@ -103,7 +105,7 @@ class Session implements SessionInterface, SessionStorage
      * @inheritDoc
      */
     public function set(string $key, mixed $value) : void {
-        if ($this->isInitialized()) {
+        if (!$this->isInitialized()) {
             session_start();
         }
         $_SESSION[$key] = $value;
@@ -117,7 +119,7 @@ class Session implements SessionInterface, SessionStorage
      * @inheritDoc
      */
     public function delete(string $key) : void {
-        if ($this->isInitialized()) {
+        if (!$this->isInitialized()) {
             session_start();
         }
         if (isset($_SESSION[$key])) {
@@ -148,7 +150,7 @@ class Session implements SessionInterface, SessionStorage
      * @inheritDoc
      */
     public function flash(string $key, mixed $value) : void {
-        if ($this->isInitialized()) {
+        if (!$this->isInitialized()) {
             session_start();
         }
         $_SESSION['flash'][$key] = $value;
