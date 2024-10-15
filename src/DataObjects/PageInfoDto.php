@@ -12,11 +12,13 @@ readonly class PageInfoDto implements JsonSerializable
      * @param  RequestMethod  $type
      * @param  string|null  $routeName
      * @param  string[]  $path
+     * @param  array<string, string|numeric-string>  $params
      */
     public function __construct(
       public RequestMethod $type,
       public ?string       $routeName = null,
-      public array         $path = []
+      public array         $path = [],
+      public array         $params = [],
     ) {}
 
     /**

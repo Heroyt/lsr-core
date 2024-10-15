@@ -33,7 +33,6 @@ use Nette\DI\Compiler;
 use Nette\DI\Container;
 use Nette\DI\ContainerLoader;
 use Nette\DI\Extensions\ExtensionsExtension;
-use Nette\DI\MissingServiceException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -247,7 +246,7 @@ class App
      *
      * @return T|T[]|null
      */
-    public static function getServiceByType(string $type) : null|object|array {
+    public static function getServiceByType(string $type) : null | object | array {
         $service = self::getContainer()->getByType($type);
         if (is_array($service)) {
             return array_map([static::class, 'getService'], $service);
@@ -516,7 +515,10 @@ class App
         $request = $this->getRequest();
         $params = [];
         return new PageInfoDto(
-          $request->getType(), $this->getRoute($params)?->getName(), $request->getPath(),
+          $request->getType(),
+          $this->getRoute($params)?->getName(),
+          $request->getPath(),
+          $params,
         );
     }
 
