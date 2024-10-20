@@ -518,7 +518,7 @@ class App
           $request->getType(),
           $this->getRoute($params)?->getName(),
           $request->getPath(),
-          $params,
+          array_merge($request->getAttributes(), $params),
         );
     }
 
