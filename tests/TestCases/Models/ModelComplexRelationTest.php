@@ -61,8 +61,8 @@ class ModelComplexRelationTest extends TestCase
 
         $this->refreshData();
 
-        /** @var string[] $files */
         $files = glob(TMP_DIR.'models/*');
+        assert($files !== false);
         foreach ($files as $file) {
             unlink($file);
         }

@@ -42,7 +42,7 @@ readonly class Latte
      *
      * @return string
      *
-     * @throws TemplateDoesNotExistException()
+     * @throws TemplateDoesNotExistException
      *
      * @version 0.1
      * @since   0.1

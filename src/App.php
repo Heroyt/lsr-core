@@ -14,6 +14,7 @@ namespace Lsr\Core;
 use Gettext\Languages\Language;
 use JsonException;
 use Lsr\Core\DataObjects\PageInfoDto;
+use Lsr\Core\Exceptions\InvalidLanguageException;
 use Lsr\Core\Links\Generator;
 use Lsr\Core\Menu\MenuBuilder;
 use Lsr\Core\Menu\MenuItem;
@@ -36,6 +37,7 @@ use Nette\DI\Extensions\ExtensionsExtension;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
+use ReflectionException;
 use RuntimeException;
 
 /**
@@ -66,6 +68,9 @@ class App
     protected ?RouteInterface $route;
     protected Logger $logger;
 
+    /**
+     * @throws ReflectionException
+     */
     public function __construct(
       public readonly Router           $router,
       public readonly SessionInterface $session,
@@ -84,7 +89,7 @@ class App
      *
      * @return mixed
      */
-    public static function __callStatic($name, $arguments) {
+    public static function __callStatic(string $name, array $arguments) {
         return self::getInstance()->{$name}(...$arguments);
     }
 
@@ -126,7 +131,7 @@ class App
         }
         Timer::start('core.setup.di');
         $loader = new ContainerLoader(TMP_DIR.'di/');
-        /** @var Container $class */
+        /** @var class-string<Container> $class */
         $class = $loader->load(
           function (Compiler $compiler) {
               $compiler->addExtension('extensions', new ExtensionsExtension());
@@ -244,14 +249,28 @@ class App
      *
      * @param  class-string<T>  $type
      *
-     * @return T|T[]|null
+     * @return T|null
      */
-    public static function getServiceByType(string $type) : null | object | array {
+    public static function getServiceByType(string $type) : null | object {
+        /** @var T|null $service */
         $service = self::getContainer()->getByType($type);
-        if (is_array($service)) {
-            return array_map([static::class, 'getService'], $service);
-        }
         return $service;
+    }
+
+    /**
+     * Resolves service by type.
+     *
+     * @template T of object
+     *
+     * @param  class-string<T>  $type
+     *
+     * @return T[]
+     */
+    public static function findServicesByType(string $type) : array {
+        $service = self::getContainer()->findByType($type);
+        /** @var T[] $services */
+        $services = array_map([static::class, 'getService'], $service);
+        return $services;
     }
 
     /**
@@ -314,8 +333,10 @@ class App
      * @since   1.0
      */
     public function getCss() : string {
-        /** @var string[] $files */
         $files = glob(ROOT.'dist/*.css');
+        if ($files === false) {
+            return '';
+        }
         $return = '';
         foreach ($files as $file) {
             if (!str_contains($file, '.min') && in_array(str_replace('.css', '.min.css', $file), $files, true)) {
@@ -403,8 +424,10 @@ class App
      * @since   1.0
      */
     public function getJs() : string {
-        /** @var string[] $files */
         $files = glob(ROOT.'dist/*.js');
+        if ($files === false) {
+            return '';
+        }
         $return = '';
         foreach ($files as $file) {
             if (!str_contains($file, '.min') && in_array(str_replace('.js', '.min.js', $file), $files, true)) {
@@ -541,6 +564,7 @@ class App
      * Get current page HTML or run CLI command
      *
      * @throws Requests\Exceptions\RouteNotFoundException
+     * @throws InvalidLanguageException
      * @since   1.0
      * @version 1.0
      */
@@ -563,14 +587,11 @@ class App
             throw new RouteNotFoundException($request);
         }
 
-        /** @noinspection PhpConditionAlreadyCheckedInspection */
-        if ($request instanceof ServerRequestInterface) {
-            foreach ($params as $key => $value) {
-                $request = $request->withAttribute($key, $value);
-            }
-            // Update immutable request
-            $this->request = $request;
+        foreach ($params as $key => $value) {
+            $request = $request->withAttribute($key, $value);
         }
+        // Update immutable request
+        $this->request = $request;
         $request->setParams($params);
 
         $this->translations->setLang($this->getDesiredLanguageCode());
@@ -630,6 +651,9 @@ class App
      */
     protected function isSupportedLanguage(string $language) : bool {
         preg_match('/([a-z]{2})[\-_]?/', $language, $matches);
+        if (!isset($matches[1])) {
+            return false;
+        }
         $id = $matches[1];
         return isset($this->translations->supportedLanguages[$id]);
     }

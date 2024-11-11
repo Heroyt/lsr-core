@@ -40,12 +40,6 @@ class Cache extends \Nette\Caching\Cache
             return [];
         }
 
-        foreach ($keys as $key) {
-            if (!is_scalar($key)) {
-                throw new InvalidArgumentException('Only scalar keys are allowed in bulkLoad()');
-            }
-        }
-
         $result = [];
         if (!$this->getStorage() instanceof BulkReader) {
             foreach ($keys as $key) {

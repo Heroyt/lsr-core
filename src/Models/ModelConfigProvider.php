@@ -239,21 +239,23 @@ trait ModelConfigProvider
                         $properties[$propertyName]['type'] = $type->getName();
                     }
                     else {
-                        /** @var array<string,class-string>|null $implements */
                         $implements = class_implements($type->getName());
+                        if (!is_array($implements)) {
+                            $implements = [];
+                        }
                         $properties[$propertyName]['isExtend'] = in_array(
                           InsertExtendInterface::class,
-                          $implements ?? [],
+                          $implements,
                           true
                         );
                         $properties[$propertyName]['isEnum'] = in_array(
                           BackedEnum::class,
-                          $implements ?? [],
+                          $implements,
                           true
                         );
                         $properties[$propertyName]['isDateTime'] = in_array(
                           DateTimeInterface::class,
-                          $implements ?? [],
+                          $implements,
                           true
                         );
                     }

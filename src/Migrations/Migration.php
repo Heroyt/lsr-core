@@ -10,8 +10,8 @@ namespace Lsr\Core\Migrations;
  *     order?:numeric,
  *     definition:string,
  *     modifications?:array<string,string[]>,
- *     indexes: IndexData[],
- *     foreignKeys: ForeignKeyData[],
+ *     indexes?: IndexData[],
+ *     foreignKeys?: ForeignKeyData[],
  * }
  */
 readonly final class Migration
@@ -51,7 +51,7 @@ readonly final class Migration
         return new self(
           $table,
           $data['definition'],
-          $data['order'] ?? null,
+          (isset($data['order']) ? (int) $data['order'] : null),
           $data['modifications'] ?? [],
           $indexes,
           $foreignKeys,

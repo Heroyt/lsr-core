@@ -17,6 +17,7 @@ use Latte\Essential\Nodes\PrintNode;
 use Latte\Extension;
 use Latte\Runtime\FilterInfo;
 use Lsr\Core\Translations;
+use Stringable;
 
 final class TranslatorExtension extends Extension
 {
@@ -69,8 +70,8 @@ final class TranslatorExtension extends Extension
         $node->modifier = $tag->parser->parseModifier();
         $node->modifier->escape = true;
 
-        if (($expr = self::toValue($node->expression)) && is_array($values = self::toValue($args))) {
-            /** @var string $expr */
+        /** @noinspection NotOptimalIfConditionsInspection */
+        if (($expr = self::toValue($node->expression)) && is_array($values = self::toValue($args)) && (is_string($expr) || $expr instanceof Stringable)) {
             $translation = $this->translator->translate($expr, ...$values);
             $node->expression = new StringNode($translation);
             return $node;

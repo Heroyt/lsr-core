@@ -5,6 +5,7 @@ namespace Lsr\Core\Tests\TestCases\Mapper;
 
 use DateTimeImmutable;
 use DateTimeInterface;
+use DateTimeZone;
 use Dibi\Row;
 use Lsr\Core\Mapper;
 use Lsr\Core\Serializer\Normalizer\DateTimeNormalizer;
@@ -34,7 +35,7 @@ class MapperTest extends TestCase
           'datetimeString' => date('c'),
           'datetimeArray'  => [
             'date'     => date('Y-m-d\TH:i:s'),
-            'timezone' => (new \DateTimeZone('Europe/Prague'))->getName(),
+            'timezone' => (new DateTimeZone('Europe/Prague'))->getName(),
           ],
           'child'          => [
             'string'   => 'child',
@@ -63,7 +64,7 @@ class MapperTest extends TestCase
         self::assertInstanceOf(DateTimeInterface::class, $object->datetimeArray);
         self::assertEquals($data['datetimeArray']['date'], $object->datetimeArray->format('Y-m-d\TH:i:s'));
         self::assertEquals(
-          (new \DateTimeZone($data['datetimeArray']['timezone']))->getName(),
+          (new DateTimeZone($data['datetimeArray']['timezone']))->getName(),
           $object->datetimeArray->getTimezone()->getName()
         );
         self::assertInstanceOf(MappedClassB::class, $object->child);
@@ -87,7 +88,7 @@ class MapperTest extends TestCase
           'datetimeString' => date('c'),
           'datetimeArray'  => [
             'date'     => date('Y-m-d\TH:i:s'),
-            'timezone' => (new \DateTimeZone('Europe/Prague'))->getName(),
+            'timezone' => (new DateTimeZone('Europe/Prague'))->getName(),
           ],
           'child'          => [
             'string'   => 'child',
@@ -117,7 +118,7 @@ class MapperTest extends TestCase
         self::assertInstanceOf(DateTimeInterface::class, $object->datetimeArray);
         self::assertEquals($data['datetimeArray']['date'], $object->datetimeArray->format('Y-m-d\TH:i:s'));
         self::assertEquals(
-          (new \DateTimeZone($data['datetimeArray']['timezone']))->getName(),
+          (new DateTimeZone($data['datetimeArray']['timezone']))->getName(),
           $object->datetimeArray->getTimezone()->getName()
         );
         self::assertInstanceOf(MappedClassB::class, $object->child);
@@ -152,6 +153,7 @@ class MappedClass
     public int $int;
     public float $float;
     public bool $bool;
+    /** @var int[] */
     public array $array;
     public object $object;
     public DateTimeInterface $datetime;

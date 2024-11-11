@@ -49,7 +49,7 @@ class DB
      *     Database?: array{
      *         DRIVER?: string,
      *         HOST?: string,
-     *         PORT?: string,
+     *         PORT?: numeric,
      *         USER?: string,
      *         PASS?: string,
      *         DATABASE?: string,
@@ -286,6 +286,9 @@ class DB
      * @since 1.0
      */
     public static function getConnection() : Connection {
+        if (!isset(self::$db)) {
+            throw new RuntimeException('Database is not initialized');
+        }
         return self::$db;
     }
 
@@ -346,7 +349,7 @@ class DB
 
     /**
      * @param  string  $table
-     * @param  array<string, mixed|array<string, mixed>>  $values
+     * @param  array<string, mixed>|array<array<string, mixed>>  $values
      *
      * @return int
      * @throws Exception

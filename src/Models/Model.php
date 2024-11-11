@@ -369,9 +369,9 @@ abstract class Model implements JsonSerializable, ArrayAccess
      * @return bool
      */
     public static function exists(int $id) : bool {
-        $test = DB::select(static::TABLE, 'count(*)')->where('%n = %i', static::getPrimaryKey(), $id)->fetchSingle(
-            cache: false
-          );
+        $test = DB::select(static::TABLE, 'count(*)')
+                  ->where('%n = %i', static::getPrimaryKey(), $id)
+                  ->fetchSingle(cache: false);
         return $test > 0;
     }
 
@@ -658,7 +658,7 @@ abstract class Model implements JsonSerializable, ArrayAccess
      * @inheritdoc
      */
     public function offsetSet($offset, $value) : void {
-        if (isset($offset) && is_string($offset) && $this->offsetExists($offset)) {
+        if (isset($offset) && $this->offsetExists($offset)) {
             $this->$offset = $value;
         }
     }

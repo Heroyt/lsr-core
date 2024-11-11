@@ -9,6 +9,7 @@ use Latte\Compiler\PrintContext;
 
 class CsrfNode extends StatementNode
 {
+    use NoIteratorNode;
 
     /**
      *
@@ -25,11 +26,5 @@ class CsrfNode extends StatementNode
 			XX,
           $this->position,
         );
-    }
-
-    public function &getIterator() : Generator {
-        if (false) {
-            yield;
-        }
     }
 }

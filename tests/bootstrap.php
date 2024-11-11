@@ -42,13 +42,13 @@ if (!file_exists(ROOT . "tests/tmp/dbc.db")) {
 
 App::setupDi();
 
-/** @var Cache $cache */
 $cache = App::getService('cache');
+assert($cache instanceof Cache);
 $cache->clean([Cache::All => true]);
 
 // Clear model cache
-/** @var string[] $files */
 $files = glob(TMP_DIR.'models/*');
+assert(is_array($files));
 foreach ($files as $file) {
 	unlink($file);
 }

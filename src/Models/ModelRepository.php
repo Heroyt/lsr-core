@@ -9,7 +9,9 @@ use Lsr\Logging\Logger;
 final class ModelRepository
 {
 
-    /** @var array<class-string<Model>, array<int, Model>> */
+    /**
+     * @var array<class-string<Model>, array<int, Model>>
+     */
     private static array $instances = [];
 
     /** @var array<class-string<Model>, Logger> */
@@ -23,7 +25,9 @@ final class ModelRepository
      */
     public static function getInstance(string $class, int $id) : ?Model {
         self::$instances[$class] ??= [];
-        return self::$instances[$class][$id] ?? null;
+        /** @var array<int,T> $instances */
+        $instances = self::$instances[$class];
+        return $instances[$id] ?? null;
     }
 
     public static function setInstance(Model $model) : void {
@@ -76,7 +80,7 @@ final class ModelRepository
 
     public static function clearLoggers() : void {
         foreach (self::$loggers as $class => $loggers) {
-            unset($loggers[$class]);
+            unset(self::$loggers[$class]);
         }
         self::$loggers = [];
     }

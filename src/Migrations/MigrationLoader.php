@@ -41,7 +41,7 @@ class MigrationLoader
     /**
      * @param  string  $file
      *
-     * @return array<string, Migration>
+     * @return array<string, MigrationData>
      * @throws AssertionException
      * @throws CyclicDependencyException
      * @throws Exception
@@ -99,6 +99,7 @@ class MigrationLoader
                     $base[$key] = static::merge($val, $base[$key] ?? null);
                 }
             }
+            /** @phpstan-ignore-next-line  */
             return $base;
         }
 
@@ -106,6 +107,7 @@ class MigrationLoader
             return $value;
         }
 
+        /** @phpstan-ignore-next-line  */
         return $base ?? [];
     }
 

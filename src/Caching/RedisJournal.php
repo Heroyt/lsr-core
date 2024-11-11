@@ -85,7 +85,7 @@ class RedisJournal implements Journal
                 $this->redis->zRangeByScore(self::PRIORITY_KEY, 0, (int) $conditions[Cache::Priority])
               )
             );
-            $this->redis->zDeleteRangeByScore(self::PRIORITY_KEY, 0, (int) $conditions[Cache::Priority]);
+            $this->redis->zRemRangeByScore(self::PRIORITY_KEY, '0.0', (string) $conditions[Cache::Priority]);
         }
 
         // @phpstan-ignore-next-line

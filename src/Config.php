@@ -6,6 +6,9 @@ use Dotenv\Dotenv;
 use Nette\Neon\Exception;
 use Nette\Neon\Neon;
 
+/**
+ * @phpstan-type ConfigCategory array<string,string|numeric>
+ */
 class Config
 {
 
@@ -26,7 +29,7 @@ class Config
 
     private bool $initialized = false;
 
-    /** @var array<string,array<string,string|numeric>|string|numeric> */
+    /** @var array<string,ConfigCategory> */
     private array $config = [
       'ENV' => [],
     ];
@@ -90,15 +93,11 @@ class Config
             } catch (Exception) {
             }
         }
-        // @phpstan-ignore-next-line
         $this->config = array_merge($this->config, $ini, $neon);
 
         $dotenv = Dotenv::createImmutable(ROOT);
         $dotenv->safeLoad();
         $env = getenv();
-        if (!is_array($env)) {
-            $env = [];
-        }
         $this->config['ENV'] = array_merge($this->config['ENV'], $_ENV, $env);
 
         $this->initialized = true;
@@ -138,7 +137,7 @@ class Config
         if (!$content) {
             return false;
         }
-        /** @var false|array<string,array<string,string|numeric>|string|numeric> $config */
+        /** @var false|array<string,ConfigCategory> $config */
         $config = unserialize($content, ['allowed_classes' => false]);
         if ($config === false) {
             return false;
@@ -192,31 +191,28 @@ class Config
     }
 
     /**
-     * @param  array<string,string|numeric>  $defaults
+     * @param  ConfigCategory  $defaults
      *
      * @return void
      */
     public function extendEnvDefault(array $defaults) : void {
-        /** @phpstan-ignore-next-line */
         $this->config['ENV'] = array_merge($this->config['ENV'], $defaults);
     }
 
     /**
      * @param  string|null  $category
      *
-     * @return ($category is null ? array<string,array<string,string|numeric>|numeric|string> :
-     *                    array<string,string|numeric>)
+     * @return ($category is null ?
+     *                    array<string,ConfigCategory> :
+     *                    ConfigCategory)
      */
     public function getConfig(?string $category = null) : array {
         if (!$this->initialized) {
             return [];
         }
         if (isset($category)) {
-            /** @var array<string, string|numeric>|string|numeric|null $return */
+            /** @var ConfigCategory $return */
             $return = $this->config[$category] ?? [];
-            if (!is_array($return)) {
-                return [];
-            }
             return $return;
         }
         return $this->config;

@@ -9,6 +9,7 @@ use Latte\Compiler\PrintContext;
 
 class GetUrlNode extends StatementNode
 {
+    use NoIteratorNode;
 
     /**
      *
@@ -25,11 +26,5 @@ class GetUrlNode extends StatementNode
 			XX,
           $this->position,
         );
-    }
-
-    public function &getIterator() : Generator {
-        if (false) {
-            yield;
-        }
     }
 }

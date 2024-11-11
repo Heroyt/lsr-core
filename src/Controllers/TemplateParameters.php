@@ -3,13 +3,17 @@
 namespace Lsr\Core\Controllers;
 
 use AllowDynamicProperties;
+use ArrayAccess;
 use JsonSerializable;
 use Lsr\Core\App;
 use Lsr\Core\Exceptions\UnsupportedOperationException;
 use Lsr\Core\Requests\Request;
 
+/**
+ * @implements ArrayAccess<string, mixed>
+ */
 #[AllowDynamicProperties]
-class TemplateParameters implements \ArrayAccess, JsonSerializable
+class TemplateParameters implements ArrayAccess, JsonSerializable
 {
     public Controller $page;
     public App $app;
@@ -44,7 +48,7 @@ class TemplateParameters implements \ArrayAccess, JsonSerializable
      * @param  mixed  $value
      * @return void
      */
-    public function offsetSet($offset, $value) : void {
+    public function offsetSet($offset, mixed $value) : void {
         $this->{$offset} = $value;
     }
 
@@ -58,6 +62,9 @@ class TemplateParameters implements \ArrayAccess, JsonSerializable
         throw new UnsupportedOperationException('Cannot call unset() on a template parameter');
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function jsonSerialize() : array {
         return (array) $this;
     }

@@ -53,8 +53,8 @@ class Translations implements Translator
             $languages = $this->config->getConfig('languages');
             if (empty($languages)) {
                 // By default, load all languages in language directory
-                /** @var string[] $files */
                 $files = glob(LANGUAGE_DIR.'*');
+                assert(is_array($files));
                 $languages = array_map(
                   static function (string $dir) {
                       return str_replace(LANGUAGE_DIR, '', $dir);

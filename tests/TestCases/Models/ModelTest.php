@@ -26,6 +26,11 @@ use Lsr\Core\Models\Attributes\Validation\Url;
 use Lsr\Core\Models\Interfaces\InsertExtendInterface;
 use Lsr\Core\Models\LoadingType;
 use Lsr\Core\Models\Model;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Depends;
+use PHPUnit\Framework\Attributes\DoesNotPerformAssertions;
+use PHPUnit\Framework\Attributes\TestWith;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use TestEnum;
@@ -36,19 +41,19 @@ use function json_encode;
  * Test suite for models
  *
  * @author Tomáš Vojík
- * @uses   \Lsr\Core\DB
- * @covers \Lsr\Core\Models\Model
- * @covers \Lsr\Core\Models\Attributes\ManyToMany
- * @covers \Lsr\Core\Models\Attributes\OneToMany
- * @covers \Lsr\Core\Models\Attributes\ManyToOne
- * @covers \Lsr\Core\Models\Attributes\PrimaryKey
- * @covers \Lsr\Core\Models\Attributes\Validation\Numeric
- * @covers \Lsr\Core\Models\Attributes\Validation\Required
- * @covers \Lsr\Core\Models\Attributes\Validation\StringLength
- * @covers \Lsr\Core\Models\Attributes\Validation\Email
- * @covers \Lsr\Core\Models\Attributes\Validation\Uri
- * @covers \Lsr\Core\Models\Attributes\Validation\Url
  */
+#[CoversClass(Url::class)]
+#[CoversClass(Uri::class)]
+#[CoversClass(Email::class)]
+#[CoversClass(StringLength::class)]
+#[CoversClass(Required::class)]
+#[CoversClass(Numeric::class)]
+#[CoversClass(PrimaryKey::class)]
+#[CoversClass(ManyToOne::class)]
+#[CoversClass(OneToMany::class)]
+#[CoversClass(ManyToMany::class)]
+#[CoversClass(Model::class)]
+#[UsesClass(DB::class)]
 class ModelTest extends TestCase
 {
 
@@ -129,8 +134,8 @@ class ModelTest extends TestCase
         );
         $this->refreshData();
 
-        /** @var string[] $files */
         $files = glob(TMP_DIR.'models/*');
+        assert($files !== false);
         foreach ($files as $file) {
             unlink($file);
         }
@@ -626,7 +631,6 @@ class ModelTest extends TestCase
     public function testDelete() : void {
         $this->refreshData();
         $model = ModelA::get(1);
-        //var_dump($model);
 
         self::assertTrue($model->delete());
 
@@ -636,8 +640,7 @@ class ModelTest extends TestCase
         unset($model);
 
         $this->expectException(ModelNotFoundException::class);
-        $model = ModelA::get(1);
-        //var_dump($model);
+        ModelA::get(1);
     }
 
     public function testDelete2() : void {
@@ -664,12 +667,12 @@ class ModelTest extends TestCase
         self::assertSame($model, $model2->models[1]);
     }
 
+    #[DoesNotPerformAssertions]
     public function testValidationRequired() : void {
         $model = new ModelValidation();
 
         $model->requiredString = 'test';
         $model->validate();
-        self::assertTrue(true);
     }
 
     public function testValidationRequiredInvalid() : void {
@@ -693,12 +696,9 @@ class ModelTest extends TestCase
         $model->validate();
     }
 
-    /**
-     * @return void
-     * @throws ValidationException
-     * @depends testValidationRequired
-     * @depends testValidationRequiredInvalid
-     */
+    #[Depends('testValidationRequiredInvalid')]
+    #[Depends('testValidationRequired')]
+    #[DoesNotPerformAssertions]
     public function testValidationStringLength() : void {
         $model = new ModelValidation();
 
@@ -726,30 +726,32 @@ class ModelTest extends TestCase
         $model->validate();
         $model->notTypedString = '';
         $model->validate();
-        self::assertTrue(true);
     }
 
-    /**
-     * @param  string  $property
-     * @param  string  $value
-     *
-     * @return void
-     * @throws ValidationException
-     *
-     * @testWith ["stringLength10", "123"]
-     *           ["stringLength10", "12345678901"]
-     *           ["stringLengthMax10", "12345678901"]
-     *           ["stringLengthMax10", "1234567890123"]
-     *           ["stringLengthBetween5and10", "123"]
-     *           ["stringLengthBetween5and10", "1"]
-     *           ["stringLengthBetween5and10", "123456789012"]
-     *           ["stringLengthBetween5and10", "1234567890123"]
-     *           ["notTypedString", 123]
-     *           ["notTypedString", 123.14]
-     *
-     * @depends testValidationRequired
-     * @depends testValidationRequiredInvalid
-     */
+    #[Depends('testValidationRequired')]
+    #[Depends('testValidationRequiredInvalid')]
+    #[TestWith([
+      "stringLength10",
+      "123",
+      "stringLength10",
+      "12345678901",
+      "stringLengthMax10",
+      "12345678901",
+      "stringLengthMax10",
+      "1234567890123",
+      "stringLengthBetween5and10",
+      "123",
+      "stringLengthBetween5and10",
+      "1",
+      "stringLengthBetween5and10",
+      "123456789012",
+      "stringLengthBetween5and10",
+      "1234567890123",
+      "notTypedString",
+      123,
+      "notTypedString",
+      123.14
+    ])]
     public function testValidationStringInvalid(string $property, mixed $value) : void {
         $model = new ModelValidation();
 
@@ -760,6 +762,7 @@ class ModelTest extends TestCase
         $model->validate();
     }
 
+    #[DoesNotPerformAssertions]
     public function testValidationNumeric() : void {
         $model = new ModelValidation();
         $model->requiredString = 'asd';
@@ -775,17 +778,9 @@ class ModelTest extends TestCase
 
         $model->numeric = '12.12';
         $model->validate();
-
-        self::assertTrue(true);
     }
 
-    /**
-     * @throws ValidationException
-     *
-     * @testWith ["hi"]
-     *           ["asda"]
-     *           ["123n"]
-     */
+    #[TestWith(["hi", "asda", "123n"])]
     public function testValidationNumericInvalid(string | int | float $value) : void {
         $model = new ModelValidation();
         $model->requiredString = 'asd';
@@ -795,37 +790,25 @@ class ModelTest extends TestCase
         $model->validate();
     }
 
-    /**
-     * @param  string  $value
-     *
-     * @return void
-     *
-     * @testWith ["asd@dasd.asd"]
-     *           ["dsadij.dsa@sdaasd.od"]
-     *           ["m.m123_13@dasd.asd.asd"]
-     */
+    #[TestWith(["asd@dasd.asd", "dsadij.dsa@sdaasd.od", "m.m123_13@dasd.asd.asd"])]
+    #[DoesNotPerformAssertions]
     public function testValidationEmail(string $value) : void {
         $model = new ModelValidation();
         $model->requiredString = 'asd';
 
         $model->email = $value;
         $model->validate();
-        self::assertTrue(true);
     }
 
-    /**
-     * @param  string  $value
-     *
-     * @return void
-     *
-     * @testWith ["asdasd.asd"]
-     *           ["dsadij"]
-     *           ["sda@.asd.asd"]
-     *           ["@asd.aa"]
-     *           ["asda.@asd.as"]
-     *           ["mysite()*@gmail.com"]
-     *           ["mysite..1234@yahoo.com"]
-     */
+    #[TestWith([
+      "asdasd.asd",
+      "dsadij",
+      "sda@.asd.asd",
+      "@asd.aa",
+      "asda.@asd.as",
+      "mysite()*@gmail.com",
+      "mysite..1234@yahoo.com"
+    ])]
     public function testValidationEmailInvalid(string $value) : void {
         $model = new ModelValidation();
         $model->requiredString = 'asd';
@@ -835,44 +818,31 @@ class ModelTest extends TestCase
         $model->validate();
     }
 
-    /**
-     * @param  string  $value
-     *
-     * @return void
-     *
-     * @testWith ["http://google.com/"]
-     *           ["http://localhost"]
-     *           ["http://example.w3.org/path%20with%20spaces.html"]
-     *           ["http://example.w3.org/%20"]
-     *           ["ftp://ftp.is.co.za/rfc/rfc1808.txt"]
-     *           ["ftp://ftp.is.co.za/../../../rfc/rfc1808.txt"]
-     *           ["http://www.ietf.org/rfc/rfc2396.txt"]
-     *           ["ldap://[2001:db8::7]/c=GB?objectClass?one"]
-     *           ["mailto:John.Doe@example.com"]
-     *           ["news:comp.infosystems.www.servers.unix"]
-     *           ["tel:+1-816-555-1212"]
-     *           ["telnet://192.0.2.16:80"]
-     *           ["urn:oasis:names:specification:docbook:dtd:xml:4.1.2"]
-     */
+    #[TestWith([
+      "http://google.com/",
+      "http://localhost",
+      "http://example.w3.org/path%20with%20spaces.html",
+      "http://example.w3.org/%20",
+      "ftp://ftp.is.co.za/rfc/rfc1808.txt",
+      "ftp://ftp.is.co.za/../../../rfc/rfc1808.txt",
+      "http://www.ietf.org/rfc/rfc2396.txt",
+      "ldap://, 2001:db8::7, /c=GB?objectClass?one",
+      "mailto:John.Doe@example.com",
+      "news:comp.infosystems.www.servers.unix",
+      "tel:+1-816-555-1212",
+      "telnet://192.0.2.16:80",
+      "urn:oasis:names:specification:docbook:dtd:xml:4.1.2"
+    ])]
+    #[DoesNotPerformAssertions]
     public function testValidationUri(string $value) : void {
         $model = new ModelValidation();
         $model->requiredString = 'asd';
 
         $model->uri = $value;
         $model->validate();
-        self::assertTrue(true);
     }
 
-    /**
-     * @param  string  $value
-     *
-     * @return void
-     *
-     * @testWith [""]
-     *           ["foo"]
-     *           ["foo@bar"]
-     *           ["://foo/"]
-     */
+    #[TestWith(["", "foo", "foo@bar", "://foo/"])]
     public function testValidationUriInvalid(string $value) : void {
         $model = new ModelValidation();
         $model->requiredString = 'asd';
@@ -882,42 +852,34 @@ class ModelTest extends TestCase
         $model->validate();
     }
 
-    /**
-     * @param  string  $value
-     *
-     * @return void
-     *
-     * @testWith ["http://google.com/"]
-     *           ["http://localhost"]
-     *           ["http://example.w3.org/path%20with%20spaces.html"]
-     *           ["http://example.w3.org/%20"]
-     *           ["http://www.ietf.org/rfc/rfc2396.txt"]
-     */
+    #[TestWith([
+      "http://google.com/",
+      "http://localhost",
+      "http://example.w3.org/path%20with%20spaces.html",
+      "http://example.w3.org/%20",
+      "http://www.ietf.org/rfc/rfc2396.txt"
+    ])]
+    #[DoesNotPerformAssertions]
     public function testValidationUrl(string $value) : void {
         $model = new ModelValidation();
         $model->requiredString = 'asd';
 
         $model->url = $value;
         $model->validate();
-        self::assertTrue(true);
     }
 
-    /**
-     * @param  string  $value
-     *
-     * @return void
-     *
-     * @testWith [""]
-     *           ["foo"]
-     *           ["foo@bar"]
-     *           ["://foo/"]
-     *           ["ldap://[2001:db8::7]/c=GB?objectClass?one"]
-     *           ["mailto:John.Doe@example.com"]
-     *           ["news:comp.infosystems.www.servers.unix"]
-     *           ["tel:+1-816-555-1212"]
-     *           ["telnet://192.0.2.16:80"]
-     *           ["urn:oasis:names:specification:docbook:dtd:xml:4.1.2"]
-     */
+    #[TestWith([
+      "",
+      "foo",
+      "foo@bar",
+      "=>//foo/",
+      "ldap=>//, 2001=>db8=>=>7, /c=GB?objectClass?one",
+      "mailto=>John.Doe@example.com",
+      "news=>comp.infosystems.www.servers.unix",
+      "tel=>+1-816-555-1212",
+      "telnet=>//192.0.2.16=>80",
+      "urn=>oasis=>names=>specification=>docbook=>dtd=>xml=>4.1.2"
+    ])]
     public function testValidationUrlInvalid(string $value) : void {
         $model = new ModelValidation();
         $model->requiredString = 'asd';
@@ -1012,7 +974,6 @@ class ModelBLazy extends Model
     public ?ModelA $parent;
 
     public function getParent() : ?ModelA {
-        // @phpstan-ignore argument.type
         $this->parent ??= ModelA::get($this->relationIds['parent'] ?? $this->row->model_a_id ?? 0);
         return $this->parent;
     }
@@ -1095,18 +1056,10 @@ final class SimpleData implements InsertExtendInterface
     ) {}
 
 
-    /**
-     * Parse data from DB into the object
-     *
-     * @param  Row  $row  Row from DB
-     *
-     * @return static|null
-     * @noinspection PhpUnnecessaryStaticReferenceInspection
-     */
-    public static function parseRow(Row $row) : ?static {
+    public static function parseRow(Row $row) : static {
         return new SimpleData(
-          $row->value1, // @phpstan-ignore argument.type
-          $row->value2, // @phpstan-ignore argument.type
+          $row->value1,
+          $row->value2,
         );
     }
 
@@ -1128,7 +1081,8 @@ class ModelInvalidInstantiate extends Model
     public const TABLE = 'model_invalid_instantiate';
 
     #[Instantiate]
-    public $val; // @phpstan-ignore missingType.property
+    /** @phpstan-ignore missingType.property */
+    public $val;
 
 }
 

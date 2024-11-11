@@ -134,7 +134,12 @@ final class DateTimeNormalizer implements NormalizerInterface, DenormalizerInter
         }
 
         if ($data instanceof DateTimeInterface) {
-            return $type::createFromFormat(DateTimeInterface::RFC3339_EXTENDED, $data->format(DateTimeInterface::RFC3339_EXTENDED));
+            if (!is_subclass_of($type, DateTimeImmutable::class)) {
+                $type = DateTimeImmutable::class;
+            }
+            $date = $type::createFromFormat(DateTimeInterface::RFC3339_EXTENDED, $data->format(DateTimeInterface::RFC3339_EXTENDED));
+            assert($date !== false); // Should not fail
+            return $date;
         }
 
         $timezone = $this->getTimezone($context);

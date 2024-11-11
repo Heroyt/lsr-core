@@ -9,6 +9,7 @@ use Latte\Compiler\PrintContext;
 
 class LogoNode extends StatementNode
 {
+    use NoIteratorNode;
 
     /**
      *
@@ -25,11 +26,5 @@ class LogoNode extends StatementNode
 			XX,
           $this->position,
         );
-    }
-
-    public function &getIterator() : Generator {
-        if (false) {
-            yield;
-        }
     }
 }

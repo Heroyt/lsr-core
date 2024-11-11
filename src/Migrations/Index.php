@@ -24,6 +24,9 @@ readonly final class Index
      * @return self
      */
     public static function fromArray(array $data) : self {
+        if (is_string($data['columns'])) {
+            $data['columns'] = [$data['columns']];
+        }
         return new self(
           $data['name'],
           $data['columns'],

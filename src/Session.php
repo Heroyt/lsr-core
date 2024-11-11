@@ -160,6 +160,9 @@ class Session implements SessionInterface, SessionStorage
         return $this->getStatus() === PHP_SESSION_ACTIVE;
     }
 
+    /**
+     * @return array<string,mixed>
+     */
     public function &getData() : array {
         return $this->get('_tracy', []);
     }

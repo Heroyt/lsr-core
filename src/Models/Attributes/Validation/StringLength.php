@@ -23,8 +23,9 @@ class StringLength implements Validator
 
     public function validateValue(mixed $value, string | object $class, string $property) : void {
         if (!is_string($value)) {
-            throw new ValidationException(
-              'Property '.(is_string($class) ? $class : $class::class).'::'.$property.' must be a string.'
+            throw ValidationException::createWithValue(
+              'Property '.(is_string($class) ? $class : $class::class).'::'.$property.' must be a string. (value: %s)',
+              $value
             );
         }
         if ($this->length === null && $this->max === null) {
@@ -33,15 +34,24 @@ class StringLength implements Validator
 
         $len = mb_strlen($value, 'UTF-8');
         if (isset($this->length, $this->max) && ($len < $this->length || $len > $this->max)) {
-            throw new ValidationException('Value\'s length must be between '.$this->length.' and '.$this->max.'.');
+            throw ValidationException::createWithValue(
+              'Value\'s length must be between '.$this->length.' and '.$this->max.'. (value: %s)',
+              $value
+            );
         }
 
         if (isset($this->length) && !isset($this->max) && $len !== $this->length) {
-            throw new ValidationException('Value\'s length must be '.$this->length.'.');
+            throw ValidationException::createWithValue(
+              'Value\'s length must be '.$this->length.'. (value: %s)',
+              $value
+            );
         }
 
         if (!isset($this->length) && isset($this->max) && $len > $this->max) {
-            throw new ValidationException('Value\'s length must be less than '.$this->max.'.');
+            throw ValidationException::createWithValue(
+              'Value\'s length must be less than '.$this->max.'. (value: %s)',
+              $value
+            );
         }
     }
 }

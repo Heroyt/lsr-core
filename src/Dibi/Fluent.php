@@ -131,7 +131,6 @@ class Fluent
             );
         }
         try {
-            /** @phpstan-ignore-next-line */
             return $this->getCache()->load(
               'sql/'.$this->getQueryHash().'/fetch/'.$class,
               fn() => $this->fluent->execute()
@@ -159,7 +158,6 @@ class Fluent
             return $this->fluent->fetch();
         }
         try {
-            /** @phpstan-ignore-next-line */
             return $this->getCache()->load(
               'sql/'.$this->getQueryHash().'/fetch',
               function () {
@@ -285,13 +283,13 @@ class Fluent
      */
     public function fetchAllDto(string $class, ?int $offset = null, ?int $limit = null, bool $cache = true) : array {
         if (!$cache) {
+            /** @phpstan-ignore-next-line  */
             return $this->fluent->execute()
                                 ?->setRowClass($class)
                                 ?->setRowFactory($this->getRowFactory($class))
                                 ?->fetchAll();
         }
         try {
-            /** @phpstan-ignore-next-line */
             return $this->getCache()->load(
               'sql/'.$this->getQueryHash().'/fetchAll/'.$offset.'/'.$limit.'/'.$class,
               fn() => $this->fluent->execute()
@@ -304,6 +302,7 @@ class Fluent
               ]
             );
         } catch (Throwable) {
+            /** @phpstan-ignore-next-line  */
             return $this->fluent->execute()
                                 ?->setRowClass($class)
                                 ?->setRowFactory($this->getRowFactory($class))
@@ -321,7 +320,6 @@ class Fluent
             return $this->fluent->fetchAll($offset, $limit);
         }
         try {
-            /** @phpstan-ignore-next-line */
             return $this->getCache()->load(
               'sql/'.$this->getQueryHash().'/fetchAll/'.$offset.'/'.$limit,
               function () use ($offset, $limit) {
@@ -356,7 +354,6 @@ class Fluent
                                 ?->fetchAssoc($assoc) ?? [];
         }
         try {
-            /** @phpstan-ignore-next-line */
             return $this->getCache()->load(
               'sql/'.$this->getQueryHash().'/fetchAssoc/'.$assoc,
               fn() => $this->fluent->execute()
@@ -388,7 +385,6 @@ class Fluent
             return $this->fluent->fetchAssoc($assoc);
         }
         try {
-            /** @phpstan-ignore-next-line */
             return $this->getCache()->load(
               'sql/'.$this->getQueryHash().'/fetchAssoc/'.$assoc,
               function () use ($assoc) {
@@ -414,7 +410,6 @@ class Fluent
             return $this->fluent->fetchPairs($key, $value);
         }
         try {
-            /** @phpstan-ignore-next-line */
             return $this->getCache()->load(
               'sql/'.$this->getQueryHash().'/fetchPairs/'.$key.'/'.$value,
               function () use ($key, $value) {
@@ -442,7 +437,6 @@ class Fluent
             return $this->fluent->count();
         }
         try {
-            /** @phpstan-ignore-next-line */
             return $this->getCache()->load(
               'sql/'.$this->getQueryHash().'/count',
               function () : int {

@@ -61,11 +61,18 @@ final class DibiRowNormalizer extends AbstractObjectNormalizer
         ];
     }
 
+    /**
+     * @param  array<string,mixed>  $context
+     * @return array<string,mixed>
+     */
     protected function extractAttributes(object $object, ?string $format = null, array $context = []) : array {
         assert($object instanceof Row, 'Invalid input object.');
         return $object->toArray();
     }
 
+    /**
+     * @param  array<string,mixed>  $context
+     */
     protected function getAttributeValue(
       object  $object,
       string  $attribute,
@@ -76,6 +83,9 @@ final class DibiRowNormalizer extends AbstractObjectNormalizer
         return $object->{$attribute};
     }
 
+    /**
+     * @param  array<string,mixed>  $context
+     */
     protected function setAttributeValue(
       object  $object,
       string  $attribute,

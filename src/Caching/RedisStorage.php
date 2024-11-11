@@ -149,7 +149,7 @@ class RedisStorage implements Storage, BulkReader
         $prefixedKeys = array_map(fn($key) => urlencode($this->prefix.$key), $keys);
         $keys = array_combine($prefixedKeys, $keys);
         /** @var array<string,string> $metas */
-        $metas = $this->redis->getMultiple($prefixedKeys);
+        $metas = $this->redis->mGet($prefixedKeys);
         $result = [];
         $deleteKeys = [];
         foreach ($metas as $prefixedKey => $meta) {
