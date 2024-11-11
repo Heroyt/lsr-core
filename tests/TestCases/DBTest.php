@@ -643,6 +643,184 @@ class DBTest extends TestCase
 
 
     }
+
+    #[Depends('testInsert')]
+    public function testSelectCache() : void {
+        $this->initSqlite();
+        DB::insert(
+          'table1',
+          [
+            'name' => 'test1',
+            'age'  => null,
+          ]
+        );
+        $id1 = DB::getInsertId();
+        DB::insert(
+          'table1',
+          [
+            'name' => 'test2',
+            'age'  => 12,
+          ]
+        );
+        //$id2 = DB::getInsertId();
+        DB::insert(
+          'table2',
+          [
+            'name'       => 'test3',
+            'table_1_id' => $id1,
+          ]
+        );
+        //$id3 = DB::getInsertId();
+        DB::insert(
+          'table2',
+          [
+            'name'       => 'test4',
+            'table_1_id' => null,
+          ]
+        );
+        //$id4 = DB::getInsertId();
+
+        // Simple select
+        $rows = DB::select('table1', '*')->fetchAll(cache: true);
+        self::assertCount(2, $rows);
+
+        // Join select with alias
+        $rows = DB::select(['table1', 'a'], 'a.id, a.name, a.age, b.name as value')
+                  ->join('table2', 'b')
+                  ->on('a.id = b.table_1_id')
+                  ->fetchAll(cache: true);
+        self::assertCount(1, $rows);
+        /** @var Row $row */
+        $row = first($rows);
+        self::assertEquals($id1, $row->id);
+        self::assertEquals('test1', $row->name);
+        self::assertEquals(null, $row->age);
+        self::assertEquals('test3', $row->value);
+    }
+
+    #[Depends('testSelect')]
+    public function testSelectDtoCache() : void {
+        $this->initSqlite();
+        DB::insert(
+          'table1',
+          [
+            'name' => 'Hello',
+            'age'  => null,
+          ]
+        );
+        $id1 = DB::getInsertId();
+        DB::insert(
+          'table1',
+          [
+            'name' => 'AAAAAAAA',
+            'age'  => 69,
+          ]
+        );
+        $id2 = DB::getInsertId();
+
+        $rows = DB::select('table1', '*')->fetchAllDto(Table1Dto::class, cache: true);
+        self::assertCount(2, $rows);
+        foreach ($rows as $row) {
+            self::assertInstanceOf(Table1Dto::class, $row);
+        }
+
+        self::assertEquals($id1, $rows[0]->id);
+        self::assertEquals($id2, $rows[1]->id);
+        self::assertEquals('Hello', $rows[0]->name);
+        self::assertEquals('AAAAAAAA', $rows[1]->name);
+        self::assertEquals(null, $rows[0]->age);
+        self::assertEquals(69, $rows[1]->age);
+    }
+
+    #[Depends('testSelect')]
+    public function testSelectIteratorCache() : void {
+        $this->initSqlite();
+        DB::insert(
+          'table1',
+          [
+            'name' => 'dasdads',
+            'age'  => null,
+          ]
+        );
+        $id1 = DB::getInsertId();
+        DB::insert(
+          'table1',
+          [
+            'name' => 'jijlkmn',
+            'age'  => 90,
+          ]
+        );
+        $id2 = DB::getInsertId();
+
+        $rows = DB::select('table1', '*')->fetchIterator(cache:true);
+        $count = 0;
+        foreach ($rows as $key => $row) {
+            self::assertInstanceOf(Row::class, $row);
+
+            switch ($key) {
+                case 0:
+                    self::assertEquals($id1, $row->id);
+                    self::assertEquals('dasdads', $row->name);
+                    self::assertEquals(null, $row->age);
+                    break;
+                case 1:
+                    self::assertEquals($id2, $row->id);
+                    self::assertEquals('jijlkmn', $row->name);
+                    self::assertEquals(90, $row->age);
+                    break;
+            }
+
+            $count++;
+        }
+        self::assertEquals(2, $count);
+
+
+    }
+
+    #[Depends('testSelect')]
+    public function testSelectIteratorDtoCache() : void {
+        $this->initSqlite();
+        DB::insert(
+          'table1',
+          [
+            'name' => 'ijoink',
+            'age'  => null,
+          ]
+        );
+        $id1 = DB::getInsertId();
+        DB::insert(
+          'table1',
+          [
+            'name' => 'uuuuuuuuu',
+            'age'  => 456,
+          ]
+        );
+        $id2 = DB::getInsertId();
+
+        $rows = DB::select('table1', '*')->fetchIteratorDto(Table1Dto::class, cache: true);
+        $count = 0;
+        foreach ($rows as $key => $row) {
+            self::assertInstanceOf(Table1Dto::class, $row);
+
+            switch ($key) {
+                case 0:
+                    self::assertEquals($id1, $row->id);
+                    self::assertEquals('ijoink', $row->name);
+                    self::assertEquals(null, $row->age);
+                    break;
+                case 1:
+                    self::assertEquals($id2, $row->id);
+                    self::assertEquals('uuuuuuuuu', $row->name);
+                    self::assertEquals(456, $row->age);
+                    break;
+            }
+
+            $count++;
+        }
+        self::assertEquals(2, $count);
+
+
+    }
 }
 
 class Table1Dto {
