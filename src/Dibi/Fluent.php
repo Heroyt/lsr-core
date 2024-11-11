@@ -6,10 +6,12 @@ use Dibi\Exception;
 use Dibi\Fluent as DibiFluent;
 use Dibi\Result;
 use Dibi\Row;
+use Generator;
 use Lsr\Core\App;
 use Lsr\Core\Caching\Cache;
 use Lsr\Core\Mapper;
 use Nette\Caching\Cache as CacheParent;
+use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Throwable;
 
 /**
@@ -42,6 +44,7 @@ use Throwable;
 class Fluent
 {
 
+    protected const ITERATOR_CHUNK_SIZE = 5;
     protected const CACHE_EXPIRE = '1 hours';
     protected ?string $queryHash = null;
 
@@ -283,7 +286,7 @@ class Fluent
      */
     public function fetchAllDto(string $class, ?int $offset = null, ?int $limit = null, bool $cache = true) : array {
         if (!$cache) {
-            /** @phpstan-ignore-next-line  */
+            /** @phpstan-ignore-next-line */
             return $this->fluent->execute()
                                 ?->setRowClass($class)
                                 ?->setRowFactory($this->getRowFactory($class))
@@ -302,11 +305,87 @@ class Fluent
               ]
             );
         } catch (Throwable) {
-            /** @phpstan-ignore-next-line  */
+            /** @phpstan-ignore-next-line */
             return $this->fluent->execute()
                                 ?->setRowClass($class)
                                 ?->setRowFactory($this->getRowFactory($class))
                                 ?->fetchAll();
+        }
+    }
+
+    /**
+     * @template T of object
+     * @param  class-string<T>  $class
+     * @param  bool  $cache
+     * @return Generator<T>
+     * @throws Exception
+     */
+    public function &fetchIteratorDto(string $class, bool $cache = true) : Generator {
+        if (!$cache) {
+            $query = $this->fluent->execute()
+                         ?->setRowClass($class)
+                         ?->setRowFactory($this->getRowFactory($class));
+            while ($row = $query?->fetch()) {
+                yield $row;
+            }
+            return;
+        }
+
+        $chunkIndex = 0;
+        while (true) {
+            $chunk = $this->getCache()->load(
+              'sql/'.$this->getQueryHash().'/iterator/'.$chunkIndex.'/'.$class,
+                fn() => $this->fetchAll($chunkIndex * $this::ITERATOR_CHUNK_SIZE, $this::ITERATOR_CHUNK_SIZE, false),
+              [
+                CacheParent::Expire => $this::CACHE_EXPIRE,
+                CacheParent::Tags   => $this->getCacheTags(),
+              ]
+            );
+            $chunkIndex++;
+
+            foreach ($chunk as $row) {
+                yield $this->getMapper()->map($row, $class);
+            }
+
+            if (count($chunk) < $this::ITERATOR_CHUNK_SIZE) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * @param  bool  $cache
+     * @return Generator<Row>
+     * @throws Exception
+     */
+    public function &fetchIterator(bool $cache = true) : Generator {
+        if (!$cache) {
+            $query = $this->fluent->execute();
+            while ($row = $query?->fetch()) {
+                yield $row;
+            }
+            return;
+        }
+
+        $chunkIndex = 0;
+        while (true) {
+            $chunk = $this->getCache()->load(
+              'sql/'.$this->getQueryHash().'/iterator/'.$chunkIndex,
+                fn() => $this->fetchAll($chunkIndex * $this::ITERATOR_CHUNK_SIZE, $this::ITERATOR_CHUNK_SIZE, false),
+              [
+                CacheParent::Expire => $this::CACHE_EXPIRE,
+                CacheParent::Tags   => $this->getCacheTags(),
+              ]
+            );
+            $chunkIndex++;
+
+            foreach ($chunk as $row) {
+                yield $row;
+            }
+
+            if (count($chunk) < $this::ITERATOR_CHUNK_SIZE) {
+                break;
+            }
         }
     }
 
