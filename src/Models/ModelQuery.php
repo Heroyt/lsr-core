@@ -135,15 +135,15 @@ class ModelQuery
         return $this;
     }
 
-    public function count() : int {
-        return $this->query->count();
+    public function count(bool $cache = true) : int {
+        return $this->query->count(cache: $cache);
     }
 
     /**
      * @return T|null
      */
-    public function first() : ?Model {
-        $row = $this->query->fetch();
+    public function first(bool $cache = true) : ?Model {
+        $row = $this->query->fetch(cache: $cache);
         if (!isset($row)) {
             return null;
         }
@@ -155,9 +155,9 @@ class ModelQuery
      * @return T[]
      * @throws ValidationException
      */
-    public function get() : array {
+    public function get(bool $cache = true) : array {
         $pk = $this->className::getPrimaryKey();
-        $rows = $this->query->fetchAll();
+        $rows = $this->query->fetchAll(cache: $cache);
         $className = $this->className;
         $models = [];
         foreach ($rows as $row) {
