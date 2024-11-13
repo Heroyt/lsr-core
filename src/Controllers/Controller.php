@@ -152,7 +152,7 @@ abstract class Controller implements ControllerInterface
     }
 
     /**
-     * @param  string|array<string, mixed>|object  $data
+     * @param  string|array<string, mixed>|list<mixed>|object  $data
      * @param  int  $code
      * @param  string[]  $headers
      *

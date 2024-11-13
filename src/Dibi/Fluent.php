@@ -6,7 +6,7 @@ use Dibi\Exception;
 use Dibi\Fluent as DibiFluent;
 use Dibi\Result;
 use Dibi\Row;
-use Generator;
+use Iterator;
 use Lsr\Core\App;
 use Lsr\Core\Caching\Cache;
 use Lsr\Core\Mapper;
@@ -317,10 +317,10 @@ class Fluent
      * @template T of object
      * @param  class-string<T>  $class
      * @param  bool  $cache
-     * @return Generator<T>
+     * @return Iterator<T>
      * @throws Exception
      */
-    public function &fetchIteratorDto(string $class, bool $cache = true) : Generator {
+    public function &fetchIteratorDto(string $class, bool $cache = true) : Iterator {
         if (!$cache) {
             $query = $this->fluent->execute()
                          ?->setRowClass($class)
@@ -355,10 +355,10 @@ class Fluent
 
     /**
      * @param  bool  $cache
-     * @return Generator<Row>
+     * @return Iterator<Row>
      * @throws Exception
      */
-    public function &fetchIterator(bool $cache = true) : Generator {
+    public function &fetchIterator(bool $cache = true) : Iterator {
         if (!$cache) {
             $query = $this->fluent->execute();
             while ($row = $query?->fetch()) {
