@@ -167,7 +167,7 @@ class DB
      * @throws Exception
      * @since 1.0
      */
-    public static function update(string $table, array $args, array $where = null) : Fluent | int {
+    public static function update(string $table, array $args, ?array $where = null) : Fluent | int {
         if (!isset(self::$db)) {
             throw new RuntimeException('Database is not connected');
         }
