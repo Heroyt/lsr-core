@@ -12,7 +12,7 @@ parameters:
 		cacheDir: %constants.tempDir%
 extensions:
 	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
-	caching: Nette\Bridges\CacheDI\CacheExtension(%constants.tempDir%)
+	caching: Lsr\Caching\DI\CacheExtension
 services:
 	app: Lsr\Core\App
 	translations: Lsr\Core\Translations

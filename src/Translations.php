@@ -8,8 +8,8 @@ use Gettext\Languages\Language;
 use Gettext\Loader\PoLoader;
 use Gettext\Translation;
 use Lsr\Core\Exceptions\InvalidLanguageException;
+use Lsr\Core\Tracy\TranslationTracyPanel;
 use Lsr\Helpers\Tools\Timer;
-use Lsr\Helpers\Tracy\TranslationTracyPanel;
 use Nette\Localization\Translator;
 use Stringable;
 
@@ -155,6 +155,7 @@ class Translations implements Translator
             }
         }
         foreach ($templates as $domain => $template) {
+            /** @var Translation $string */
             foreach ($template->getTranslations() as $string) {
                 $string->translate('');
                 $pluralCount = count($string->getPluralTranslations());
@@ -189,7 +190,6 @@ class Translations implements Translator
         }
         return $this->translations[$lang][$domain];
     }
-
     public function translate(string | Stringable $message, mixed ...$params) : string {
         if (empty($message)) {
             return '';
@@ -199,13 +199,16 @@ class Translations implements Translator
 
         $context = $params['context'] ?? '';
         // Add context
-        if (!empty($context)) {
+        if (is_string($context) && !empty($context)) {
             $message = $context."\004".$message;
         }
 
-        $plural = (string) ($params['plural'] ?? '');
+        assert($params['plural'] === null || is_string($params['plural']));
+        $plural = $params['plural'] ?? '';
+        assert($params['num'] === null || is_numeric($params['num']));
         $num = (int) ($params['num'] ?? 1);
-        $domain = (string) ($params['domain'] ?? LANGUAGE_FILE_NAME);
+        assert($params['domain'] === null || is_string($params['domain']));
+        $domain = $params['domain'] ?? LANGUAGE_FILE_NAME;
 
         $translated = $this->translateModular($message, $plural, $num, $domain);
 
@@ -215,6 +218,13 @@ class Translations implements Translator
         }
 
         if (!empty($params['format']) && is_array($params['format'])) {
+            assert(
+              array_all(
+                $params['format'],
+                static fn($val) => $val === null || is_string($val) || is_int($val) || is_float($val) || is_bool($val)
+              )
+            );
+            /** @phpstan-ignore argument.type */
             $translated = sprintf($translated, ...$params['format']);
         }
 

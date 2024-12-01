@@ -35,7 +35,6 @@ use Nette\DI\Container;
 use Nette\DI\ContainerLoader;
 use Nette\DI\Extensions\ExtensionsExtension;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
 use ReflectionException;
 use RuntimeException;
@@ -73,6 +72,7 @@ class App
      */
     public function __construct(
       public readonly Router           $router,
+      public readonly RouteHandler $routeHandler,
       public readonly SessionInterface $session,
       public readonly Config           $config,
       public readonly Translations     $translations,
@@ -110,6 +110,7 @@ class App
      * @return object
      */
     public static function getService(string $name) : object {
+        /** @phpstan-ignore return.type */
         return self::getContainer()->getService($name);
     }
 
@@ -541,6 +542,7 @@ class App
           $request->getType(),
           $this->getRoute($params)?->getName(),
           $request->getPath(),
+          /** @phpstan-ignore argument.type */
           array_merge($request->getAttributes(), $params),
         );
     }
@@ -592,11 +594,18 @@ class App
         }
         // Update immutable request
         $this->request = $request;
+
+        $lang = $this->getDesiredLanguageCode();
+        $this->translations->setLang($lang);
+        $request = $request->withAttribute('lang', $this->translations->getLangId());
+
+        // Update immutable request
+        $this->request = $request;
+        /** @phpstan-ignore argument.type */
         $request->setParams($params);
 
-        $this->translations->setLang($this->getDesiredLanguageCode());
-
-        return $route->handle($request);
+        assert($route instanceof Route);
+        return $this->routeHandler->setRoute($route)->handle($request);
     }
 
     /**
@@ -623,7 +632,7 @@ class App
         }
 
         $cookieLang = $request->getCookieParams()['lang'] ?? null;
-        if (isset($cookieLang) && $this->isSupportedLanguage($cookieLang)) {
+        if (is_string($cookieLang) && $this->isSupportedLanguage($cookieLang)) {
             return $cookieLang;
         }
 

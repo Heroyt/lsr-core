@@ -23,6 +23,27 @@ readonly class MenuBuilder
         if (!file_exists(ROOT.'config/nav/'.$type.'.php')) {
             throw new FileException('Menu configuration file "'.$type.'.php" does not exist.');
         }
+        /** @var array{
+         *     name:string,
+         *     icon?:string,
+         *     path?:string[],
+         *     order?:int,
+         *     route?:string,
+         *     children?:array{
+         *         name:string,
+         *         icon?:string,
+         *         path?:string[],
+         *         order?:int,
+         *         route?:string,
+         *         access?:string[]|string,
+         *         loggedInOnly?:bool,
+         *         loggedOutOnly?:bool
+         *     }[],
+         *     access?:string[]|string,
+         *     loggedInOnly?:bool,
+         *     loggedOutOnly?:bool
+         * }[] $config
+         */
         $config = require ROOT.'config/nav/'.$type.'.php';
         $menu = [];
         foreach ($config as $item) {
@@ -69,9 +90,9 @@ readonly class MenuBuilder
 
     /**
      * @param  array{
-     *   access:string[]|null|string,
-     *   loggedInOnly:bool|null,
-     *   loggedOutOnly:bool|null
+     *   access?:string[]|null|string,
+     *   loggedInOnly?:bool|null,
+     *   loggedOutOnly?:bool|null
      * }  $item
      *
      * @return bool

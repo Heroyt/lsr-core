@@ -13,7 +13,7 @@ use Lsr\Core\Templating\Nodes\IconNode;
 use Lsr\Core\Templating\Nodes\LangNode;
 use Lsr\Core\Templating\Nodes\LinkNode;
 use Lsr\Core\Templating\Nodes\LogoNode;
-use Lsr\Helpers\Tools\LogoHelper;
+use Lsr\Core\Tools\LogoHelper;
 
 class LatteExtension extends Extension
 {
@@ -24,6 +24,9 @@ class LatteExtension extends Extension
 
     }
 
+    /**
+     * @return array<string,callable>
+     */
     public function getTags() : array {
         return [
           'alert'        => [AlertNode::class, 'create'],
@@ -42,12 +45,18 @@ class LatteExtension extends Extension
         ];
     }
 
+    /**
+     * @return array<string,callable>
+     */
     public function getFilters() : array {
         return [
           'lang' => 'lang',
         ];
     }
 
+    /**
+     * @return array<string,callable>
+     */
     public function getFunctions() : array {
         return [
           'csrf'    => 'formToken',

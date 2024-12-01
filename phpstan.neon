@@ -5,7 +5,7 @@ parameters:
 		- DEFAULT_LANGUAGE
 		- ROOT
 	editorUrl: 'phpstorm://open?file=%%file%%&line=%%line%%'
-	level: 8
+	level: max
 	paths:
 		- src
 		- config

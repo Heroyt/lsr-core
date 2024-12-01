@@ -37,6 +37,10 @@ class Session implements SessionInterface, SessionStorage
         }
     }
 
+    public function getStatus() : int {
+        return session_status();
+    }
+
     public function close() : void {
         session_write_close();
     }
@@ -87,20 +91,6 @@ class Session implements SessionInterface, SessionStorage
         return session_get_cookie_params();
     }
 
-    public function getStatus() : int {
-        return session_status();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function &get(string $key, mixed $default = null) : mixed {
-        if (!isset($_SESSION[$key])) {
-            $_SESSION[$key] = $default;
-        }
-        return $_SESSION[$key];
-    }
-
     /**
      * @inheritDoc
      */
@@ -139,7 +129,7 @@ class Session implements SessionInterface, SessionStorage
      */
     public function getFlash(string $key, mixed $default = null) : mixed {
         $value = $default;
-        if (isset($_SESSION['flash'][$key])) {
+        if (isset($_SESSION['flash']) && is_array($_SESSION['flash']) && isset($_SESSION['flash'][$key])) {
             $value = $_SESSION['flash'][$key];
             unset($_SESSION['flash'][$key]);
         }
@@ -152,6 +142,10 @@ class Session implements SessionInterface, SessionStorage
     public function flash(string $key, mixed $value) : void {
         if (!$this->isInitialized()) {
             session_start();
+
+        }
+        if (!isset($_SESSION['flash']) || !is_array($_SESSION['flash'])) {
+            $_SESSION['flash'] = [];
         }
         $_SESSION['flash'][$key] = $value;
     }
@@ -164,6 +158,20 @@ class Session implements SessionInterface, SessionStorage
      * @return array<string,mixed>
      */
     public function &getData() : array {
+        /** @phpstan-ignore return.type */
         return $this->get('_tracy', []);
+    }
+
+    /**
+     * @inheritDoc
+     * @template T
+     * @param  T  $default
+     * @return mixed|T
+     */
+    public function &get(string $key, mixed $default = null) : mixed {
+        if (!isset($_SESSION[$key])) {
+            $_SESSION[$key] = $default;
+        }
+        return $_SESSION[$key];
     }
 }

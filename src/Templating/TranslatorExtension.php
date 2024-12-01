@@ -42,7 +42,10 @@ final class TranslatorExtension extends Extension
      */
     public function getFilters() : array {
         return [
-          'translate' => fn(FilterInfo $fi, ...$args) : string => $this->translator->translate(...$args),
+          'translate' => fn(FilterInfo          $fi,
+                            string | Stringable $message,
+                            mixed               ...$args
+          ) : string => $this->translator->translate($message, ...$args),
         ];
     }
 

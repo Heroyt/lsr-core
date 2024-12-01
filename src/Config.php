@@ -12,7 +12,7 @@ use Nette\Neon\Neon;
 class Config
 {
 
-    private const ENV_DEFAULTS = [
+    private const array ENV_DEFAULTS = [
       'APP_NAME'    => '',
       'DB_HOST'     => 'localhost',
       'DB_PORT'     => 3306,
@@ -27,16 +27,16 @@ class Config
 
     private static Config $instance;
 
-    private bool $initialized = false;
+    public private(set) bool $initialized = false;
 
     /** @var array<string,ConfigCategory> */
     private array $config = [
       'ENV' => [],
     ];
 
-    private string $iniFile;
-    private string $neonFile;
-    private string $envFile;
+    public private(set) string $iniFile;
+    public private(set) string $neonFile;
+    public private(set) string $envFile;
 
     public function __construct(
       private readonly string $cacheDir = TMP_DIR
@@ -93,11 +93,13 @@ class Config
             } catch (Exception) {
             }
         }
+        /** @phpstan-ignore assign.propertyType, argument.type */
         $this->config = array_merge($this->config, $ini, $neon);
 
         $dotenv = Dotenv::createImmutable(ROOT);
         $dotenv->safeLoad();
         $env = getenv();
+        /** @phpstan-ignore assign.propertyType, argument.type */
         $this->config['ENV'] = array_merge($this->config['ENV'], $_ENV, $env);
 
         $this->initialized = true;

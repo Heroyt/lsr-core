@@ -1,0 +1,79 @@
+<?php
+declare(strict_types=1);
+
+namespace Lsr\Core\Models;
+
+use Lsr\Caching\Cache;
+use Lsr\Core\App;
+use Lsr\Orm\Attributes\AfterDelete;
+use Lsr\Orm\Attributes\AfterInsert;
+use Lsr\Orm\Attributes\AfterUpdate;
+use Nette\Caching\Cache as CacheParent;
+
+trait WithCacheClear
+{
+
+    /**
+     * Clear cache for model queries (the Model::query() method)
+     *
+     * @return void
+     * @see Model::query()
+     *
+     */
+    public static function clearQueryCache() : void {
+        /** @var Cache $cache */
+        $cache = App::getService('cache');
+        $cache->clean(
+          [
+            CacheParent::Tags => [
+              static::TABLE.'/query',
+            ],
+          ]
+        );
+    }
+
+    /**
+     * Clear cache for this model
+     *
+     * @return void
+     */
+    public static function clearModelCache() : void {
+        /** @var Cache $cache */
+        $cache = App::getService('cache');
+        $cache->clean(
+          [
+            CacheParent::Tags => [
+              static::TABLE,
+              static::TABLE.'/query',
+            ],
+          ]
+        );
+    }
+
+    /**
+     * Clear cache for this model instance
+     *
+     * @post Clear cache for this specific instance
+     *
+     * @return void
+     * @see  Cache
+     *
+     */
+    #[AfterUpdate, AfterDelete, AfterInsert]
+    public function clearCache() : void {
+        if (isset($this->id)) {
+            /** @var Cache $cache */
+            $cache = App::getService('cache');
+            $cache->clean(
+              [
+                CacheParent::Tags => [
+                  $this::TABLE,
+                  $this::TABLE.'/query',
+                  $this::TABLE.'/'.$this->id,
+                  $this::TABLE.'/'.$this->id.'/relations',
+                ],
+              ]
+            );
+        }
+    }
+}

@@ -1,7 +1,7 @@
 {
   "name": "lsr/core",
   "description": "Laser framework core.",
-  "version": "0.2.72",
+  "version": "0.3.0",
   "repositories": [
     {
       "type": "composer",
@@ -19,12 +19,16 @@
     "phpstan/phpstan": "^2.0",
     "phpstan/extension-installer": "^1.2",
     "phpstan/phpstan-dibi": "^2.0",
-    "phpstan/phpstan-nette": "^2.0"
+    "phpstan/phpstan-nette": "^2.0",
+    "squizlabs/php_codesniffer": "^3.11"
   },
   "autoload": {
     "psr-4": {
       "Lsr\\Core\\": "src/"
-    }
+    },
+    "files": [
+      "include/functions.php"
+    ]
   },
   "autoload-dev": {
     "psr-4": {
@@ -39,8 +43,9 @@
   ],
   "minimum-stability": "stable",
   "require": {
-    "lsr/interfaces": "^0.2",
-    "lsr/logging": "^0.2",
+    "php": ">=8.4",
+    "lsr/interfaces": "^0.3",
+    "lsr/logging": "^0.3",
     "ext-fileinfo": "*",
     "ext-gettext": "*",
     "ext-simplexml": "*",
@@ -49,15 +54,14 @@
     "ext-pdo_sqlite": "*",
     "latte/latte": "^3.0",
     "nette/di": "^3.2",
-    "nette/caching": "^3.3",
-    "ext-zip": "*",
-    "dibi/dibi": "^5",
-    "lsr/routing": "^0.2",
-    "lsr/request": "^0.2",
+    "lsr/routing": "^0.3",
+    "lsr/request": "^0.3",
+    "lsr/db": "^0.3",
+    "lsr/serializer": "^0.3",
+    "lsr/cache": "^0.3",
+    "lsr/orm": "^0.3",
     "vlucas/phpdotenv": "^5.6",
-    "nette/php-generator": "^4.1",
-    "ext-redis": "*",
-    "symfony/serializer": "^7.1"
+    "nette/php-generator": "^4.1"
   },
   "config": {
     "allow-plugins": {
@@ -66,7 +70,8 @@
   },
   "extra": {
     "branch-alias": {
-      "v0.2": "0.2.x-dev"
+      "v0.2": "0.2.x-dev",
+      "v0.3": "0.3.x-dev"
     }
   }
 }

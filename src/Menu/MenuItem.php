@@ -38,9 +38,10 @@ class MenuItem
      * @return bool
      */
     public function checkActive() : bool {
-        $this->active = Router::comparePaths(array_values($this->path));
+        $activePath = App::getInstance()->getRequest()->getPath();
+        $this->active = Router::comparePaths(array_values($this->path), $activePath);
         foreach ($this->children as $child) {
-            $this->active = $this->active || Router::comparePaths($child->path);
+            $this->active = $this->active || Router::comparePaths($child->path, $activePath);
         }
         return $this->active;
     }

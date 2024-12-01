@@ -22,8 +22,10 @@ use Lsr\Core\Templating\Latte;
 use Lsr\Exceptions\TemplateDoesNotExistException;
 use Lsr\Interfaces\ControllerInterface;
 use Lsr\Interfaces\RequestInterface;
+use Lsr\Interfaces\RouteInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 
 /**
  * @class   Page
@@ -44,7 +46,7 @@ abstract class Controller implements ControllerInterface
     /**
      * @var array<string, mixed> $params Parameters added to latte template
      */
-    public TemplateParameters|array $params = [];
+    public TemplateParameters | array $params = [];
     /** @var App Injected property */
     public App $app;
     /** @var Latte Injected property */
@@ -112,7 +114,7 @@ abstract class Controller implements ControllerInterface
         return $this->getApp()->getAppName().
           (!empty($this->title) ?
             ' - '.sprintf(
-              lang($this->title, context: 'pageTitles'),
+                 lang($this->title, context: 'pageTitles'),
               ...$this->titleParams
             )
             : ''
@@ -181,7 +183,6 @@ abstract class Controller implements ControllerInterface
         return $response->withJsonBody($data);
     }
 
-
     /**
      * @param  ServerRequestInterface  $request
      * @return string[]
@@ -192,6 +193,20 @@ abstract class Controller implements ControllerInterface
             $types[] = strtolower(trim(explode(';', $value, 2)[0]));
         }
         return $types;
+    }
+
+    /**
+     * @param  UriInterface|RouteInterface|string[]|string  $to  URL, Route, Route's name or path as an array
+     * @param  RequestInterface|null  $from  Previous request
+     * @param  int  $type  Redirect HTTP code
+     * @return ResponseInterface
+     */
+    protected function redirect(
+      UriInterface | RouteInterface | array | string $to,
+      ?RequestInterface                              $from = null,
+      int                                            $type = 302
+    ) : ResponseInterface {
+        return App::getInstance()->redirect($to, $from, $type);
     }
 
 }

@@ -96,6 +96,7 @@ class MigrationLoader
                     $base[$key] = $val;
                 }
                 else {
+                    /** @phpstan-ignore argument.type */
                     $base[$key] = static::merge($val, $base[$key] ?? null);
                 }
             }

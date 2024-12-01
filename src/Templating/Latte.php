@@ -17,7 +17,8 @@ readonly class Latte
     ) {
         $sandbox = SecurityPolicy::createSafePolicy();
         $sandbox->allowTags(['svgIcon', 'link', 'getUrl', 'lang']);
-        $sandbox->allowFilters($sandbox::ALL);
+        /** @phpstan-ignore argument.type */
+        $sandbox->allowFilters($sandbox::All);
         $sandbox->allowFunctions(['sprintf', 'lang']);
 
         $this->engine->setPolicy($sandbox);
