@@ -320,7 +320,7 @@ class Fluent
      * @return Iterator<T>
      * @throws Exception
      */
-    public function &fetchIteratorDto(string $class, bool $cache = true) : Iterator {
+    public function fetchIteratorDto(string $class, bool $cache = true) : Iterator {
         if (!$cache) {
             $query = $this->fluent->execute()
                          ?->setRowClass($class)
@@ -358,7 +358,7 @@ class Fluent
      * @return Iterator<Row>
      * @throws Exception
      */
-    public function &fetchIterator(bool $cache = true) : Iterator {
+    public function fetchIterator(bool $cache = true) : Iterator {
         if (!$cache) {
             $query = $this->fluent->execute();
             while ($row = $query?->fetch()) {
