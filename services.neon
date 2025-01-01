@@ -3,16 +3,13 @@ includes:
 parameters:
 	constants:
 		debug: true
-	cache:
-		path: '%constants.tempDir%cache.db'
-		journal: '%constants.tempDir%journal.db'
 	templating:
 		tmpPath: '%constants.tempDir%latte/'
 	config:
 		cacheDir: %constants.tempDir%
 extensions:
 	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
-	caching: Lsr\Caching\DI\CacheExtension
+	cache: Lsr\Caching\DI\CacheExtension
 services:
 	app: Lsr\Core\App
 	translations: Lsr\Core\Translations
@@ -28,9 +25,6 @@ services:
 		create: \Lsr\Core\Session::getInstance()
 		setup:
 			- init()
-	cache.storage: Nette\Caching\Storages\SQLiteStorage(%cache.path%)
-	caching.journal: Nette\Caching\Storages\SQLiteJournal(%cache.journal%)
-	cache: Lsr\Core\Caching\Cache(@cache.storage, null, %constants.debug%)
 	cache.extension.latte: Nette\Bridges\CacheLatte\CacheExtension(@cache.storage)
 	templating.latte.extension:
 		create: Lsr\Core\Templating\LatteExtension()
@@ -53,10 +47,10 @@ services:
 		create: Lsr\Core\Templating\Latte(@templating.latte.engine)
 		tags:
 			- templating
-
-	symfony.normalizer.datetime: Lsr\Core\Serializer\Normalizer\DateTimeNormalizer
-	symfony.normalizer.dibiRow: Lsr\Core\Serializer\Normalizer\DibiRowNormalizer
-	mapper: Lsr\Core\Mapper
+cache:
+	cacheDir: %constants.tempDir%
+	cacheFile: '%constants.tempDir%cache.db'
+	journalFile: '%constants.tempDir%journal.db'
 search:
 	controllers:
 		in: '%constants.appDir%src/Controllers'
