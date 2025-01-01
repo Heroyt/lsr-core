@@ -11,6 +11,7 @@ extensions:
 	search: Nette\DI\Extensions\SearchExtension(%constants.tempDir%)
 	cache: Lsr\Caching\DI\CacheExtension
 services:
+	routeHandler: Lsr\Core\RouteHandler
 	app: Lsr\Core\App
 	translations: Lsr\Core\Translations
 
