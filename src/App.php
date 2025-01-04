@@ -595,14 +595,15 @@ class App
         // Update immutable request
         $this->request = $request;
 
+        /** @phpstan-ignore argument.type */
+        $request->setParams($params);
+
         $lang = $this->getDesiredLanguageCode();
         $this->translations->setLang($lang);
         $request = $request->withAttribute('lang', $this->translations->getLangId());
 
         // Update immutable request
         $this->request = $request;
-        /** @phpstan-ignore argument.type */
-        $request->setParams($params);
 
         assert($route instanceof Route);
         return $this->routeHandler->setRoute($route)->handle($request);
