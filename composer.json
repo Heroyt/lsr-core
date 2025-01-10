@@ -44,7 +44,7 @@
   "minimum-stability": "stable",
   "require": {
     "php": ">=8.4",
-    "lsr/interfaces": "^0.3",
+    "lsr/interfaces": "^0.3.4",
     "lsr/logging": "^0.3",
     "ext-fileinfo": "*",
     "ext-gettext": "*",

@@ -14,6 +14,7 @@ use Lsr\Core\Routing\Exceptions\ModelNotFoundException as RouteModelNotFoundExce
 use Lsr\Core\Routing\Middleware;
 use Lsr\Core\Routing\Route;
 use Lsr\Enums\RequestMethod;
+use Lsr\Exceptions\RedirectException;
 use Lsr\Helpers\Tools\Strings;
 use Lsr\Interfaces\ControllerInterface;
 use Lsr\Interfaces\RequestInterface;
@@ -112,7 +113,11 @@ class RouteHandler implements RequestHandlerInterface
         next($this->route->middleware);
 
         // Process route-wide middleware
-        return $middleware->process($request, $this);
+        try {
+            return $middleware->process($request, $this);
+        } catch (RedirectException $e) {
+            return App::getInstance()->redirect($e->url, $e->request, $e->getCode());
+        }
     }
 
 
