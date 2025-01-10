@@ -132,4 +132,13 @@ readonly class Latte
         return $return;
     }
 
+    /**
+     * @param  string|null  $locale
+     * @return $this
+     */
+    public function setLocale(?string $locale) : Latte {
+        $this->engine->setLocale($locale);
+        return $this;
+    }
+
 }

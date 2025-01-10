@@ -149,7 +149,11 @@ abstract class Controller implements ControllerInterface
      * @throws TemplateDoesNotExistException
      */
     protected function view(string $template) : ResponseInterface {
-        return $this->respond($this->latte->viewToString($template, $this->params))
+        return $this->respond(
+          $this->latte
+            ->setLocale($this->app->translations->getLang())
+            ->viewToString($template, $this->params)
+        )
                     ->withHeader('Content-Type', 'text/html; charset=utf-8');
     }
 

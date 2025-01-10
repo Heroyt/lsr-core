@@ -95,6 +95,11 @@ class Translations implements Translator
         $this->setLang($defaultLang);
     }
 
+    /**
+     * Get the whole language code (ex. `cs_CZ`)
+     *
+     * @return string
+     */
     public function getLang() : string {
         return $this->lang;
     }
@@ -294,10 +299,20 @@ class Translations implements Translator
         return $this->translations;
     }
 
+    /**
+     * Get the short language code (ex. `cs`)
+     *
+     * @return string
+     */
     public function getLangId() : string {
         return $this->langId;
     }
 
+    /**
+     * Get the country code (ex. `CZ`)
+     *
+     * @return string
+     */
     public function getCountry() : string {
         return $this->country;
     }
