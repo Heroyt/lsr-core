@@ -43,6 +43,7 @@ class Session implements SessionInterface, SessionStorage
 
     public function close() : void {
         session_write_close();
+        $this->clear();
     }
 
     public function setParams(
@@ -173,5 +174,26 @@ class Session implements SessionInterface, SessionStorage
             $_SESSION[$key] = $default;
         }
         return $_SESSION[$key];
+    }
+
+    public function getCookieHeader() : string {
+        $params = $this->getParams();
+        $cookie = session_name().'='.session_id();
+        if (!empty($params['domain'])) {
+            $cookie .= '; Domain='.$params['domain'];
+        }
+        if (!empty($params['path'])) {
+            $cookie .= '; Path='.$params['path'];
+        }
+        if ($params['secure']) {
+            $cookie .= '; Secure';
+        }
+        if ($params['httponly']) {
+            $cookie .= '; HttpOnly';
+        }
+        if (!empty($params['lifetime'])) {
+            $cookie .= '; Expires='.$params['lifetime'];
+        }
+        return $cookie;
     }
 }

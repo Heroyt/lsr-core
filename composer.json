@@ -1,7 +1,7 @@
 {
   "name": "lsr/core",
   "description": "Laser framework core.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "repositories": [
     {
       "type": "composer",
@@ -44,7 +44,7 @@
   "minimum-stability": "stable",
   "require": {
     "php": ">=8.4",
-    "lsr/interfaces": "^0.3.4",
+    "lsr/interfaces": "^0.3.5",
     "lsr/logging": "^0.3",
     "ext-fileinfo": "*",
     "ext-gettext": "*",
