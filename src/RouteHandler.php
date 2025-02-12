@@ -159,10 +159,10 @@ class RouteHandler implements RequestHandlerInterface
                   elseif ($type instanceof \ReflectionUnionType) {
                       $subTypes = [];
                       foreach ($type->getTypes() as $subtype) {
-                          if (!$subtype instanceof ReflectionNamedType || !$subtype->isBuiltin()) {
+                          if (!$subtype instanceof ReflectionNamedType && !$subtype->isBuiltin()) {
                               throw new RuntimeException(
                                 sprintf(
-                                  "Unsupported route handler method type in %s(%s). Only built-in types, RequestInterface and Model classes are supported.",
+                                  "Unsupported route handler method union type in %s(%s). Only built-in types, RequestInterface and Model classes are supported.",
                                   $this->handlerToString($this->route->getHandler()),
                                   $name
                                 )
