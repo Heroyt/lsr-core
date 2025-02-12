@@ -144,24 +144,49 @@ class RouteHandler implements RequestHandlerInterface
                   $name = $argument->getName();
                   $optional = $argument->isOptional();
 
-                  /** @var ReflectionType|null $type */
+                  /** @var ReflectionType|\ReflectionUnionType|null $type */
                   $type = $argument->getType();
 
-                  if (!$type instanceof ReflectionNamedType) {
+                  if ($type instanceof ReflectionNamedType) {
+                      $args[$name] = [
+                        'optional'   => $optional,
+                        'union'      => false,
+                        'type'       => $type->getName(),
+                        'nullable'   => $type->allowsNull(),
+                        'mapRequest' => !empty($argument->getAttributes(MapRequest::class)),
+                      ];
+                  }
+                  elseif ($type instanceof \ReflectionUnionType) {
+                      $subTypes = [];
+                      foreach ($type->getTypes() as $subtype) {
+                          if (!$subtype instanceof ReflectionNamedType || !$subtype->isBuiltin()) {
+                              throw new RuntimeException(
+                                sprintf(
+                                  "Unsupported route handler method type in %s(%s). Only built-in types, RequestInterface and Model classes are supported.",
+                                  $this->handlerToString($this->route->getHandler()),
+                                  $name
+                                )
+                              );
+                          }
+                          $subTypes[] = $subtype->getName();
+                      }
+                      $args[$name] = [
+                        'optional'   => $optional,
+                        'union'      => true,
+                        'type'       => $subTypes,
+                        'nullable'   => $type->allowsNull(),
+                        'mapRequest' => !empty($argument->getAttributes(MapRequest::class)),
+                      ];
+                  }
+                  else {
                       throw new RuntimeException(
                         sprintf(
-                          "Unsupported route handler method type in %s(). Only built-in types, RequestInterface and Model classes are supported.",
-                          $this->handlerToString($this->route->getHandler())
+                          "Unsupported route handler method type in %s(%s). Only built-in types, RequestInterface and Model classes are supported.",
+                          $this->handlerToString($this->route->getHandler()),
+                          $name
                         )
                       );
                   }
-
-                  $args[$name] = [
-                    'optional'   => $optional,
-                    'type'       => $type->getName(),
-                    'nullable'   => $type->allowsNull(),
-                    'mapRequest' => !empty($argument->getAttributes(MapRequest::class)),
-                  ];
               }
               return $args;
           },
@@ -179,6 +204,42 @@ class RouteHandler implements RequestHandlerInterface
 
         $argsValues = [];
         foreach ($args as $name => $type) {
+            if ($type['union']) {
+                $value = $request->getParam($name);
+                if (
+                  (in_array('float', $type['type'], true) || in_array('double', $type['type']))
+                  && is_numeric($value)
+                ) {
+                    $argsValues[$name] = (float) $value;
+                    continue;
+                }
+                if (
+                  (in_array('int', $type['type'], true) || in_array('integer', $type['type']))
+                  && is_numeric($value)
+                ) {
+                    $argsValues[$name] = (int) $value;
+                    continue;
+                }
+                if (
+                  (in_array('bool', $type['type'], true) || in_array('boolean', $type['type']))
+                  && (is_numeric($value) || in_array(strtolower($value), ['true', 'false']))
+                ) {
+                    $argsValues[$name] = is_numeric($value) ? ((int) $value) > 0 : strtolower($value) === 'true';
+                    continue;
+                }
+                if (in_array('string', $type['type'], true)) {
+                    $argsValues[$name] = (string) $value;
+                    continue;
+                }
+                throw new RunTimeException(
+                  sprintf(
+                    "Unsupported route handler method type in %s(%s \$%s). Only built-in types, RequestInterface and Model classes are supported.",
+                    $this->handlerToString($this->route->getHandler()),
+                    $type['type'],
+                    $name
+                  )
+                );
+            }
             if (class_exists($type['type'])) {
                 // Check for request
                 $implements = class_implements($type['type']);
