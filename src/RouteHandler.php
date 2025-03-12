@@ -153,7 +153,12 @@ class RouteHandler implements RequestHandlerInterface
                         'union'      => false,
                         'type'       => $type->getName(),
                         'nullable'   => $type->allowsNull(),
-                        'mapRequest' => !empty($argument->getAttributes(MapRequest::class)),
+                        'mapRequest' => !empty(
+                        $argument->getAttributes(
+                          MapRequest::class,
+                          \ReflectionAttribute::IS_INSTANCEOF
+                        )
+                        ),
                       ];
                   }
                   elseif ($type instanceof \ReflectionUnionType) {
@@ -175,7 +180,12 @@ class RouteHandler implements RequestHandlerInterface
                         'union'      => true,
                         'type'       => $subTypes,
                         'nullable'   => $type->allowsNull(),
-                        'mapRequest' => !empty($argument->getAttributes(MapRequest::class)),
+                        'mapRequest' => !empty(
+                        $argument->getAttributes(
+                          MapRequest::class,
+                          \ReflectionAttribute::IS_INSTANCEOF
+                        )
+                        ),
                       ];
                   }
                   else {
