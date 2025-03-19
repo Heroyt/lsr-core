@@ -35,7 +35,7 @@ class CsrfNode extends StatementNode
     public function print(PrintContext $context) : string {
         return $context->format(
           <<<'XX'
-          echo %raw::getServiceByType(%raw)->formToken(%node) %line;
+          echo %raw::getServiceByType(%dump)->formToken(%node) %line;
           XX,
           App::class,
           TokenHelper::class,
