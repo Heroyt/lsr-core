@@ -37,7 +37,7 @@ class CsrfInputNode extends StatementNode
     public function print(PrintContext $context) : string {
         return $context->format(
           <<<'XX'
-          echo '<input type="hidden" name="_csrf_token" value="'.hash_hmac('sha256', %node, %raw::getServiceByType(%dump)->(%node)).'" />' %line;
+          echo '<input type="hidden" name="_csrf_token" value="'.hash_hmac('sha256', %node, %raw::getServiceByType(%dump)->formToken(%node)).'" />' %line;
           XX,
           $this->name,
           App::class,
