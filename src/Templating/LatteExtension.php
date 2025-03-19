@@ -14,12 +14,14 @@ use Lsr\Core\Templating\Nodes\LangNode;
 use Lsr\Core\Templating\Nodes\LinkNode;
 use Lsr\Core\Templating\Nodes\LogoNode;
 use Lsr\Core\Tools\LogoHelper;
+use Lsr\Helpers\Csrf\TokenHelper;
 
 class LatteExtension extends Extension
 {
 
     public function __construct(
       private readonly App $app,
+      private readonly TokenHelper $tokenHelper,
     ) {
 
     }
@@ -59,7 +61,7 @@ class LatteExtension extends Extension
      */
     public function getFunctions() : array {
         return [
-          'csrf'    => 'formToken',
+          'csrf' => [$this->tokenHelper, 'formToken'],
           'getUrl'  => [$this->app, 'getBaseUrl'],
           'lang'    => 'lang',
           'link'    => [$this->app, 'getLink'],
