@@ -267,6 +267,9 @@ class RouteHandler implements RequestHandlerInterface
                         $id = $request->getParam(strtolower($paramName));
                     }
                     if (!isset($id)) {
+                        $id = $request->getParam(strtolower($name));
+                    }
+                    if (!isset($id)) {
                         $id = $request->getParam('id');
                     }
                     if (!isset($id)) {
