@@ -5,11 +5,14 @@ namespace Lsr\Core\Models;
 
 use Lsr\Caching\Cache;
 use Lsr\Core\App;
-use Lsr\Orm\Attributes\AfterDelete;
-use Lsr\Orm\Attributes\AfterInsert;
-use Lsr\Orm\Attributes\AfterUpdate;
+use Lsr\Orm\Attributes\Hooks\AfterDelete;
+use Lsr\Orm\Attributes\Hooks\AfterInsert;
+use Lsr\Orm\Attributes\Hooks\AfterUpdate;
 use Nette\Caching\Cache as CacheParent;
 
+/**
+ * @mixin \Lsr\Orm\Model
+ */
 trait WithCacheClear
 {
 
