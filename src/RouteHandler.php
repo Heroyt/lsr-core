@@ -90,7 +90,10 @@ class RouteHandler implements RequestHandlerInterface
                               $args = $this->getHandlerArgs($request);
 
                               /** @phpstan-ignore return.type */
-                              return $controller->$func(...$args);
+                              return $controller->$func(...$args)->withAddedHeader(
+                                'Set-Cookie',
+                                App::cookieJar()->getHeaders()
+                              );
                           },
                         ]
                       )
@@ -102,11 +105,11 @@ class RouteHandler implements RequestHandlerInterface
                 $args = $this->getHandlerArgs($request);
 
                 /** @phpstan-ignore return.type */
-                return $controller->$func(...$args);
+                return $controller->$func(...$args)->withAddedHeader('Set-Cookie', App::cookieJar()->getHeaders());
             }
 
             /** @phpstan-ignore argument.type, return.type */
-            return call_user_func($handler, $request);
+            return call_user_func($handler, $request)->withAddedHeader('Set-Cookie', App::cookieJar()->getHeaders());
         }
 
         // Iterate to the next middleware
