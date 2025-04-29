@@ -89,7 +89,11 @@ class Config
         }
         if (($neonFile = $this->getNeonFile()) !== '') {
             try {
+                /** @var array<string,mixed>|null $neon */
                 $neon = Neon::decodeFile($neonFile);
+                if (!is_array($neon)) {
+                    $neon = [];
+                }
             } catch (Exception) {
             }
         }

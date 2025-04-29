@@ -19,6 +19,8 @@ class MigrationLoader
     public array $migrations = [];
     /** @var array<string,bool> */
     protected array $loadedFiles = [];
+    /** @var array<string,string> */
+    public array $views = [];
 
     /**
      * @param  string  $configFile
@@ -35,13 +37,15 @@ class MigrationLoader
      * @throws FileException
      */
     public function load() : void {
-        $this->migrations = $this->loadFile($this->configFile);
+        ['tables' => $tables, 'views' => $views] = $this->loadFile($this->configFile);
+        $this->migrations = $tables;
+        $this->views = $views;
     }
 
     /**
      * @param  string  $file
      *
-     * @return array<string, MigrationData>
+     * @return array{tables: array<string, MigrationData>, views: array<string,string>}
      * @throws AssertionException
      * @throws CyclicDependencyException
      * @throws Exception
@@ -61,19 +65,25 @@ class MigrationLoader
 
         $this->loadedFiles[$file] = true;
 
-        /** @var array{includes?: string[], tables?: array<string,MigrationData>} $data */
+        /** @var array{includes?: string[], tables?: array<string,MigrationData>, views?: array<string,string>} $data */
         $data = Neon::decodeFile($file);
 
-        $migrations = [];
+        $tables = [];
+        $views = [];
 
         if (isset($data['includes'])) {
             Validators::assert($data['includes'], 'list');
             foreach ($data['includes'] as $includeFile) {
-                $migrations = static::merge($this->loadFile($includeFile), $migrations);
+                $loaded = $this->loadFile($includeFile);
+                $tables = static::merge($loaded['tables'], $tables);
+                $views = array_merge($loaded['views'], $views);
             }
         }
 
-        return static::merge($data['tables'] ?? [], $migrations);
+        return [
+          'tables' => static::merge($data['tables'] ?? [], $tables),
+          'views'  => array_merge($data['views'] ?? [], $views),
+        ];
     }
 
     /**

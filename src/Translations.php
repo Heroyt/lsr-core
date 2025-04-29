@@ -12,6 +12,7 @@ use Lsr\Core\Tracy\TranslationTracyPanel;
 use Lsr\Helpers\Tools\Timer;
 use Nette\Localization\Translator;
 use Stringable;
+use Tracy\Debugger;
 
 class Translations implements Translator
 {
@@ -241,7 +242,7 @@ class Translations implements Translator
 
     private function translateModular(string $message, string $plural, int $num, string $domain) : string {
         /** @phpstan-ignore-next-line */
-        if (!PRODUCTION && CHECK_TRANSLATIONS) {
+        if (CHECK_TRANSLATIONS && Debugger::isEnabled()) {
             $split = explode("\004", $message);
             if (count($split) === 2) {
                 [$context, $msgTmp] = $split;

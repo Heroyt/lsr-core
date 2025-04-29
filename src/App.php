@@ -26,6 +26,7 @@ use Lsr\Core\Routing\Route;
 use Lsr\Core\Routing\Router;
 use Lsr\Exceptions\FileException;
 use Lsr\Helpers\Tools\Timer;
+use Lsr\Interfaces\CookieJarInterface;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;
 use Lsr\Interfaces\SessionInterface;
@@ -66,6 +67,7 @@ class App
     protected RequestInterface $request;
     protected ?RouteInterface $route;
     protected Logger $logger;
+    protected ?CookieJarInterface $cookieJar = null;
 
     /**
      * @throws ReflectionException
@@ -274,6 +276,51 @@ class App
         return $services;
     }
 
+    public static function cookieJar() : CookieJarInterface {
+        $app = static::getInstance();
+        if ($app->cookieJar === null) {
+            $app->cookieJar = CookieJar::fromRequest($app->getRequest());
+        }
+        return $app->cookieJar;
+    }
+
+    /**
+     * Get the request array
+     *
+     * @return RequestInterface
+     *
+     * @version 1.0
+     * @since   1.0
+     */
+    public function getRequest() : RequestInterface {
+        if (!isset($this->request)) {
+            try {
+                $this->request = RequestFactory::getHttpRequest();
+            } catch (JsonException) {
+
+            }
+
+            if (isset($this->session)) {
+                /** @var string|null $previousRequest */
+                $previousRequest = $this->session->getFlash('fromRequest');
+                if (isset($previousRequest)) {
+                    /** @var Request|false $previousRequest */
+                    $previousRequest = unserialize($previousRequest, ['allowed_classes' => true,]);
+                    if ($previousRequest instanceof RequestInterface) {
+                        $this->request->setPreviousRequest($previousRequest);
+                    }
+                }
+            }
+        }
+        return $this->request;
+    }
+
+    public function setRequest(RequestInterface $request) : void {
+        $this->request = $request;
+        $this->route = null;
+        $this->cookieJar = null;
+    }
+
     /**
      * Check if the language exists
      *
@@ -369,42 +416,6 @@ class App
      */
     public function getBaseUrlObject() : UriInterface {
         return $this->getRequest()->getUri()->withPath('/')->withFragment('')->withQuery('');
-    }
-
-    /**
-     * Get the request array
-     *
-     * @return RequestInterface
-     *
-     * @version 1.0
-     * @since   1.0
-     */
-    public function getRequest() : RequestInterface {
-        if (!isset($this->request)) {
-            try {
-                $this->request = RequestFactory::getHttpRequest();
-            } catch (JsonException) {
-
-            }
-
-            if (isset($this->session)) {
-                /** @var string|null $previousRequest */
-                $previousRequest = $this->session->getFlash('fromRequest');
-                if (isset($previousRequest)) {
-                    /** @var Request|false $previousRequest */
-                    $previousRequest = unserialize($previousRequest, ['allowed_classes' => true,]);
-                    if ($previousRequest instanceof RequestInterface) {
-                        $this->request->setPreviousRequest($previousRequest);
-                    }
-                }
-            }
-        }
-        return $this->request;
-    }
-
-    public function setRequest(RequestInterface $request) : void {
-        $this->request = $request;
-        $this->route = null;
     }
 
     /**
@@ -606,7 +617,9 @@ class App
         $this->request = $request;
 
         assert($route instanceof Route);
-        return $this->routeHandler->setRoute($route)->handle($request);
+        return $this->routeHandler
+          ->setRoute($route)
+          ->handle($request);
     }
 
     /**
