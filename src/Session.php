@@ -31,9 +31,9 @@ class Session implements SessionInterface, SessionStorage
     private string $serializer = 'igbinary';
 
     public function __construct(
-      string $directory = TMP_DIR.'/sessions',
+      string $directory = TMP_DIR.'sessions',
     ) {
-        if (!file_exists($directory) || !mkdir($directory, 0777, true) || !is_dir($directory)) {
+        if (!file_exists($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
             throw new \RuntimeException(
               sprintf('Session directory "%s" was not created', $directory)
             );
@@ -56,6 +56,10 @@ class Session implements SessionInterface, SessionStorage
         return self::$instance;
     }
 
+    public function __wakeup() : void {
+        $this->init();
+    }
+
     /**
      * @inheritDoc
      */
@@ -67,15 +71,14 @@ class Session implements SessionInterface, SessionStorage
         if ((($id = $cookies->get(self::SESSION_COOKIE_NAME)) !== null) && file_exists($this->filePrefix.$id)) {
             $this->sessionId = $id;
             $this->status = PHP_SESSION_ACTIVE;
+            $this->data = null;
             $this->setCookie();
             return;
         }
 
         // Generate new session
         $this->sessionId = $this->generateSessionId();
-        $this->data = [
-          self::SESSION_FLASH_KEY => [],
-        ];
+        $this->data = null;
         $this->status = PHP_SESSION_ACTIVE;
         $this->setCookie();
     }
@@ -86,11 +89,17 @@ class Session implements SessionInterface, SessionStorage
      * @param  T  $default
      * @return mixed|T
      */
-    public function get(string $key, mixed $default = null) : mixed {
+    public function &get(string $key, mixed $default = null) : mixed {
+        if (!$this->isInitialized()) {
+            $this->init();
+        }
         if ($this->data === null) {
             $this->loadSessionData();
         }
-        return $this->data[$key] ?? $default;
+        if (!isset($this->data[$key])) {
+            $this->data[$key] = $default;
+        }
+        return $this->data[$key];
     }
 
     private function loadSessionData() : void {
@@ -111,6 +120,7 @@ class Session implements SessionInterface, SessionStorage
             return;
         }
         $this->data = $decoded['data'];
+        $_SESSION = $this->data;
     }
 
     /**
@@ -140,6 +150,9 @@ class Session implements SessionInterface, SessionStorage
      * @inheritDoc
      */
     public function set(string $key, mixed $value) : void {
+        if (!$this->isInitialized()) {
+            $this->init();
+        }
         if ($this->data === null) {
             $this->loadSessionData();
         }
@@ -240,6 +253,9 @@ class Session implements SessionInterface, SessionStorage
      * @inheritDoc
      */
     public function delete(string $key) : void {
+        if (!$this->isInitialized()) {
+            $this->init();
+        }
         if ($this->data === null) {
             $this->loadSessionData();
         }
@@ -252,9 +268,7 @@ class Session implements SessionInterface, SessionStorage
      * @inheritDoc
      */
     public function clear() : void {
-        $this->data = [
-          self::SESSION_FLASH_KEY => [],
-        ];
+        $this->data = null;
     }
 
     /**
@@ -274,6 +288,9 @@ class Session implements SessionInterface, SessionStorage
      * @inheritDoc
      */
     public function flash(string $key, mixed $value) : void {
+        if (!$this->isInitialized()) {
+            $this->init();
+        }
         if ($this->data === null) {
             $this->loadSessionData();
         }
