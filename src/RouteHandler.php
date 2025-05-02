@@ -89,11 +89,13 @@ class RouteHandler implements RequestHandlerInterface
                               $controller->init($request);
                               $args = $this->getHandlerArgs($request);
 
-                              /** @phpstan-ignore return.type */
-                              return $controller->$func(...$args)->withAddedHeader(
-                                'Set-Cookie',
-                                App::cookieJar()->getHeaders()
-                              );
+                              $cookieHeaders = App::cookieJar()->getHeaders();
+                              /** @var ResponseInterface $response */
+                              $response = $controller->$func(...$args);
+                              if (!empty($cookieHeaders)) {
+                                  $response = $response->withAddedHeader('Set-Cookie', $cookieHeaders);
+                              }
+                              return $response;
                           },
                         ]
                       )
@@ -104,12 +106,22 @@ class RouteHandler implements RequestHandlerInterface
                 $controller->init($request);
                 $args = $this->getHandlerArgs($request);
 
-                /** @phpstan-ignore return.type */
-                return $controller->$func(...$args)->withAddedHeader('Set-Cookie', App::cookieJar()->getHeaders());
+                $cookieHeaders = App::cookieJar()->getHeaders();
+                /** @var ResponseInterface $response */
+                $response = $controller->$func(...$args);
+                if (!empty($cookieHeaders)) {
+                    $response = $response->withAddedHeader('Set-Cookie', $cookieHeaders);
+                }
+                return $response;
             }
 
-            /** @phpstan-ignore argument.type, return.type */
-            return call_user_func($handler, $request)->withAddedHeader('Set-Cookie', App::cookieJar()->getHeaders());
+            $cookieHeaders = App::cookieJar()->getHeaders();
+            /** @var ResponseInterface $response */
+            $response = call_user_func($handler, $request);
+            if (!empty($cookieHeaders)) {
+                $response = $response->withAddedHeader('Set-Cookie', $cookieHeaders);
+            }
+            return $response;
         }
 
         // Iterate to the next middleware
