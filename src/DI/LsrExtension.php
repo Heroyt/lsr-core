@@ -31,6 +31,9 @@ use Nette\Schema\Expect;
  *     },
  *     latte: object{
  *      tempDir?:string
+ *     },
+ *     links: object{
+ *      modifiers: string[],
  *     }
  *  } $config
  */
@@ -83,6 +86,11 @@ class LsrExtension extends CompilerExtension
                                               ->default([]),
               ]
             ),
+            'links' => Expect::structure(
+              [
+                'modifiers' => Expect::listOf('string')->default([]),
+              ]
+            ),
           ]
         );
     }
@@ -109,7 +117,12 @@ class LsrExtension extends CompilerExtension
                 ->setFactory(App::class)
                 ->setTags(['lsr', 'core']);
         $builder->addDefinition($this->prefix('links.generator'))
-                ->setFactory(Generator::class)
+          ->setFactory(
+            Generator::class,
+            [
+              'modifiers' => $this->config->links->modifiers,
+            ]
+          )
                 ->setTags(['lsr', 'core']);
         $builder->addDefinition($this->prefix('menu.builder'))
                 ->setFactory(MenuBuilder::class)

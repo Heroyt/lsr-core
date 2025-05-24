@@ -24,6 +24,7 @@ class Translations implements Translator
 
     private string $lang;
     private Language $language;
+    private Language $defaultLanguage;
 
     private string $langId = '';
     private string $country = '';
@@ -93,7 +94,52 @@ class Translations implements Translator
             }
         }
         $this->supportedCountries = $supportedCountries;
+        $this->setDefaultLanguage($defaultLang);
         $this->setLang($defaultLang);
+    }
+
+    /**
+     * Get the default language ID (ex. `cs`)
+     *
+     * @return string
+     * @throws InvalidLanguageException
+     */
+    public function getDefaultLangId() : string {
+        $id = $this->getDefaultLanguage()->id;
+        $split = explode('_', $id);
+        if (count($split) === 2) {
+            $id = $split[0];
+        }
+        return $id;
+    }
+
+    /**
+     * @return Language
+     * @throws InvalidLanguageException
+     */
+    public function getDefaultLanguage() : Language {
+        if (!isset($this->defaultLanguage)) {
+            throw new InvalidLanguageException('Default language "'.DEFAULT_LANGUAGE.'" not found');
+        }
+        return $this->defaultLanguage;
+    }
+
+    /**
+     * @param  string  $lang
+     * @return $this
+     * @throws InvalidLanguageException
+     */
+    public function setDefaultLanguage(string $lang) : Translations {
+        $language = $this->findLanguage($lang);
+        if (!isset($language)) {
+            throw new InvalidLanguageException('Invalid language "'.$lang.'"');
+        }
+        $this->defaultLanguage = $language;
+        return $this;
+    }
+
+    private function findLanguage(string $lang) : ?Language {
+        return Language::getById($lang);
     }
 
     /**
@@ -196,6 +242,7 @@ class Translations implements Translator
         }
         return $this->translations[$lang][$domain];
     }
+
     public function translate(string | Stringable $message, mixed ...$params) : string {
         if (empty($message)) {
             return '';
@@ -316,10 +363,6 @@ class Translations implements Translator
      */
     public function getCountry() : string {
         return $this->country;
-    }
-
-    private function findLanguage(string $lang) : ?Language {
-        return Language::getById($lang);
     }
 
     private function initLanguage() : void {

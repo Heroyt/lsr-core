@@ -16,7 +16,6 @@ use Lsr\Core\Routing\Route;
 use Lsr\Enums\RequestMethod;
 use Lsr\Exceptions\RedirectException;
 use Lsr\Helpers\Tools\Strings;
-use Lsr\Interfaces\ControllerInterface;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Orm\Exceptions\ModelNotFoundException;
 use Lsr\Orm\Exceptions\ValidationException;
@@ -27,10 +26,12 @@ use Nette\DI\MissingServiceException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use ReflectionAttribute;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionType;
+use ReflectionUnionType;
 use RuntimeException;
 use Throwable;
 
@@ -72,7 +73,9 @@ class RouteHandler implements RequestHandlerInterface
               && is_string($handler[1])
             ) {
                 [$class, $func] = $handler;
-                /** @var ControllerInterface $controller */
+                assert(!empty($func));
+
+                /** @var object $controller */
                 $controller = is_object($class) ? $class : App::getContainer()->getByType($class);
 
                 // Controller-wide middleware
@@ -86,16 +89,7 @@ class RouteHandler implements RequestHandlerInterface
                         $controller->middleware,
                         [
                           function (RequestInterface $request) use ($controller, $func) : ResponseInterface {
-                              $controller->init($request);
-                              $args = $this->getHandlerArgs($request);
-
-                              $cookieHeaders = App::cookieJar()->getHeaders();
-                              /** @var ResponseInterface $response */
-                              $response = $controller->$func(...$args);
-                              if (!empty($cookieHeaders)) {
-                                  $response = $response->withAddedHeader('Set-Cookie', $cookieHeaders);
-                              }
-                              return $response;
+                              return $this->handleControllerRequest($controller, $request, $func);
                           },
                         ]
                       )
@@ -103,21 +97,12 @@ class RouteHandler implements RequestHandlerInterface
                     return $dispatcher->handle($request);
                 }
 
-                $controller->init($request);
-                $args = $this->getHandlerArgs($request);
-
-                $cookieHeaders = App::cookieJar()->getHeaders();
-                /** @var ResponseInterface $response */
-                $response = $controller->$func(...$args);
-                if (!empty($cookieHeaders)) {
-                    $response = $response->withAddedHeader('Set-Cookie', $cookieHeaders);
-                }
-                return $response;
+                return $this->handleControllerRequest($controller, $request, $func);
             }
 
             $cookieHeaders = App::cookieJar()->getHeaders();
             /** @var ResponseInterface $response */
-            $response = call_user_func($handler, $request);
+            $response = $handler($request);
             if (!empty($cookieHeaders)) {
                 $response = $response->withAddedHeader('Set-Cookie', $cookieHeaders);
             }
@@ -135,6 +120,31 @@ class RouteHandler implements RequestHandlerInterface
         }
     }
 
+    /**
+     * @param  object  $controller
+     * @param  RequestInterface  $request
+     * @param  non-empty-string  $func
+     * @return ResponseInterface
+     * @throws Throwable
+     */
+    protected function handleControllerRequest(
+      object           $controller,
+      RequestInterface $request,
+      string           $func
+    ) : ResponseInterface {
+        if (method_exists($controller, 'init')) {
+            $controller->init($request);
+        }
+        $args = $this->getHandlerArgs($request);
+
+        $cookieHeaders = App::cookieJar()->getHeaders();
+        /** @var ResponseInterface $response */
+        $response = $controller->$func(...$args);
+        if (!empty($cookieHeaders)) {
+            $response = $response->withAddedHeader('Set-Cookie', $cookieHeaders);
+        }
+        return $response;
+    }
 
     /**
      * @param  RequestInterface  $request
@@ -159,7 +169,7 @@ class RouteHandler implements RequestHandlerInterface
                   $name = $argument->getName();
                   $optional = $argument->isOptional();
 
-                  /** @var ReflectionType|\ReflectionUnionType|null $type */
+                  /** @var ReflectionType|ReflectionUnionType|null $type */
                   $type = $argument->getType();
 
                   if ($type instanceof ReflectionNamedType) {
@@ -171,12 +181,12 @@ class RouteHandler implements RequestHandlerInterface
                         'mapRequest' => !empty(
                         $argument->getAttributes(
                           MapRequest::class,
-                          \ReflectionAttribute::IS_INSTANCEOF
+                          ReflectionAttribute::IS_INSTANCEOF
                         )
                         ),
                       ];
                   }
-                  elseif ($type instanceof \ReflectionUnionType) {
+                  elseif ($type instanceof ReflectionUnionType) {
                       $subTypes = [];
                       foreach ($type->getTypes() as $subtype) {
                           if (!$subtype instanceof ReflectionNamedType && !$subtype->isBuiltin()) {
@@ -198,7 +208,7 @@ class RouteHandler implements RequestHandlerInterface
                         'mapRequest' => !empty(
                         $argument->getAttributes(
                           MapRequest::class,
-                          \ReflectionAttribute::IS_INSTANCEOF
+                          ReflectionAttribute::IS_INSTANCEOF
                         )
                         ),
                       ];

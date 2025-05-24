@@ -13,9 +13,13 @@ readonly class Generator
     private UriInterface $baseUrl;
     private bool $prettyUrl;
 
+    /**
+     * @param  LinkModifier[]  $modifiers
+     */
     public function __construct(
-      private Router $router,
-      App            $app
+      protected Router $router,
+      App              $app,
+      protected array  $modifiers = [],
     ) {
         $this->baseUrl = $app->getBaseUrlObject();
         $this->prettyUrl = App::isPrettyUrl();
@@ -26,7 +30,7 @@ readonly class Generator
      *
      * @return string
      */
-    public function getLink(...$request) : string {
+    public function getLink(array | string ...$request) : string {
         return (string) $this->getLinkObject(...$request);
     }
 
@@ -80,6 +84,12 @@ readonly class Generator
                 );
             }
         }
+
+        // Apply modifiers
+        foreach ($this->modifiers as $modifier) {
+            $path = $modifier->modifyLinkPath($path);
+        }
+
         if ($this->prettyUrl) {
             return $this->baseUrl->withPath(implode('/', $path));
         }
