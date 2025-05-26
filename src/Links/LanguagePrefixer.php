@@ -25,6 +25,18 @@ readonly class LanguagePrefixer implements LinkModifier
             $lang = $this->translations->getLangId();
         }
 
+        // If the link contains a "[lang]", remove it
+        if (isset($link[0]) && preg_match('/^\[lang(?:=[^\[]*)?\]$/', $link[0])) {
+            array_shift($link);
+        }
+
+        // If the link already starts with a language prefix and it does not match the current language, remove it
+        if (isset($link[0]) && preg_match('/^[a-z]{2,3}$/', $link[0]) && $this->translations->supportsLanguage(
+            $link[0]
+          ) && $link[0] !== $lang) {
+            array_shift($link);
+        }
+
         // Default language does not need a prefix
         try {
             if ($lang === $this->translations->getDefaultLangId()) {

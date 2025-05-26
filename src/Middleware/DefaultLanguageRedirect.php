@@ -30,8 +30,12 @@ class DefaultLanguageRedirect implements Middleware
             if ($lang === App::getInstance()->translations->getDefaultLangId()) {
                 // Get the current path
                 $path = $request->getUri()->getPath();
+                // If the path does not start with the language prefix, continue processing the request
+                if (!str_contains($path, $lang)) {
+                    return $handler->handle($request);
+                }
                 // Remove the language prefix from the path
-                $newPath = explode('/', str_replace($lang.'/', '', $path));
+                $newPath = explode('/', str_replace($lang, '', $path));
                 // Create a new response with a 301 redirect
                 return Response::create(
                   308,

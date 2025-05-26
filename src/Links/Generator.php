@@ -47,11 +47,22 @@ readonly class Generator
                 $route = $this->router->getRouteByName($request[0]);
                 if (isset($route)) {
                     $path = $route->getPath();
+
+                    // Apply modifiers
+                    foreach ($this->modifiers as $modifier) {
+                        $path = $modifier->modifyLinkPath($path);
+                    }
+
                     return $this->buildUrlFromPath($path);
                 }
 
                 // Route is given as a string
                 return $this->buildUrlFromPath(explode('/', $request[0]));
+            }
+
+            // Apply modifiers
+            foreach ($this->modifiers as $modifier) {
+                $request[0] = $modifier->modifyLinkPath($request[0]);
             }
 
             /** @var string[] $path */
@@ -63,6 +74,10 @@ readonly class Generator
         }
 
         if ($count > 1) {
+            // Apply modifiers
+            foreach ($this->modifiers as $modifier) {
+                $request = $modifier->modifyLinkPath($request);
+            }
             // @phpstan-ignore-next-line
             return $this->buildUrlFromPath($request);
         }
@@ -83,11 +98,6 @@ readonly class Generator
                   'Cannot build parametrized URL if the parameter is not provided. '.implode('/', $path)
                 );
             }
-        }
-
-        // Apply modifiers
-        foreach ($this->modifiers as $modifier) {
-            $path = $modifier->modifyLinkPath($path);
         }
 
         if ($this->prettyUrl) {

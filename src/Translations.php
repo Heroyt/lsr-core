@@ -138,7 +138,7 @@ class Translations implements Translator
         return $this;
     }
 
-    private function findLanguage(string $lang) : ?Language {
+    public function findLanguage(string $lang) : ?Language {
         return Language::getById($lang);
     }
 
@@ -183,6 +183,19 @@ class Translations implements Translator
             $this->initLanguage();
         }
         return $this;
+    }
+
+    public function supportsLanguage(string $lang) : bool {
+        $language = $this->findLanguage($lang);
+        if (!isset($language)) {
+            return false;
+        }
+        $id = $language->id;
+        $split = explode('_', $id);
+        if (count($split) === 2) {
+            $id = $split[0];
+        }
+        return isset($this->supportedLanguages[$id]);
     }
 
     public function getLanguage() : Language {
