@@ -73,9 +73,7 @@ class CookieJar implements CookieJarInterface
             if ($cookies['expire'] > 0) {
                 $header .= '; expires='.gmdate('D, d M Y H:i:s T', $cookies['expire']);
             }
-            if ($cookies['path'] !== '/') {
-                $header .= '; path='.$cookies['path'];
-            }
+            $header .= '; path='.$cookies['path'];
             if ($cookies['domain'] !== '') {
                 $header .= '; domain='.$cookies['domain'];
             }

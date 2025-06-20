@@ -59,9 +59,11 @@ class RouteHandler implements RequestHandlerInterface
                 foreach ($request->params as $name => $value) {
                     $link = str_replace('{'.$name.'}', $value, $link);
                 }
-                return Response::create(
-                  308,
-                  ['Location' => $link]
+                return $this->withCookies(
+                  Response::create(
+                    308,
+                    ['Location' => $link]
+                  )
                 );
             }
 
@@ -100,13 +102,9 @@ class RouteHandler implements RequestHandlerInterface
                 return $this->handleControllerRequest($controller, $request, $func);
             }
 
-            $cookieHeaders = App::cookieJar()->getHeaders();
             /** @var ResponseInterface $response */
             $response = $handler($request);
-            if (!empty($cookieHeaders)) {
-                $response = $response->withAddedHeader('Set-Cookie', $cookieHeaders);
-            }
-            return $response;
+            return $this->withCookies($response);
         }
 
         // Iterate to the next middleware
@@ -116,8 +114,16 @@ class RouteHandler implements RequestHandlerInterface
         try {
             return $middleware->process($request, $this);
         } catch (RedirectException $e) {
-            return App::getInstance()->redirect($e->url, $e->request, $e->getCode());
+            return $this->withCookies(App::getInstance()->redirect($e->url, $e->request, $e->getCode()));
         }
+    }
+
+    protected function withCookies(ResponseInterface $response) : ResponseInterface {
+        $cookieHeaders = App::cookieJar()->getHeaders();
+        if (!empty($cookieHeaders)) {
+            return $response->withAddedHeader('Set-Cookie', $cookieHeaders);
+        }
+        return $response;
     }
 
     /**
@@ -137,13 +143,9 @@ class RouteHandler implements RequestHandlerInterface
         }
         $args = $this->getHandlerArgs($request);
 
-        $cookieHeaders = App::cookieJar()->getHeaders();
         /** @var ResponseInterface $response */
         $response = $controller->$func(...$args);
-        if (!empty($cookieHeaders)) {
-            $response = $response->withAddedHeader('Set-Cookie', $cookieHeaders);
-        }
-        return $response;
+        return $this->withCookies($response);
     }
 
     /**
