@@ -12,7 +12,6 @@
 namespace Lsr\Core;
 
 use Gettext\Languages\Language;
-use JsonException;
 use Lsr\Core\DataObjects\PageInfoDto;
 use Lsr\Core\Exceptions\InvalidLanguageException;
 use Lsr\Core\Links\Generator;
@@ -20,13 +19,13 @@ use Lsr\Core\Menu\MenuBuilder;
 use Lsr\Core\Menu\MenuItem;
 use Lsr\Core\Requests\Exceptions\RouteNotFoundException;
 use Lsr\Core\Requests\Request;
-use Lsr\Core\Requests\RequestFactory;
 use Lsr\Core\Requests\Response;
 use Lsr\Core\Routing\Route;
 use Lsr\Core\Routing\Router;
 use Lsr\Exceptions\FileException;
 use Lsr\Helpers\Tools\Timer;
 use Lsr\Interfaces\CookieJarInterface;
+use Lsr\Interfaces\RequestFactoryInterface;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\RouteInterface;
 use Lsr\Interfaces\SessionInterface;
@@ -294,11 +293,11 @@ class App
      */
     public function getRequest() : RequestInterface {
         if (!isset($this->request)) {
-            try {
-                $this->request = RequestFactory::getHttpRequest();
-            } catch (JsonException) {
-
+            $request = $this::getServiceByType(RequestFactoryInterface::class)?->getHttpRequest();
+            if ($request === null) {
+                throw new RuntimeException('RequestFactoryInterface is not registered in the DI container.');
             }
+            $this->request = $request;
 
             if (isset($this->session)) {
                 /** @var string|null $previousRequest */

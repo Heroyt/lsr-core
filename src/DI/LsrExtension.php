@@ -7,6 +7,11 @@ use Gettext\Languages\Language;
 use Latte\Engine;
 use Lsr\Core\App;
 use Lsr\Core\Config;
+use Lsr\Core\FpmHandler;
+use Lsr\Core\Http\AsyncHandlerInterface;
+use Lsr\Core\Http\ExceptionHandlerInterface;
+use Lsr\Core\Http\NotFoundExceptionHandler;
+use Lsr\Core\Http\TracyExceptionHandler;
 use Lsr\Core\Links\Generator;
 use Lsr\Core\Menu\MenuBuilder;
 use Lsr\Core\RouteHandler;
@@ -34,6 +39,10 @@ use Nette\Schema\Expect;
  *     },
  *     links: object{
  *      modifiers: string[],
+ *     },
+ *     http: object{
+ *      exceptionHandlers: (class-string<ExceptionHandlerInterface>|Nette\DI\Definitions\Statement)[],
+ *      asyncHandlers: (class-string<ExceptionHandlerInterface>|Nette\DI\Definitions\Statement)[],
  *     }
  *  } $config
  */
@@ -91,6 +100,31 @@ class LsrExtension extends CompilerExtension
                 'modifiers' => Expect::listOf('string')->default([]),
               ]
             ),
+            'http'  => Expect::structure(
+              [
+                'exceptionHandlers' => Expect::listOf(
+                  Expect::anyOf(
+                    [
+                      'string',
+                      Nette\DI\Definitions\Statement::class,
+                    ]
+                  )
+                )->default(
+                  [
+                    NotFoundExceptionHandler::class,
+                    TracyExceptionHandler::class,
+                  ]
+                ),
+                'asyncHandlers'     => Expect::listOf(
+                  Expect::anyOf(
+                    [
+                      'string',
+                      Nette\DI\Definitions\Statement::class,
+                    ]
+                  )
+                )->default([]),
+              ]
+            ),
           ]
         );
     }
@@ -129,6 +163,68 @@ class LsrExtension extends CompilerExtension
                 ->setTags(['lsr', 'core']);
         $builder->addDefinition($this->prefix('csrf.helper'))
                 ->setFactory([TokenHelper::class, 'getInstance'], ['@'.$this->prefix('session')])
+                ->setTags(['lsr', 'core']);
+
+        /** @var list<Nette\DI\Definitions\Statement|Nette\DI\Definitions\Definition> $exceptionHandlers */
+        $exceptionHandlers = [];
+        foreach ($this->config->http->exceptionHandlers as $handler) {
+            if (is_string($handler)) {
+                if (!class_exists($handler) || !is_subclass_of($handler, ExceptionHandlerInterface::class)) {
+                    throw new Nette\InvalidArgumentException(
+                      sprintf('Exception handler class "%s" is not a valid ExceptionHandler.', $handler)
+                    );
+                }
+                /** @var class-string<ExceptionHandlerInterface> $class */
+                $class = $handler;
+                $handler = $builder->getByType($class);
+                if ($handler === null) {
+                    $handler = $builder->addDefinition(null)
+                                       ->setType($class)
+                                       ->setFactory($class)
+                                       ->setAutowired()
+                                       ->setTags(['lsr', 'core', 'exceptionHandler']);
+                }
+            }
+
+            if ($handler instanceof Nette\DI\Definitions\Statement || $handler instanceof Nette\DI\Definitions\Definition) {
+                $exceptionHandlers[] = $handler;
+            }
+        }
+        /** @var list<Nette\DI\Definitions\Statement|Nette\DI\Definitions\Definition> $asyncHandlers */
+        $asyncHandlers = [];
+        foreach ($this->config->http->asyncHandlers as $handler) {
+            if (is_string($handler)) {
+                if (!class_exists($handler) || !is_subclass_of($handler, AsyncHandlerInterface::class)) {
+                    throw new Nette\InvalidArgumentException(
+                      sprintf('Async handler class "%s" is not a valid AsyncHandler.', $handler)
+                    );
+                }
+                /** @var class-string<AsyncHandlerInterface> $class */
+                $class = $handler;
+                $handler = $builder->getByType($class);
+                if ($handler === null) {
+                    $handler = $builder->addDefinition(null)
+                                       ->setType($class)
+                                       ->setFactory($class)
+                                       ->setAutowired()
+                                       ->setTags(['lsr', 'core', 'asyncHandler']);
+                }
+            }
+
+            if ($handler instanceof Nette\DI\Definitions\Statement || $handler instanceof Nette\DI\Definitions\Definition) {
+                $asyncHandlers[] = $handler;
+            }
+        }
+        $builder->addDefinition($this->prefix('fpmHandler'))
+                ->setType(FpmHandler::class)
+                ->setFactory(
+                  FpmHandler::class,
+                  [
+                    'exceptionHandlers' => $exceptionHandlers,
+                    'asyncHandlers'     => $asyncHandlers,
+                  ]
+                )
+                ->setAutowired()
                 ->setTags(['lsr', 'core']);
 
         $builder->addAlias('config', $this->prefix('config'));
