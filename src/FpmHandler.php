@@ -56,7 +56,7 @@ readonly class FpmHandler
         } finally {
             $this->sendResponse($response);
             Debugger::shutdownHandler();
-            $this->session->clear();
+            $this->session->close();
             fastcgi_finish_request();
             $this->handleAsync();
         }

@@ -104,10 +104,8 @@ class LsrExtension extends CompilerExtension
               [
                 'exceptionHandlers' => Expect::listOf(
                   Expect::anyOf(
-                    [
-                      'string',
-                      Nette\DI\Definitions\Statement::class,
-                    ]
+                    Expect::string(),
+                    Expect::type(Nette\DI\Definitions\Statement::class),
                   )
                 )->default(
                   [
@@ -117,10 +115,8 @@ class LsrExtension extends CompilerExtension
                 ),
                 'asyncHandlers'     => Expect::listOf(
                   Expect::anyOf(
-                    [
-                      'string',
-                      Nette\DI\Definitions\Statement::class,
-                    ]
+                    Expect::string(),
+                    Expect::type(Nette\DI\Definitions\Statement::class),
                   )
                 )->default([]),
               ]
