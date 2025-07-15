@@ -7,6 +7,7 @@ namespace Lsr\Core\Tracy;
 
 use Lsr\Core\App;
 use Lsr\Core\Requests\Request;
+use Lsr\Core\Routing\RouteParameter;
 use Lsr\Core\Routing\Router;
 use Lsr\Interfaces\RouteInterface;
 use Tracy\Dumper;
@@ -106,7 +107,7 @@ class RoutingTracyPanel implements IBarPanel
      *
      * @return array<string,string|array<string,string>>
      */
-    private function formatRoutes(array $routes) : array {
+    private function formatRoutes(array | RouteParameter $routes) : array | RouteParameter {
         $formatted = [];
         foreach ($routes as $key => $route) {
             if ($route instanceof RouteInterface) {
