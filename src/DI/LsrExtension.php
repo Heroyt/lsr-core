@@ -107,12 +107,7 @@ class LsrExtension extends CompilerExtension
                     Expect::string(),
                     Expect::type(Nette\DI\Definitions\Statement::class),
                   )
-                )->default(
-                  [
-                    NotFoundExceptionHandler::class,
-                    TracyExceptionHandler::class,
-                  ]
-                ),
+                )->default([]),
                 'asyncHandlers'     => Expect::listOf(
                   Expect::anyOf(
                     Expect::string(),
@@ -163,6 +158,13 @@ class LsrExtension extends CompilerExtension
 
         /** @var list<Nette\DI\Definitions\Statement|Nette\DI\Definitions\Definition> $exceptionHandlers */
         $exceptionHandlers = [];
+        if (empty($this->config->http->exceptionHandlers)) {
+            // Default exception handlers
+            $this->config->http->exceptionHandlers = [
+              TracyExceptionHandler::class,
+              NotFoundExceptionHandler::class,
+            ];
+        }
         foreach ($this->config->http->exceptionHandlers as $handler) {
             if (is_string($handler)) {
                 /** @phpstan-ignore function.alreadyNarrowedType */
