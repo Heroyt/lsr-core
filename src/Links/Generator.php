@@ -1,4 +1,5 @@
 <?php
+/** @noinspection PhpUndefinedClassInspection */
 
 namespace Lsr\Core\Links;
 
@@ -26,7 +27,7 @@ readonly class Generator
     }
 
     /**
-     * @param  array<array<string|int,string>|string>  ...$request
+     * @param  LinkArray|LinkArray[]  ...$request
      *
      * @return string
      */
@@ -35,16 +36,18 @@ readonly class Generator
     }
 
     /**
-     * @param  array<array<string|int,string>|string>  ...$request
+     * @param  LinkArray|LinkArray[]  ...$request
      *
      * @return UriInterface
      */
     public function getLinkObject(array | string ...$request) : UriInterface {
         $count = count($request);
         if ($count === 1) {
-            if (is_string($request[0])) {
+            /** @var LinkArray|string $request */
+            $request = $request[0];
+            if (is_string($request)) {
                 // Try to get route by name
-                $route = $this->router->getRouteByName($request[0]);
+                $route = $this->router->getRouteByName($request);
                 if (isset($route)) {
                     $path = $route->getPath();
 
@@ -57,18 +60,18 @@ readonly class Generator
                 }
 
                 // Route is given as a string
-                return $this->buildUrlFromPath(explode('/', $request[0]));
+                return $this->buildUrlFromPath(explode('/', $request));
             }
 
             // Apply modifiers
             foreach ($this->modifiers as $modifier) {
-                $request[0] = $modifier->modifyLinkPath($request[0]);
+                $request = $modifier->modifyLinkPath($request);
             }
 
             /** @var string[] $path */
-            $path = array_filter($request[0], 'is_int', ARRAY_FILTER_USE_KEY);
+            $path = array_filter($request, 'is_int', ARRAY_FILTER_USE_KEY);
             /** @var array<string,string> $query */
-            $query = array_filter($request[0], 'is_string', ARRAY_FILTER_USE_KEY);
+            $query = array_filter($request, 'is_string', ARRAY_FILTER_USE_KEY);
 
             return $this->buildUrlFromPath($path)->withQuery(http_build_query($query));
         }
@@ -76,6 +79,7 @@ readonly class Generator
         if ($count > 1) {
             // Apply modifiers
             foreach ($this->modifiers as $modifier) {
+                /** @phpstan-ignore argument.type */
                 $request = $modifier->modifyLinkPath($request);
             }
             // @phpstan-ignore-next-line
@@ -86,14 +90,15 @@ readonly class Generator
     }
 
     /**
-     * @param  string[]  $path
+     * @param  LinkArray  $path
      *
      * @return UriInterface
      */
     private function buildUrlFromPath(array $path) : UriInterface {
         // Check validity
         foreach ($path as $part) {
-            if (preg_match('/\{([a-zA-Z\d]+)}/', $part, $matches) === 1) {
+            $part = (string) $part;
+            if (preg_match('/\{([a-zA-Z\d]+)}/', $part) === 1) {
                 throw new RuntimeException(
                   'Cannot build parametrized URL if the parameter is not provided. '.implode('/', $path)
                 );

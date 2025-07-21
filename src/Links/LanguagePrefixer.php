@@ -26,14 +26,17 @@ readonly class LanguagePrefixer implements LinkModifier
         }
 
         // If the link contains a "[lang]", remove it
-        if (isset($link[0]) && preg_match('/^\[lang(?:=[^\[]*)?\]$/', $link[0])) {
+        if (isset($link[0]) && preg_match('/^\[lang(?:=[^\[]*)?]$/', (string) $link[0])) {
             array_shift($link);
         }
 
         // If the link already starts with a language prefix and it does not match the current language, remove it
-        if (isset($link[0]) && preg_match('/^[a-z]{2,3}$/', $link[0]) && $this->translations->supportsLanguage(
-            $link[0]
-          ) && $link[0] !== $lang) {
+        if (
+          isset($link[0])
+          && ($first = (string) $link[0]) !== $lang
+          && preg_match('/^[a-z]{2,3}$/', $first)
+          && $this->translations->supportsLanguage($first)
+        ) {
             array_shift($link);
         }
 

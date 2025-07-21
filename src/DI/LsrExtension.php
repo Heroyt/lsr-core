@@ -165,6 +165,7 @@ class LsrExtension extends CompilerExtension
         $exceptionHandlers = [];
         foreach ($this->config->http->exceptionHandlers as $handler) {
             if (is_string($handler)) {
+                /** @phpstan-ignore function.alreadyNarrowedType */
                 if (!class_exists($handler) || !is_subclass_of($handler, ExceptionHandlerInterface::class)) {
                     throw new Nette\InvalidArgumentException(
                       sprintf('Exception handler class "%s" is not a valid ExceptionHandler.', $handler)

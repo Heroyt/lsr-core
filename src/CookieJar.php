@@ -22,6 +22,7 @@ class CookieJar implements CookieJarInterface
     ) {}
 
     public static function fromRequest(ServerRequestInterface $request) : CookieJar {
+        /** @phpstan-ignore argument.type */
         return new self($request->getCookieParams());
     }
 

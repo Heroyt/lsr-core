@@ -107,7 +107,7 @@ class RoutingTracyPanel implements IBarPanel
      *
      * @return array<string,string|array<string,string>>
      */
-    private function formatRoutes(array | RouteParameter $routes) : array | RouteParameter {
+    private function formatRoutes(array | RouteParameter $routes) : array {
         $formatted = [];
         foreach ($routes as $key => $route) {
             if ($route instanceof RouteInterface) {
@@ -121,6 +121,7 @@ class RoutingTracyPanel implements IBarPanel
                 continue;
             }
 
+            /** @phpstan-ignore argument.type */
             $formatted[$key.'/'] = $this->formatRoutes($route);
         }
         /** @phpstan-ignore return.type */

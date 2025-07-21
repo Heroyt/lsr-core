@@ -113,14 +113,7 @@ class Translations implements Translator
         return $id;
     }
 
-    /**
-     * @return Language
-     * @throws InvalidLanguageException
-     */
     public function getDefaultLanguage() : Language {
-        if (!isset($this->defaultLanguage)) {
-            throw new InvalidLanguageException('Default language "'.DEFAULT_LANGUAGE.'" not found');
-        }
         return $this->defaultLanguage;
     }
 

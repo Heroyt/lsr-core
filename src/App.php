@@ -293,21 +293,20 @@ class App
      */
     public function getRequest() : RequestInterface {
         if (!isset($this->request)) {
+            /** @var RequestInterface|null $request */
             $request = $this::getServiceByType(RequestFactoryInterface::class)?->getHttpRequest();
             if ($request === null) {
                 throw new RuntimeException('RequestFactoryInterface is not registered in the DI container.');
             }
             $this->request = $request;
 
-            if (isset($this->session)) {
-                /** @var string|null $previousRequest */
-                $previousRequest = $this->session->getFlash('fromRequest');
-                if (isset($previousRequest)) {
-                    /** @var Request|false $previousRequest */
-                    $previousRequest = unserialize($previousRequest, ['allowed_classes' => true,]);
-                    if ($previousRequest instanceof RequestInterface) {
-                        $this->request->setPreviousRequest($previousRequest);
-                    }
+            /** @var string|null $previousRequest */
+            $previousRequest = $this->session->getFlash('fromRequest');
+            if (isset($previousRequest)) {
+                /** @var Request|false $previousRequest */
+                $previousRequest = unserialize($previousRequest, ['allowed_classes' => true,]);
+                if ($previousRequest instanceof RequestInterface) {
+                    $this->request->setPreviousRequest($previousRequest);
                 }
             }
         }
@@ -636,12 +635,10 @@ class App
             return $lang;
         }
 
-        if (isset($this->session)) {
-            /** @var string|null $sessLang */
-            $sessLang = $this->session->get('lang');
-            if (isset($sessLang) && $this->isSupportedLanguage($sessLang)) {
-                return $sessLang;
-            }
+        /** @var string|null $sessLang */
+        $sessLang = $this->session->get('lang');
+        if (isset($sessLang) && $this->isSupportedLanguage($sessLang)) {
+            return $sessLang;
         }
 
         $cookieLang = $request->getCookieParams()['lang'] ?? null;

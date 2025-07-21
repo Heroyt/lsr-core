@@ -8,6 +8,7 @@ use JsonSerializable;
 use Lsr\Core\App;
 use Lsr\Core\Exceptions\UnsupportedOperationException;
 use Lsr\Core\Requests\Request;
+use Lsr\Dto\Notice;
 
 /**
  * @implements ArrayAccess<string, mixed>
@@ -22,6 +23,8 @@ class TemplateParameters implements ArrayAccess, JsonSerializable
     public array $errors = [];
     /** @var array<string|array{title?:string,content:string,type?:string}> */
     public array $notices = [];
+    /** @var Notice[] */
+    public array $flashMessages = [];
     /** @var string[] */
     public array $addCss = [];
     /** @var string[] */

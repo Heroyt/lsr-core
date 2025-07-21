@@ -3,8 +3,12 @@
 namespace Lsr\Core;
 
 use InvalidArgumentException;
+use LogicException;
+use Lsr\Dto\Notice;
+use Lsr\Enums\NoticeType;
 use Lsr\Interfaces\SessionInterface;
 use Random\Randomizer;
+use RuntimeException;
 use Tracy\SessionStorage;
 
 class Session implements SessionInterface, SessionStorage
@@ -13,6 +17,7 @@ class Session implements SessionInterface, SessionStorage
     private const string SESSION_KEY_PREFIX = 'session_';
     private const string SESSION_COOKIE_NAME = 'SESSID';
     private const string SESSION_FLASH_KEY = 'session_flash';
+    private const string SESSION_FLASH_MESSAGE_KEY = 'session_flash_notice';
 
     private static Session $instance;
 
@@ -34,7 +39,7 @@ class Session implements SessionInterface, SessionStorage
       string $directory = TMP_DIR.'sessions',
     ) {
         if (!file_exists($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
               sprintf('Session directory "%s" was not created', $directory)
             );
         }
@@ -102,6 +107,14 @@ class Session implements SessionInterface, SessionStorage
         return $this->data[$key];
     }
 
+    public function isInitialized() : bool {
+        return $this->getStatus() === PHP_SESSION_ACTIVE;
+    }
+
+    public function getStatus() : int {
+        return $this->status;
+    }
+
     private function loadSessionData() : void {
         assert($this->sessionId !== null);
         $file = $this->filePrefix.$this->sessionId;
@@ -110,6 +123,11 @@ class Session implements SessionInterface, SessionStorage
             return;
         }
         $contents = file_get_contents($file);
+        if ($contents === false) {
+            // Failed to read session file, treat as empty session
+            $this->data = [];
+            return;
+        }
         $decoded = $this->getUnserializer()($contents);
         if (!is_array($decoded) || !isset($decoded['expire']) || $decoded['expire'] < time()) {
             $this->data = [];
@@ -119,6 +137,7 @@ class Session implements SessionInterface, SessionStorage
             $this->data = [];
             return;
         }
+        /** @phpstan-ignore assign.propertyType */
         $this->data = $decoded['data'];
         $_SESSION = $this->data;
     }
@@ -134,11 +153,14 @@ class Session implements SessionInterface, SessionStorage
     }
 
     private function setCookie() : void {
+        assert($this->sessionId !== null);
+        /** @var int<0,max> $ttl */
+        $ttl = time() + $this->ttl;
         App::cookieJar()
            ->set(
              self::SESSION_COOKIE_NAME,
              $this->sessionId,
-             time() + $this->ttl,
+             $ttl,
              $this->path,
              $this->domain,
              $this->secure,
@@ -183,7 +205,7 @@ class Session implements SessionInterface, SessionStorage
 
     private function saveSessionData() : void {
         if ($this->sessionId === null) {
-            throw new \LogicException('Session not initialized');
+            throw new LogicException('Session not initialized');
         }
         $file = $this->filePrefix.$this->sessionId;
         $data = ($this->getSerializer())(
@@ -199,18 +221,19 @@ class Session implements SessionInterface, SessionStorage
      * @return callable(mixed):string
      */
     private function getSerializer() : callable {
-        if ($this->serializer === 'igbinary') {
-            return 'igbinary_serialize';
+        if ($this->serializer === 'igbinary' && extension_loaded('igbinary')) {
+            /** @phpstan-ignore return.type */
+            return igbinary_serialize(...);
         }
-        return 'serialize';
+        return serialize(...);
     }
 
     public function setParams(
-      int     $lifetime,
+      int $lifetime,
       ?string $path = null,
       ?string $domain = null,
-      ?bool   $secure = null,
-      ?bool   $httponly = null
+      ?bool $secure = null,
+      ?bool $httponly = null
     ) : bool {
         $defaults = $this->getParams();
         $path = $path ?? $defaults['path'];
@@ -239,14 +262,6 @@ class Session implements SessionInterface, SessionStorage
           'secure'   => $this->secure,
           'httponly' => $this->httponly,
         ];
-    }
-
-    public function isInitialized() : bool {
-        return $this->getStatus() === PHP_SESSION_ACTIVE;
-    }
-
-    public function getStatus() : int {
-        return $this->status;
     }
 
     /**
@@ -278,9 +293,13 @@ class Session implements SessionInterface, SessionStorage
         if ($this->data === null) {
             $this->loadSessionData();
         }
-        if (!isset($this->data[self::SESSION_FLASH_KEY]) || !is_array($this->data[self::SESSION_FLASH_KEY])) {
+        if (
+          !isset($this->data[self::SESSION_FLASH_KEY])
+          || !is_array($this->data[self::SESSION_FLASH_KEY])
+        ) {
             $this->data[self::SESSION_FLASH_KEY] = [];
         }
+        /** @phpstan-ignore offsetAccess.nonOffsetAccessible */
         return $this->data[self::SESSION_FLASH_KEY][$key] ?? $default;
     }
 
@@ -297,7 +316,57 @@ class Session implements SessionInterface, SessionStorage
         if (!isset($this->data[self::SESSION_FLASH_KEY]) || !is_array($this->data[self::SESSION_FLASH_KEY])) {
             $this->data[self::SESSION_FLASH_KEY] = [];
         }
+        /** @phpstan-ignore offsetAccess.nonOffsetAccessible */
         $this->data[self::SESSION_FLASH_KEY][$key] = $value;
+    }
+
+    public function flashSuccess(string $message) : void {
+        $this->flashNotice(new Notice($message, NoticeType::SUCCESS));
+    }
+
+    public function flashError(string $message) : void {
+        $this->flashNotice(new Notice($message, NoticeType::ERROR));
+    }
+
+    public function flashWarning(string $message) : void {
+        $this->flashNotice(new Notice($message, NoticeType::WARNING));
+    }
+
+    public function flashInfo(string $message) : void {
+        $this->flashNotice(new Notice($message, NoticeType::INFO));
+    }
+
+    public function flashNotice(Notice $notice) : void {
+        if (!$this->isInitialized()) {
+            $this->init();
+        }
+        if ($this->data === null) {
+            $this->loadSessionData();
+        }
+        if (
+          !isset($this->data[self::SESSION_FLASH_MESSAGE_KEY])
+          || !is_array($this->data[self::SESSION_FLASH_MESSAGE_KEY])
+        ) {
+            $this->data[self::SESSION_FLASH_MESSAGE_KEY] = [];
+        }
+        /** @phpstan-ignore offsetAccess.nonOffsetAccessible */
+        $this->data[self::SESSION_FLASH_MESSAGE_KEY][] = $notice;
+    }
+
+    public function getFlashMessages() : array {
+        if ($this->data === null) {
+            $this->loadSessionData();
+        }
+        if (
+          !isset($this->data[self::SESSION_FLASH_MESSAGE_KEY])
+          || !is_array($this->data[self::SESSION_FLASH_MESSAGE_KEY])
+        ) {
+            $this->data[self::SESSION_FLASH_MESSAGE_KEY] = [];
+        }
+        /** @var Notice[] $messages */
+        $messages = $this->data[self::SESSION_FLASH_MESSAGE_KEY];
+        $this->data[self::SESSION_FLASH_MESSAGE_KEY] = []; // Clear flash messages after reading
+        return $messages;
     }
 
     public function isAvailable() : bool {
@@ -311,6 +380,7 @@ class Session implements SessionInterface, SessionStorage
         if ($this->get('_tracy') === null) {
             $this->data['_tracy'] = [];
         }
+        assert(isset($this->data['_tracy']) && is_array($this->data['_tracy']));
         /** @phpstan-ignore return.type */
         return $this->data['_tracy'];
     }
@@ -339,7 +409,7 @@ class Session implements SessionInterface, SessionStorage
     public function clearSessionFiles() : void {
         $files = glob($this->filePrefix.'*');
         if ($files === false) {
-            throw new \RuntimeException('Failed to read session files');
+            throw new RuntimeException('Failed to read session files');
         }
         foreach ($files as $file) {
             // Check file ttl

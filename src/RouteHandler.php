@@ -14,7 +14,6 @@ use Lsr\Core\Routing\Exceptions\ModelNotFoundException as RouteModelNotFoundExce
 use Lsr\Core\Routing\Middleware;
 use Lsr\Core\Routing\Route;
 use Lsr\Enums\RequestMethod;
-use Lsr\Exceptions\RedirectException;
 use Lsr\Helpers\Tools\Strings;
 use Lsr\Interfaces\RequestInterface;
 use Lsr\Orm\Exceptions\ModelNotFoundException;
@@ -69,11 +68,20 @@ class RouteHandler implements RequestHandlerInterface
 
             $handler = $this->route->getHandler();
 
-            if (
-              is_array($handler)
-              && (is_object($handler[0]) || (is_string($handler[0]) && class_exists($handler[0])))
-              && is_string($handler[1])
-            ) {
+            if (is_array($handler)) {
+                if (
+                  !(is_object($handler[0]) || (is_string($handler[0]) && class_exists($handler[0])))
+                  || !is_string($handler[1])
+                ) {
+                    throw new RuntimeException(
+                      sprintf(
+                        "Invalid route handler in %s. Expected [class, method] or [object, method], got %s.",
+                        $this->route->getReadable(),
+                        print_r($handler, true),
+                      )
+                    );
+                }
+
                 [$class, $func] = $handler;
                 assert(!empty($func));
 
@@ -111,11 +119,7 @@ class RouteHandler implements RequestHandlerInterface
         next($this->route->middleware);
 
         // Process route-wide middleware
-        try {
-            return $middleware->process($request, $this);
-        } catch (RedirectException $e) {
-            return $this->withCookies(App::getInstance()->redirect($e->url, $e->request, $e->getCode()));
-        }
+        return $middleware->process($request, $this);
     }
 
     protected function withCookies(ResponseInterface $response) : ResponseInterface {
@@ -156,7 +160,7 @@ class RouteHandler implements RequestHandlerInterface
      * @throws Throwable
      */
     private function getHandlerArgs(RequestInterface $request) : array {
-        /** @var array<string,array{optional:bool,type:string|class-string,nullable:bool,mapRequest:bool}> $args */
+        /** @var array<string,array{optional:bool,type:string|class-string|array<string|class-string>,nullable:bool,mapRequest:bool,union:bool}> $args */
         $args = $this->cache->load(
           'route.'.$this->route->getMethod()->value.'.'.$this->route->getReadable().'.args',
           function () {
@@ -191,7 +195,7 @@ class RouteHandler implements RequestHandlerInterface
                   elseif ($type instanceof ReflectionUnionType) {
                       $subTypes = [];
                       foreach ($type->getTypes() as $subtype) {
-                          if (!$subtype instanceof ReflectionNamedType && !$subtype->isBuiltin()) {
+                          if (!$subtype instanceof ReflectionNamedType || !$subtype->isBuiltin()) {
                               throw new RuntimeException(
                                 sprintf(
                                   "Unsupported route handler method union type in %s(%s). Only built-in types, RequestInterface and Model classes are supported.",
@@ -242,41 +246,72 @@ class RouteHandler implements RequestHandlerInterface
         $argsValues = [];
         foreach ($args as $name => $type) {
             if ($type['union']) {
+                assert(is_array($type['type']));
                 $value = $request->getParam($name);
+
+                // Handle null value
+                if ($value === null) {
+                    if (!$type['nullable'] || !$type['optional']) {
+                        throw new RuntimeException(
+                          sprintf(
+                            "Cannot instantiate union type for route. No value for parameter %s in %s(%s).",
+                            $name,
+                            $this->handlerToString($this->route->getHandler()),
+                            $name
+                          )
+                        );
+                    }
+                    $argsValues[$name] = null;
+                    continue;
+                }
+
+                // Handle float value
                 if (
-                  (in_array('float', $type['type'], true) || in_array('double', $type['type']))
-                  && is_numeric($value)
+                  is_numeric($value)
+                  && (in_array('float', $type['type'], true) || in_array('double', $type['type'], true))
                 ) {
                     $argsValues[$name] = (float) $value;
                     continue;
                 }
+
+                // Handle int value
                 if (
-                  (in_array('int', $type['type'], true) || in_array('integer', $type['type']))
-                  && is_numeric($value)
+                  is_numeric($value)
+                  && (in_array('int', $type['type'], true) || in_array('integer', $type['type'], true))
                 ) {
                     $argsValues[$name] = (int) $value;
                     continue;
                 }
+
+                // Handle boolean value
                 if (
-                  (in_array('bool', $type['type'], true) || in_array('boolean', $type['type']))
-                  && (is_numeric($value) || in_array(strtolower($value), ['true', 'false']))
+                  (is_numeric($value) || in_array(strtolower($value), ['true', 'false'], true))
+                  && (in_array('bool', $type['type'], true) || in_array('boolean', $type['type'], true))
                 ) {
                     $argsValues[$name] = is_numeric($value) ? ((int) $value) > 0 : strtolower($value) === 'true';
                     continue;
                 }
+
+                // Handle string value
                 if (in_array('string', $type['type'], true)) {
                     $argsValues[$name] = (string) $value;
                     continue;
                 }
+
+                // Invalid value
                 throw new RunTimeException(
                   sprintf(
                     "Unsupported route handler method type in %s(%s \$%s). Only built-in types, RequestInterface and Model classes are supported.",
                     $this->handlerToString($this->route->getHandler()),
-                    $type['type'],
+                    implode('|', $type['type']),
                     $name
                   )
                 );
             }
+
+            assert(is_string($type['type']));
+
+            // Handle objects
             if (class_exists($type['type'])) {
                 // Check for request
                 $implements = class_implements($type['type']);
@@ -290,16 +325,16 @@ class RouteHandler implements RequestHandlerInterface
                     // Find ID
                     $paramName = Strings::toCamelCase($name.'_id');
                     $id = $request->getParam($paramName);
-                    if (!isset($id)) {
+                    if (empty($id)) {
                         $id = $request->getParam(strtolower($paramName));
                     }
-                    if (!isset($id)) {
+                    if (empty($id)) {
                         $id = $request->getParam(strtolower($name));
                     }
-                    if (!isset($id)) {
+                    if (empty($id)) {
                         $id = $request->getParam('id');
                     }
-                    if (!isset($id)) {
+                    if (empty($id)) {
                         if ($type['optional']) {
                             continue;
                         }
@@ -313,6 +348,7 @@ class RouteHandler implements RequestHandlerInterface
                           )
                         );
                     }
+
                     try {
                         $model = $type['type']::get((int) $id);
                     } catch (ModelNotFoundException $e) {

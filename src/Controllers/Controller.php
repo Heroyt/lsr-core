@@ -13,12 +13,12 @@
 
 namespace Lsr\Core\Controllers;
 
-
 use JsonException;
 use Lsr\Core\App;
 use Lsr\Core\Requests\Response;
 use Lsr\Core\Routing\Middleware;
 use Lsr\Core\Templating\Latte;
+use Lsr\Dto\Notice;
 use Lsr\Exceptions\TemplateDoesNotExistException;
 use Lsr\Interfaces\ControllerInterface;
 use Lsr\Interfaces\RequestInterface;
@@ -74,8 +74,6 @@ abstract class Controller implements ControllerInterface
     protected string $description = '';
     protected RequestInterface $request;
 
-    public function __construct() {}
-
     /**
      * Initialization function
      *
@@ -89,10 +87,9 @@ abstract class Controller implements ControllerInterface
         $this->params['page'] = $this;
         $this->params['app'] = $this->getApp();
         $this->params['request'] = $request;
-        /** @phpstan-ignore-next-line */
-        $this->params['errors'] = $request->errors;
-        /** @phpstan-ignore-next-line */
-        $this->params['notices'] = $request->notices;
+        $this->params['errors'] = $request->getErrors();
+        $this->params['notices'] = $request->getNotices();
+        $this->params['flashMessages'] = $this->app->session->getFlashMessages();
     }
 
     public function getApp() : App {
@@ -211,6 +208,26 @@ abstract class Controller implements ControllerInterface
       int                                            $type = 302
     ) : ResponseInterface {
         return App::getInstance()->redirect($to, $from, $type);
+    }
+
+    protected function flashSuccess(string $message) : void {
+        $this->app->session->flashSuccess($message);
+    }
+
+    protected function flashError(string $message) : void {
+        $this->app->session->flashError($message);
+    }
+
+    protected function flashWarning(string $message) : void {
+        $this->app->session->flashWarning($message);
+    }
+
+    protected function flashInfo(string $message) : void {
+        $this->app->session->flashInfo($message);
+    }
+
+    protected function flashNotice(Notice $notice) : void {
+        $this->app->session->flashNotice($notice);
     }
 
 }

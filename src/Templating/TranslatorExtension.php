@@ -13,7 +13,7 @@ use Latte\Compiler\Nodes\Php\IdentifierNode;
 use Latte\Compiler\Nodes\Php\Scalar\StringNode;
 use Latte\Compiler\Tag;
 use Latte\Engine;
-use Latte\Essential\Nodes\PrintNode;
+use Latte\Compiler\Nodes\PrintNode;
 use Latte\Extension;
 use Latte\Runtime\FilterInfo;
 use Lsr\Core\Translations;

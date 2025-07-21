@@ -7,8 +7,8 @@ interface LinkModifier
 {
 
     /**
-     * @param  string[]  $link
-     * @return string[]
+     * @param  LinkArray  $link
+     * @return LinkArray
      */
     public function modifyLinkPath(array $link) : array;
 

@@ -2,12 +2,16 @@
 
 namespace Lsr\Core;
 
+use Lsr\Dto\Notice;
+use Lsr\Enums\NoticeType;
 use Lsr\Interfaces\SessionInterface;
 use Tracy\SessionStorage;
 
 class NativeSession implements SessionInterface, SessionStorage
 {
 
+    private const string SESSION_FLASH_KEY = 'session_flash';
+    private const string SESSION_FLASH_MESSAGE_KEY = 'session_flash_notice';
     private static NativeSession $instance;
 
     /**
@@ -19,26 +23,6 @@ class NativeSession implements SessionInterface, SessionStorage
         }
         // @phpstan-ignore-next-line
         return self::$instance;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function init() : void {
-        if ($this->getStatus() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        if (!isset($_SESSION['flash'])) {
-            $_SESSION['flash'] = [];
-        }
-        /** @noinspection PhpUndefinedConstantInspection */
-        if (defined('SESSION_AUTO_CLOSE') && SESSION_AUTO_CLOSE) {
-            session_write_close();
-        }
-    }
-
-    public function getStatus() : int {
-        return session_status();
     }
 
     public function close() : void {
@@ -99,6 +83,10 @@ class NativeSession implements SessionInterface, SessionStorage
         return session_get_cookie_params();
     }
 
+    public function getStatus() : int {
+        return session_status();
+    }
+
     /**
      * @inheritDoc
      */
@@ -130,9 +118,15 @@ class NativeSession implements SessionInterface, SessionStorage
      */
     public function getFlash(string $key, mixed $default = null) : mixed {
         $value = $default;
-        if (isset($_SESSION['flash']) && is_array($_SESSION['flash']) && isset($_SESSION['flash'][$key])) {
-            $value = $_SESSION['flash'][$key];
-            unset($_SESSION['flash'][$key]);
+        /** @noinspection PhpIssetCanCheckNestedAccessDirectlyInspection */
+        /** @noinspection IssetConstructsCanBeMergedInspection */
+        if (
+          isset($_SESSION[self::SESSION_FLASH_KEY])
+          && is_array($_SESSION[self::SESSION_FLASH_KEY])
+          && isset($_SESSION[self::SESSION_FLASH_KEY][$key])
+        ) {
+            $value = $_SESSION[self::SESSION_FLASH_KEY][$key];
+            unset($_SESSION[self::SESSION_FLASH_KEY][$key]);
         }
         return $value;
     }
@@ -145,10 +139,68 @@ class NativeSession implements SessionInterface, SessionStorage
             session_start();
 
         }
-        if (!isset($_SESSION['flash']) || !is_array($_SESSION['flash'])) {
-            $_SESSION['flash'] = [];
+        if (!isset($_SESSION[self::SESSION_FLASH_KEY]) || !is_array($_SESSION[self::SESSION_FLASH_KEY])) {
+            $_SESSION[self::SESSION_FLASH_KEY] = [];
         }
-        $_SESSION['flash'][$key] = $value;
+        $_SESSION[self::SESSION_FLASH_KEY][$key] = $value;
+    }
+
+    public function flashSuccess(string $message) : void {
+        $this->flashNotice(new Notice($message, NoticeType::SUCCESS));
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function init() : void {
+        if ($this->getStatus() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (!isset($_SESSION[self::SESSION_FLASH_KEY])) {
+            $_SESSION[self::SESSION_FLASH_KEY] = [];
+        }
+        /** @noinspection PhpUndefinedConstantInspection */
+        if (defined('SESSION_AUTO_CLOSE') && SESSION_AUTO_CLOSE) {
+            session_write_close();
+        }
+    }
+
+    public function flashError(string $message) : void {
+        $this->flashNotice(new Notice($message, NoticeType::ERROR));
+    }
+
+    public function flashWarning(string $message) : void {
+        $this->flashNotice(new Notice($message, NoticeType::WARNING));
+    }
+
+    public function flashInfo(string $message) : void {
+        $this->flashNotice(new Notice($message, NoticeType::INFO));
+    }
+
+    public function flashNotice(Notice $notice) : void {
+        if (!$this->isInitialized()) {
+            $this->init();
+        }
+        if (
+          !isset($_SESSION[self::SESSION_FLASH_MESSAGE_KEY])
+          || !is_array($_SESSION[self::SESSION_FLASH_MESSAGE_KEY])
+        ) {
+            $_SESSION[self::SESSION_FLASH_MESSAGE_KEY] = [];
+        }
+        $_SESSION[self::SESSION_FLASH_MESSAGE_KEY][] = $notice;
+    }
+
+    public function getFlashMessages() : array {
+        if (
+          !isset($_SESSION[self::SESSION_FLASH_MESSAGE_KEY])
+          || !is_array($_SESSION[self::SESSION_FLASH_MESSAGE_KEY])
+        ) {
+            $_SESSION[self::SESSION_FLASH_MESSAGE_KEY] = [];
+        }
+        /** @var Notice[] $messages */
+        $messages = $_SESSION[self::SESSION_FLASH_MESSAGE_KEY];
+        $_SESSION[self::SESSION_FLASH_MESSAGE_KEY] = []; // Clear flash messages after reading
+        return $messages;
     }
 
     public function isAvailable() : bool {

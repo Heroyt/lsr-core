@@ -6,6 +6,7 @@ namespace Lsr\Core;
 use Lsr\Core\Http\AsyncHandlerInterface;
 use Lsr\Core\Http\ExceptionHandlerInterface;
 use Lsr\Core\Requests\Request;
+use Lsr\Core\Requests\Response;
 use Lsr\Exceptions\DispatchBreakException;
 use Lsr\Interfaces\RequestFactoryInterface;
 use Lsr\Interfaces\RequestInterface;
@@ -25,11 +26,14 @@ readonly class FpmHandler
     public function __construct(
       protected RequestFactoryInterface $requestFactory,
       protected SessionInterface        $session,
+      protected CookieJar               $cookieJar,
       protected array                   $exceptionHandlers = [],
       protected array                   $asyncHandlers = [],
     ) {
         // Validate that all handlers are of the correct type
+        /** @phpstan-ignore instanceof.alwaysTrue */
         assert(array_all($this->exceptionHandlers, static fn($val) => $val instanceof ExceptionHandlerInterface));
+        /** @phpstan-ignore instanceof.alwaysTrue */
         assert(array_all($this->asyncHandlers, static fn($val) => $val instanceof AsyncHandlerInterface));
     }
 
@@ -47,13 +51,13 @@ readonly class FpmHandler
 
         try {
             $app->setRequest($request);
-
             $response = $app->run();
         } catch (DispatchBreakException $e) {
-            $response = $e->getResponse();
+            $response = $this->withCookies($e->getResponse());
         } catch (Throwable $e) {
-            $response = $this->handleException($e, $request);
+            $response = $this->withCookies($this->handleException($e, $request));
         } finally {
+            /** @phpstan-ignore variable.undefined */
             $this->sendResponse($response);
             Debugger::shutdownHandler();
             $this->session->close();
@@ -78,6 +82,14 @@ readonly class FpmHandler
         }
 
         return $request;
+    }
+
+    protected function withCookies(ResponseInterface $response) : ResponseInterface {
+        $headers = $this->cookieJar->getHeaders();
+        if (empty($headers)) {
+            return $response;
+        }
+        return $response->withAddedHeader('Set-Cookie', $headers);
     }
 
     protected function handleException(Throwable $exception, Request $request) : ResponseInterface {

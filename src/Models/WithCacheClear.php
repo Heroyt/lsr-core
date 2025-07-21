@@ -12,6 +12,7 @@ use Nette\Caching\Cache as CacheParent;
 
 /**
  * @mixin \Lsr\Orm\Model
+ * @phpstan-ignore trait.unused
  */
 trait WithCacheClear
 {

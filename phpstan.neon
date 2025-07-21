@@ -12,3 +12,5 @@ parameters:
 		- tests/bootstrap.php
 		- tests/TestCases
 	tmpDir: temp
+	typeAliases:
+		LinkArray: 'array<string|int, string|\Stringable|numeric>'
