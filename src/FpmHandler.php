@@ -6,7 +6,6 @@ namespace Lsr\Core;
 use Lsr\Core\Http\AsyncHandlerInterface;
 use Lsr\Core\Http\ExceptionHandlerInterface;
 use Lsr\Core\Requests\Request;
-use Lsr\Core\Requests\Response;
 use Lsr\Exceptions\DispatchBreakException;
 use Lsr\Interfaces\RequestFactoryInterface;
 use Lsr\Interfaces\RequestInterface;
@@ -26,7 +25,6 @@ readonly class FpmHandler
     public function __construct(
       protected RequestFactoryInterface $requestFactory,
       protected SessionInterface        $session,
-      protected CookieJar               $cookieJar,
       protected array                   $exceptionHandlers = [],
       protected array                   $asyncHandlers = [],
     ) {
@@ -85,7 +83,7 @@ readonly class FpmHandler
     }
 
     protected function withCookies(ResponseInterface $response) : ResponseInterface {
-        $headers = $this->cookieJar->getHeaders();
+        $headers = App::cookieJar()->getHeaders();
         if (empty($headers)) {
             return $response;
         }
