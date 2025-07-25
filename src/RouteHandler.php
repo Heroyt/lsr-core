@@ -160,7 +160,7 @@ class RouteHandler implements RequestHandlerInterface
      * @throws Throwable
      */
     private function getHandlerArgs(RequestInterface $request) : array {
-        /** @var array<string,array{optional:bool,type:string|class-string|array<string|class-string>,nullable:bool,mapRequest:bool,union:bool}> $args */
+        /** @var array<string,array{optional:bool,type:string|class-string|array<string|class-string>,nullable:bool,mapRequest:bool,union:bool,unionHasModel:bool}> $args */
         $args = $this->cache->load(
           'route.'.$this->route->getMethod()->value.'.'.$this->route->getReadable().'.args',
           function () {
@@ -180,11 +180,12 @@ class RouteHandler implements RequestHandlerInterface
 
                   if ($type instanceof ReflectionNamedType) {
                       $args[$name] = [
-                        'optional'   => $optional,
-                        'union'      => false,
-                        'type'       => $type->getName(),
-                        'nullable'   => $type->allowsNull(),
-                        'mapRequest' => !empty(
+                        'optional'      => $optional,
+                        'union'         => false,
+                        'unionHasModel' => false,
+                        'type'          => $type->getName(),
+                        'nullable'      => $type->allowsNull(),
+                        'mapRequest'    => !empty(
                         $argument->getAttributes(
                           MapRequest::class,
                           ReflectionAttribute::IS_INSTANCEOF
@@ -194,24 +195,36 @@ class RouteHandler implements RequestHandlerInterface
                   }
                   elseif ($type instanceof ReflectionUnionType) {
                       $subTypes = [];
+                      $hasModel = false;
                       foreach ($type->getTypes() as $subtype) {
-                          if (!$subtype instanceof ReflectionNamedType || !$subtype->isBuiltin()) {
+                          if (
+                            !$subtype instanceof ReflectionNamedType
+                            || (
+                              !($model = is_subclass_of($subtype->getName(), Model::class))
+                              && !$subtype->isBuiltin()
+                            )
+                          ) {
                               throw new RuntimeException(
                                 sprintf(
-                                  "Unsupported route handler method union type in %s(%s). Only built-in types, RequestInterface and Model classes are supported.",
+                                  "Unsupported route handler method union type in %s(%s). Only built-in types, RequestInterface and Model classes are supported. On type: %s.",
                                   $this->handlerToString($this->route->getHandler()),
-                                  $name
+                                  $name,
+                                  $subtype->getName()
                                 )
                               );
+                          }
+                          if ($model) {
+                              $hasModel = true;
                           }
                           $subTypes[] = $subtype->getName();
                       }
                       $args[$name] = [
-                        'optional'   => $optional,
-                        'union'      => true,
-                        'type'       => $subTypes,
-                        'nullable'   => $type->allowsNull(),
-                        'mapRequest' => !empty(
+                        'optional'      => $optional,
+                        'union'         => true,
+                        'unionHasModel' => $hasModel,
+                        'type'          => $subTypes,
+                        'nullable'      => $type->allowsNull(),
+                        'mapRequest'    => !empty(
                         $argument->getAttributes(
                           MapRequest::class,
                           ReflectionAttribute::IS_INSTANCEOF
@@ -263,6 +276,25 @@ class RouteHandler implements RequestHandlerInterface
                     }
                     $argsValues[$name] = null;
                     continue;
+                }
+
+                // Handle model value
+                if ($type['unionHasModel']) {
+                    /** @var class-string<Model>|false|null $modelType */
+                    $modelType = array_find($type['type'], static fn($type) => is_subclass_of($type, Model::class));
+                    if (is_string($modelType)) {
+                        // Found model type
+                        $id = $this->findID($name, $request);
+                        if (!empty($id)) {
+                            try {
+                                $model = $modelType::get((int) $id);
+                                $argsValues[$name] = $model;
+                                continue;
+                            } catch (ModelNotFoundException) {
+                                // Fall through to handle other types
+                            }
+                        }
+                    }
                 }
 
                 // Handle float value
@@ -323,21 +355,12 @@ class RouteHandler implements RequestHandlerInterface
                 // Check for model
                 if (is_subclass_of($type['type'], Model::class)) {
                     // Find ID
-                    $paramName = Strings::toCamelCase($name.'_id');
-                    $id = $request->getParam($paramName);
-                    if (empty($id)) {
-                        $id = $request->getParam(strtolower($paramName));
-                    }
-                    if (empty($id)) {
-                        $id = $request->getParam(strtolower($name));
-                    }
-                    if (empty($id)) {
-                        $id = $request->getParam('id');
-                    }
+                    $id = $this->findID($name, $request);
                     if (empty($id)) {
                         if ($type['optional']) {
                             continue;
                         }
+                        $paramName = Strings::toCamelCase($name.'_id');
                         throw new RuntimeException(
                           sprintf(
                             "Cannot instantiate Model for route. No ID route parameter. %s - argument: %s \$%s. Expecting parameter \"id\" or \"%s\".",
@@ -421,6 +444,24 @@ class RouteHandler implements RequestHandlerInterface
             return $handler;
         }
         return 'callable';
+    }
+
+    /**
+     * @return numeric-string|int
+     */
+    private function findID(string $name, RequestInterface $request) : int | string {
+        $paramName = Strings::toCamelCase($name.'_id');
+        $id = $request->getParam($paramName);
+        if (empty($id)) {
+            $id = $request->getParam(strtolower($paramName));
+        }
+        if (empty($id)) {
+            $id = $request->getParam(strtolower($name));
+        }
+        if (empty($id)) {
+            $id = $request->getParam('id');
+        }
+        return $id;
     }
 
     public function setRoute(Route $route) : RouteHandler {
