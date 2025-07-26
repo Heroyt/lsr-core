@@ -447,10 +447,11 @@ class RouteHandler implements RequestHandlerInterface
     }
 
     /**
-     * @return numeric-string|int
+     * @return numeric-string|int|null
      */
-    private function findID(string $name, RequestInterface $request) : int | string {
+    private function findID(string $name, RequestInterface $request) : int | string | null {
         $paramName = Strings::toCamelCase($name.'_id');
+        /** @var numeric-string|null $id */
         $id = $request->getParam($paramName);
         if (empty($id)) {
             $id = $request->getParam(strtolower($paramName));
