@@ -44,8 +44,14 @@ readonly class FpmHandler
     public function run() : void {
         $app = App::getInstance();
 
-        // Parse request
-        $request = $this->createRequest();
+        try {
+            // Parse request
+            $request = $this->createRequest();
+        } catch (DispatchBreakException $e) {
+            $response = $this->withCookies($e->getResponse());
+            $this->finishRequest($response);
+            return;
+        }
 
         try {
             $app->setRequest($request);
@@ -56,12 +62,16 @@ readonly class FpmHandler
             $response = $this->withCookies($this->handleException($e, $request));
         } finally {
             /** @phpstan-ignore variable.undefined */
-            $this->sendResponse($response);
-            Debugger::shutdownHandler();
-            $this->session->close();
-            fastcgi_finish_request();
-            $this->handleAsync();
+            $this->finishRequest($response);
         }
+    }
+
+    private function finishRequest(ResponseInterface $response) : void {
+        $this->sendResponse($response);
+        Debugger::shutdownHandler();
+        $this->session->close();
+        fastcgi_finish_request();
+        $this->handleAsync();
     }
 
     public function createRequest() : Request {
