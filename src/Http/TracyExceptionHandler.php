@@ -34,7 +34,7 @@ final readonly class TracyExceptionHandler implements ExceptionHandlerInterface
         Helpers::improveException($exception);
         Debugger::log($exception, ILogger::EXCEPTION);
 
-        if (Debugger::isEnabled()) {
+        if (!Debugger::$productionMode) {
             ob_start(); // double buffer prevents sending HTTP headers in some PHP
             ob_start();
             Debugger::getBlueScreen()->render($exception);
