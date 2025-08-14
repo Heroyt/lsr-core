@@ -48,7 +48,7 @@ readonly class FpmHandler
             // Parse request
             $request = $this->createRequest();
         } catch (DispatchBreakException $e) {
-            $response = $this->withCookies($e->getResponse());
+            $response = $e->getResponse(); // Cannot add cookies if the request cannot be created
             $this->finishRequest($response);
             return;
         }
