@@ -87,7 +87,7 @@ class CookieJar implements CookieJarInterface
             $headers[] = $header;
         }
         foreach ($this->cookiesToDelete as $name) {
-            $headers[] = sprintf('%s=; expires=Thu, 01 Jan 1970 00:00:00 GMT', $name);
+            $headers[] = sprintf('%s=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/', $name);
         }
         return $headers;
     }
