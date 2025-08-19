@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Lsr\Core\DI;
 
-use Lsr\Core\App;
 use Nette;
 use Nette\DI\CompilerExtension;
 use Nette\DI\Definitions\Statement;
@@ -144,37 +143,28 @@ class TracyExtension extends CompilerExtension
         }
 
         if ($this->config->email) {
-            $email = '';
             if ($this->config->email === true) {
-                $email = App::getInstance()->config->getConfig('env')['TRACY_MAIL'] ?? '';
+                $initialize->addBody(
+                  '$email = \Lsr\Core\App::getInstance()->config->getConfig("env")["TRACY_MAIL"] ?? "";'
+                );
             }
             elseif (is_string($this->config->email) || is_array($this->config->email)) {
-                $email = $this->config->email;
-            }
-            if (!empty($email)) {
-                $params = [];
-                $params['fromEmail'] = $this->config->fromEmail ?? '';
-                $params['host'] = App::getInstance()->getBaseUrl();
                 $initialize->addBody(
-                  $builder->formatPhp(
-                    'Tracy\Debugger::$email = ?;',
-                    [
-                      $email,
-                    ]
-                  )
-                );
-                $initialize->addBody(
-                  $builder->formatPhp(
-                    'if ($logger instanceof Tracy\Logger) $logger->mailer = ?;',
-                    [
-                      [
-                        new Statement(Tracy\Bridges\Nette\MailSender::class, $params),
-                        'send',
-                      ],
-                    ]
-                  )
+                  '$email = ?;',
+                  Nette\DI\Helpers::filterArguments([$this->config->email]),
                 );
             }
+            $initialize->addBody(
+              'if (!empty($email)) {
+Tracy\Debugger::$email = $email;
+if ($logger instanceof Tracy\Logger) {
+$logger->mailer = function($message, string $email) use ($logger) {
+    $mailSender = new Tracy\Bridges\Nette\MailSender($this->getService("mailer"), $logger->email, \Lsr\Core\App::getInstance()->getBaseUrl());
+		$mailSender->send($message, $email);
+};
+}
+}',
+            );
         }
 
         $panels = '';
@@ -182,7 +172,9 @@ class TracyExtension extends CompilerExtension
             if (is_string($item) && str_starts_with($item, '@')) {
                 $item = new Statement(['@'.$builder::ThisContainer, 'getService'], [substr($item, 1)]);
             }
-            elseif (is_string($item)) {
+
+            elseif
+            (is_string($item)) {
                 $item = new Statement($item);
             }
 
@@ -207,10 +199,10 @@ class TracyExtension extends CompilerExtension
               '$lsrRuntimeConfig = $this->getService(?);'."\n".
               'if (!($lsrRuntimeConfig instanceof \Lsr\Interfaces\RuntimeConfigurationInterface)) throw new '.Nette\DI\InvalidConfigurationException::class.'("Invalid type of service in TracyExtension.debug. Expected type of \Lsr\Interfaces\RuntimeConfigurationInterface, got " . get_class($lsrRuntimeConfig));'."\n".
               '$lsrDebugEnabled = $lsrRuntimeConfig->isDebugMode();'."\n".
-              'Tracy\Debugger::enable($lsrDebugEnabled ? Tracy\Debugger::Development : Tracy\Debugger::Production, ?);'."\n".
+              'Tracy\Debugger::enable($lsrDebugEnabled \? Tracy\Debugger::Development : Tracy\Debugger::Production, ?);'."\n".
               'if ($lsrDebugEnabled) {'.$panels.'}',
               [
-                $this->config->debug,
+                substr($this->config->debug, 1),
                 $this->config->logDir,
               ],
             );
