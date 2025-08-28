@@ -53,7 +53,7 @@ class TracyExtension extends CompilerExtension
               Statement::class,
               Expect::string(),
             )->default(false),
-            'logDir'        => Expect::string()->default(LOG_DIR.'tracy/'),
+            'logDir' => Expect::string()->default(LOG_DIR.'tracy'),
             'email'         => Expect::anyOf(
               Expect::email(),
               Expect::listOf('email'),
@@ -83,7 +83,7 @@ class TracyExtension extends CompilerExtension
               $errorSeverityExpr,
               Expect::listOf($errorSeverity)
             ),
-            'bar'           => Expect::listOf('string|Nette\DI\Definitions\Statement'),
+            'bar'    => Expect::arrayOf('string|Nette\DI\Definitions\Statement'),
             'blueScreen'    => Expect::listOf('callable'),
             'editorMapping' => Expect::arrayOf('string')->dynamic()->default(null),
           ]
@@ -168,7 +168,7 @@ $logger->mailer = function($message, string $email) use ($logger) {
         }
 
         $panels = '';
-        foreach ($this->config->bar as $item) {
+        foreach ($this->config->bar as $key => $item) {
             if (is_string($item) && str_starts_with($item, '@')) {
                 $item = new Statement(['@'.$builder::ThisContainer, 'getService'], [substr($item, 1)]);
             }
@@ -179,8 +179,14 @@ $logger->mailer = function($message, string $email) use ($logger) {
             }
 
             $panels .= $builder->formatPhp(
-              '$this->getService(?)->addPanel(?);',
-              Nette\DI\Helpers::filterArguments([$this->prefix('bar'), $item]),
+              '$this->getService(?)->addPanel(?, ?);',
+              Nette\DI\Helpers::filterArguments(
+                [
+                  $this->prefix('bar'),
+                  $item,
+                  is_numeric($key) ? null : $key,
+                ]
+              ),
             );
         }
 
@@ -210,7 +216,7 @@ $logger->mailer = function($message, string $email) use ($logger) {
 
         if (!$this->cliMode && ($name = $builder->getByType(Tracy\SessionStorage::class))) {
             $initialize->addBody(
-              'Tracy\Debugger::setSessionStorage($this->getService(?));',
+              'if (!Tracy\Debugger::getSessionStorage() instanceof \Tracy\SessionStorage) Tracy\Debugger::setSessionStorage($this->getService(?));',
               [$name],
             );
         }
