@@ -68,14 +68,18 @@ trait WithCacheClear
         if (isset($this->id)) {
             /** @var Cache $cache */
             $cache = App::getService('cache');
+            $tags = [
+              $this::TABLE,
+              $this::TABLE.'/query',
+              $this::TABLE.'/'.$this->id,
+              $this::TABLE.'/'.$this->id.'/relations',
+            ];
+            if (method_exists($this, 'getCacheTags')) {
+                $tags = array_map($tags, $this->getCacheTags());
+            }
             $cache->clean(
               [
-                CacheParent::Tags => [
-                  $this::TABLE,
-                  $this::TABLE.'/query',
-                  $this::TABLE.'/'.$this->id,
-                  $this::TABLE.'/'.$this->id.'/relations',
-                ],
+                CacheParent::Tags => $tags,
               ]
             );
         }
