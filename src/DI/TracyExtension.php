@@ -74,6 +74,7 @@ class TracyExtension extends CompilerExtension
             'maxLength'     => Expect::int()->dynamic(),
             'maxDepth'      => Expect::int()->dynamic(),
             'maxItems'      => Expect::int()->dynamic(),
+            /** @phpstan-ignore method.notFound */
             'keysToHide'    => Expect::array(null)->dynamic(),
             'dumpTheme'     => Expect::string()->dynamic(),
             'showLocation'  => Expect::bool()->dynamic(),
@@ -124,6 +125,7 @@ class TracyExtension extends CompilerExtension
 
         foreach (['logSeverity', 'strictMode', 'scream'] as $key) {
             if (is_string($options[$key]) || is_array($options[$key])) {
+                /** @phpstan-ignore argument.type */
                 $options[$key] = $this->parseErrorSeverity($options[$key]);
             }
         }
@@ -170,7 +172,9 @@ $logger->mailer = function($message, string $email) use ($logger) {
         $panels = '';
         foreach ($this->config->bar as $key => $item) {
             if (is_string($item) && str_starts_with($item, '@')) {
-                $item = new Statement(['@'.$builder::ThisContainer, 'getService'], [substr($item, 1)]);
+                /** @var string $thisContainer */
+                $thisContainer = $builder::ThisContainer;
+                $item = new Statement(['@'.$thisContainer, 'getService'], [substr($item, 1)]);
             }
 
             elseif
@@ -239,7 +243,9 @@ $logger->mailer = function($message, string $email) use ($logger) {
      */
     private function parseErrorSeverity(string | array $value) : int {
         $value = implode('|', (array) $value);
-        $res = (int) @parse_ini_string('e = '.$value)['e']; // @ may fail
+        /** @var array{e: numeric} $parsedIniVar */
+        $parsedIniVar = @parse_ini_string('e = '.$value); // @ may fail
+        $res = (int) @$parsedIniVar['e'];
         if (!$res) {
             throw new Nette\InvalidStateException("Syntax error in expression '$value'");
         }

@@ -27,6 +27,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use ReflectionAttribute;
 use ReflectionFunction;
+use ReflectionIntersectionType;
 use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionType;
@@ -209,7 +210,16 @@ class RouteHandler implements RequestHandlerInterface
                                   "Unsupported route handler method union type in %s(%s). Only built-in types, RequestInterface and Model classes are supported. On type: %s.",
                                   $this->handlerToString($this->route->getHandler()),
                                   $name,
-                                  $subtype->getName()
+                                  $subtype instanceof ReflectionIntersectionType ?
+                                    implode(
+                                      '&',
+                                      array_map(
+                                        fn(ReflectionType $type) => $type instanceof ReflectionNamedType ?
+                                          $type->getName() : 'unknown',
+                                        $subtype->getTypes()
+                                      )
+                                    )
+                                    : $subtype->getName()
                                 )
                               );
                           }
@@ -447,7 +457,7 @@ class RouteHandler implements RequestHandlerInterface
     }
 
     /**
-     * @return numeric-string|int|null
+     * @return non-empty-string|int|null
      */
     private function findID(string $name, RequestInterface $request) : int | string | null {
         $paramName = Strings::toCamelCase($name.'_id');
@@ -461,6 +471,12 @@ class RouteHandler implements RequestHandlerInterface
         }
         if (empty($id)) {
             $id = $request->getParam('id');
+        }
+        if (is_numeric($id)) {
+            return (int) $id;
+        }
+        if (empty($id)) {
+            return null;
         }
         return $id;
     }

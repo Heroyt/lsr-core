@@ -26,7 +26,7 @@ use Nette\DI\CompilerExtension;
 use Nette\Schema\Expect;
 
 /**
- * @property-read object{
+ * @property object{
  *     appDir: non-empty-string,
  *     tempDir: non-empty-string,
  *     translations: object{
@@ -160,6 +160,7 @@ class LsrExtension extends CompilerExtension
         $exceptionHandlers = [];
         if (empty($this->config->http->exceptionHandlers)) {
             // Default exception handlers
+            /** @phpstan-ignore assign.propertyReadOnly */
             $this->config->http->exceptionHandlers = [
               TracyExceptionHandler::class,
               NotFoundExceptionHandler::class,
