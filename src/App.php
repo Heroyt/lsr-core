@@ -79,6 +79,7 @@ class App
       public readonly Translations     $translations,
     ) {
         self::$instance = $this;
+        $this->router->setup();
     }
 
     /**
