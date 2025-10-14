@@ -75,7 +75,7 @@ trait WithCacheClear
               $this::TABLE.'/'.$this->id.'/relations',
             ];
             if (method_exists($this, 'getCacheTags')) {
-                $tags = array_map($tags, $this->getCacheTags());
+                $tags = array_merge($tags, $this->getCacheTags());
             }
             $cache->clean(
               [
