@@ -407,6 +407,7 @@ class RouteHandler implements RequestHandlerInterface
                     $argsValues[$name] = $request->getType() === RequestMethod::GET ?
                       $requestMapper->mapQueryToObject($type['type']) :
                       $requestMapper->mapBodyToObject($type['type']);
+                    continue;
                 }
 
                 // Try to get class from DI
