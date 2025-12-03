@@ -25,7 +25,7 @@ class CsrfNode extends StatementNode
         $node = new self;
         $node->args = $tag->parser->parseArguments();
         $node->modifier = $tag->parser->parseModifier();
-        $node->modifier->escape = false;
+        $node->modifier->escape = !$node->modifier->removeFilter('noescape');
 
         $args = $node->args->toArguments();
         $node->prefix = isset($args[0]) ? $args[0]->value : new StringNode('');

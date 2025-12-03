@@ -30,7 +30,7 @@ class CsrfInputNode extends StatementNode
         $node = new self();
         $node->name = $tag->parser->parseExpression();
         $node->modifier = $tag->parser->parseModifier();
-        $node->modifier->escape = false;
+        $node->modifier->escape = !$node->modifier->removeFilter('noescape');
         return $node;
     }
 

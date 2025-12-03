@@ -7,6 +7,7 @@ use Latte\CompileException;
 use Latte\Compiler\Node;
 use Latte\Compiler\Nodes\Php\ArrayItemNode;
 use Latte\Compiler\Nodes\Php\Expression\ArrayNode;
+use Latte\Compiler\Nodes\Php\ModifierNode;
 use Latte\Compiler\Nodes\Php\Scalar\StringNode;
 use Latte\Compiler\Nodes\StatementNode;
 use Latte\Compiler\PrintContext;
@@ -16,6 +17,7 @@ class AlertNode extends StatementNode
 {
 
     private ArrayNode $args;
+    public ModifierNode $modifier;
 
     /**
      * @param  Tag  $tag
@@ -27,6 +29,8 @@ class AlertNode extends StatementNode
         $tag->expectArguments();
         $node = new self();
         $node->args = $tag->parser->parseArguments();
+        $node->modifier = $tag->parser->parseModifier();
+        $node->modifier->escape = !$node->modifier->removeFilter('noescape');
         return $node;
     }
 

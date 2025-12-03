@@ -8,7 +8,6 @@ use Latte\Compiler\Node;
 use Latte\Compiler\NodeHelpers;
 use Latte\Compiler\Nodes\Php\Expression\ArrayNode;
 use Latte\Compiler\Nodes\Php\ModifierNode;
-use Latte\Compiler\Nodes\Php\Scalar\StringNode;
 use Latte\Compiler\Nodes\StatementNode;
 use Latte\Compiler\Nodes\TextNode;
 use Latte\Compiler\PrintContext;
@@ -35,7 +34,7 @@ class LinkNode extends StatementNode
         $node = $tag->node = new self;
         $node->args = $args = $tag->parser->parseArguments();
         $node->modifier = $tag->parser->parseModifier();
-        $node->modifier->escape = true;
+        $node->modifier->escape = !$node->modifier->removeFilter('noescape');
 
         try {
             /** @var array<array<string|int,string>|string> $constArgs */
