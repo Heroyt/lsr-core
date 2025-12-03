@@ -115,13 +115,13 @@ class RoutingTracyPanel implements IBarPanel
                 $formatted[$key] = (!empty($name) ? $name.': ' : '').$this->formatHandler($route->getHandler());
                 continue;
             }
+            assert(is_array($route)); // This is to keep phpstan happy: if it's not a RouteInterface, it must be an array of RouteInterfaces.
             if (count($route) === 1 && (($route[0] ?? null) instanceof RouteInterface)) {
                 $name = $route[0]->getName();
                 $formatted[$key] = (!empty($name) ? $name.': ' : '').$this->formatHandler($route[0]->getHandler());
                 continue;
             }
 
-            /** @phpstan-ignore argument.type */
             $formatted[$key.'/'] = $this->formatRoutes($route);
         }
         /** @phpstan-ignore return.type */

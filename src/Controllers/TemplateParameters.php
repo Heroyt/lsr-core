@@ -69,6 +69,6 @@ class TemplateParameters implements ArrayAccess, JsonSerializable
      * @return array<string,mixed>
      */
     public function jsonSerialize() : array {
-        return (array) $this;
+        return get_object_vars($this);
     }
 }

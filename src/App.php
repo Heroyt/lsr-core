@@ -99,7 +99,6 @@ class App
             // @phpstan-ignore-next-line
             self::$instance = self::getService('app');
         }
-        // @phpstan-ignore-next-line
         return self::$instance;
     }
 

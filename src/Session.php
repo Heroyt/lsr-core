@@ -299,7 +299,6 @@ class Session implements SessionInterface, SessionStorage
         ) {
             $this->data[self::SESSION_FLASH_KEY] = [];
         }
-        /** @phpstan-ignore offsetAccess.nonOffsetAccessible */
         return $this->data[self::SESSION_FLASH_KEY][$key] ?? $default;
     }
 
@@ -316,7 +315,6 @@ class Session implements SessionInterface, SessionStorage
         if (!isset($this->data[self::SESSION_FLASH_KEY]) || !is_array($this->data[self::SESSION_FLASH_KEY])) {
             $this->data[self::SESSION_FLASH_KEY] = [];
         }
-        /** @phpstan-ignore offsetAccess.nonOffsetAccessible */
         $this->data[self::SESSION_FLASH_KEY][$key] = $value;
     }
 
@@ -349,7 +347,6 @@ class Session implements SessionInterface, SessionStorage
         ) {
             $this->data[self::SESSION_FLASH_MESSAGE_KEY] = [];
         }
-        /** @phpstan-ignore offsetAccess.nonOffsetAccessible */
         $this->data[self::SESSION_FLASH_MESSAGE_KEY][] = $notice;
     }
 
