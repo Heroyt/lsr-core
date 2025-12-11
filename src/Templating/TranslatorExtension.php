@@ -11,9 +11,9 @@ use Latte\Compiler\Nodes\Php\ExpressionNode;
 use Latte\Compiler\Nodes\Php\FilterNode;
 use Latte\Compiler\Nodes\Php\IdentifierNode;
 use Latte\Compiler\Nodes\Php\Scalar\StringNode;
+use Latte\Compiler\Nodes\PrintNode;
 use Latte\Compiler\Tag;
 use Latte\Engine;
-use Latte\Compiler\Nodes\PrintNode;
 use Latte\Extension;
 use Latte\Runtime\FilterInfo;
 use Lsr\Core\Translations;
@@ -71,7 +71,7 @@ final class TranslatorExtension extends Extension
         }
 
         $node->modifier = $tag->parser->parseModifier();
-        $node->modifier->escape = true;
+        $node->modifier->escape = !$node->modifier->removeFilter('noescape');
 
         /** @noinspection NotOptimalIfConditionsInspection */
         if (($expr = self::toValue($node->expression)) && is_array($values = self::toValue($args)) && (is_string($expr) || $expr instanceof Stringable)) {
