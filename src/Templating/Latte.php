@@ -8,8 +8,10 @@ use Latte\Loaders\StringLoader;
 use Latte\Sandbox\SecurityPolicy;
 use Lsr\Core\Controllers\TemplateParameters;
 use Lsr\Exceptions\TemplateDoesNotExistException;
+use Lsr\Interfaces\TemplateParametersInterface;
+use Lsr\Interfaces\ViewFactoryInterface;
 
-readonly class Latte
+readonly class Latte implements ViewFactoryInterface
 {
 
     public function __construct(
@@ -32,7 +34,8 @@ readonly class Latte
      *
      * @throws TemplateDoesNotExistException
      */
-    public function view(string $template, array|TemplateParameters $params = []) : void {
+    public function view(string $template, array|TemplateParametersInterface $params = []): void
+    {
         $this->engine->render($this->getTemplate($template), $params);
     }
 
@@ -64,7 +67,8 @@ readonly class Latte
      * @return string Can be empty if $return is false
      * @throws TemplateDoesNotExistException
      */
-    public function viewToString(string $template, array|TemplateParameters $params = []) : string {
+    public function viewToString(string $template, array|TemplateParametersInterface $params = []): string
+    {
         return $this->engine->renderToString($this->getTemplate($template), $params);
     }
 
@@ -136,7 +140,8 @@ readonly class Latte
      * @param  string|null  $locale
      * @return $this
      */
-    public function setLocale(?string $locale) : Latte {
+    public function setLocale(?string $locale): static
+    {
         $this->engine->setLocale($locale);
         return $this;
     }

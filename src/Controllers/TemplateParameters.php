@@ -4,17 +4,17 @@ namespace Lsr\Core\Controllers;
 
 use AllowDynamicProperties;
 use ArrayAccess;
-use JsonSerializable;
 use Lsr\Core\App;
 use Lsr\Core\Exceptions\UnsupportedOperationException;
 use Lsr\Core\Requests\Request;
 use Lsr\Dto\Notice;
+use Lsr\Interfaces\TemplateParametersInterface;
 
 /**
  * @implements ArrayAccess<string, mixed>
  */
 #[AllowDynamicProperties]
-class TemplateParameters implements ArrayAccess, JsonSerializable
+class TemplateParameters implements TemplateParametersInterface
 {
     public Controller $page;
     public App $app;
@@ -70,5 +70,12 @@ class TemplateParameters implements ArrayAccess, JsonSerializable
      */
     public function jsonSerialize() : array {
         return get_object_vars($this);
+    }
+
+    public function getProps(): array
+    {
+        $props = get_object_vars($this);
+        unset($props['page'], $props['app'], $props['request'], $props['addCss'], $props['addJs']);
+        return $props;
     }
 }
