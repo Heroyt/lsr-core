@@ -53,7 +53,7 @@ readonly class NotFoundExceptionHandler implements ExceptionHandlerInterface
             } catch (\JsonException) {
                 $data = '{"type":"resource_not_found_error","title":"Oops, I cannot find this."}';
             }
-            return $this->responseFactory->createResponse(
+            return $this->responseFactory->createFullResponse(
               404,
               ['Content-Type' => 'application/json'],
               $data
@@ -61,7 +61,7 @@ readonly class NotFoundExceptionHandler implements ExceptionHandlerInterface
         }
 
         if (in_array('text/html', $acceptTypes, true)) {
-            return $this->responseFactory->createResponse(
+            return $this->responseFactory->createFullResponse(
               404,
               ['Content-Type' => 'text/html'],
               <<<HTML
@@ -82,7 +82,7 @@ readonly class NotFoundExceptionHandler implements ExceptionHandlerInterface
             );
         }
 
-        return $this->responseFactory->createResponse(
+        return $this->responseFactory->createFullResponse(
           404,
           ['Content-Type' => 'text/plain'],
           'Oops, I cannot find this. - '.$exception->getMessage()

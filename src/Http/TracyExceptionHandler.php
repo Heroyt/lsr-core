@@ -5,7 +5,7 @@ namespace Lsr\Core\Http;
 
 use Lsr\Core\Requests\Dto\ErrorResponse;
 use Lsr\Core\Requests\Request;
-use Lsr\Interfaces\ResponseFactoryInterface;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Tracy\Debugger;
 use Tracy\Helpers;
@@ -42,7 +42,7 @@ final readonly class TracyExceptionHandler implements ExceptionHandlerInterface
             $blueScreen = ob_get_clean();
             ob_end_clean();
 
-            return $this->responseFactory->createResponse(
+            return $this->responseFactory->createFullResponse(
               500,
               [
                 'Content-Type' => 'text/html',
@@ -71,7 +71,7 @@ final readonly class TracyExceptionHandler implements ExceptionHandlerInterface
             } catch (\JsonException) {
                 $data = '{"type":"internal","title":"Something Went wrong!"}';
             }
-            return $this->responseFactory->createResponse(
+            return $this->responseFactory->createFullResponse(
               500,
               ['Content-Type' => 'application/json'],
               $data
@@ -79,7 +79,7 @@ final readonly class TracyExceptionHandler implements ExceptionHandlerInterface
         }
 
         if (in_array('text/html', $acceptTypes, true)) {
-            return $this->responseFactory->createResponse(
+            return $this->responseFactory->createFullResponse(
               500,
               ['Content-Type' => 'text/html'],
               <<<HTML
@@ -100,7 +100,7 @@ final readonly class TracyExceptionHandler implements ExceptionHandlerInterface
             );
         }
 
-        return $this->responseFactory->createResponse(
+        return $this->responseFactory->createFullResponse(
           500,
           ['Content-Type' => 'text/plain'],
           'Internal server error - '.$exception->getMessage()
