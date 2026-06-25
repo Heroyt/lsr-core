@@ -191,7 +191,11 @@ abstract class Controller implements ControllerInterface
     protected function getAcceptTypes(ServerRequestInterface $request) : array {
         $types = [];
         foreach ($request->getHeader('Accept') as $value) {
-            $types[] = strtolower(trim(explode(';', $value, 2)[0]));
+            $str = strtolower(trim(explode(';', $value, 2)[0]));
+            if ($str === '') {
+                continue;
+            }
+            $types[] = $str;
         }
         return $types;
     }
