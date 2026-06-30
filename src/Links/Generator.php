@@ -5,6 +5,7 @@ namespace Lsr\Core\Links;
 
 use Lsr\Core\App;
 use Lsr\Core\Routing\Router;
+use Nyholm\Psr7\Uri;
 use Psr\Http\Message\UriInterface;
 use RuntimeException;
 
@@ -32,6 +33,16 @@ readonly class Generator
      * @return string
      */
     public function getLink(array | string ...$request) : string {
+        $link = $this->getLinkObject(...$request);
+        return $this->formatLocalLink($link);
+    }
+
+    /**
+     * @param  LinkArray|LinkArray[]  ...$request
+     *
+     * @return string
+     */
+    public function getAbsoluteLink(array | string ...$request) : string {
         return (string) $this->getLinkObject(...$request);
     }
 
@@ -46,6 +57,10 @@ readonly class Generator
             /** @var LinkArray|string $request */
             $request = $request[0];
             if (is_string($request)) {
+                if ($this->isAbsoluteUrl($request)) {
+                    return new Uri($request);
+                }
+
                 // Try to get route by name
                 $route = $this->router->getRouteByName($request);
                 if (isset($route)) {
@@ -87,6 +102,43 @@ readonly class Generator
         }
 
         return $this->baseUrl;
+    }
+
+    private function formatLocalLink(UriInterface $link) : string {
+        if (!$this->isLocalUri($link)) {
+            return (string) $link;
+        }
+
+        $path = $link->getPath();
+        if ($path === '') {
+            $path = '/';
+        }
+
+        $query = $link->getQuery();
+        if ($query !== '') {
+            $path .= '?'.$query;
+        }
+
+        $fragment = $link->getFragment();
+        if ($fragment !== '') {
+            $path .= '#'.$fragment;
+        }
+
+        return $path;
+    }
+
+    private function isAbsoluteUrl(string $link) : bool {
+        return preg_match('#^[a-z][a-z0-9+.-]*://#i', $link) === 1;
+    }
+
+    private function isLocalUri(UriInterface $link) : bool {
+        $host = $link->getHost();
+        if ($host === '') {
+            return true;
+        }
+
+        return strcasecmp($host, $this->baseUrl->getHost()) === 0
+            && $link->getPort() === $this->baseUrl->getPort();
     }
 
     /**

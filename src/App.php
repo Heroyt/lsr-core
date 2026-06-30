@@ -203,8 +203,9 @@ class App
      * Get url to request location
      *
      * @param  array<string|int, string>  $request  request array
-     *                                           * Ex: ['user', 'login', 'view' => 1, 'type' => 'company']:
-     *   http(s)://host.cz/user/login?view=1&type=company
+     *                                          * Ex: ['user', 'login', 'view' => 1, 'type' => 'company']:
+     *   /user/login?view=1&type=company
+     *   Set $absolute to true to include the current scheme and host.
      *
      * @return UriInterface
      * @warning Should use the new \Lsr\Core\Links\Generator class to generate links
@@ -516,9 +517,12 @@ class App
      * @version 1.0
      * @since   1.0
      */
-    public static function getLink(array $request = []) : string {
+    public static function getLink(array $request = [], bool $absolute = false) : string {
         /** @var Generator $generator */
         $generator = static::getService('links.generator');
+        if ($absolute) {
+            return $generator->getAbsoluteLink($request);
+        }
         return $generator->getLink($request);
     }
 
