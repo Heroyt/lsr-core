@@ -78,7 +78,7 @@ class App
       public readonly Config           $config,
       public readonly Translations     $translations,
     ) {
-        self::$instance = $this;
+        static::$instance = $this;
         $this->router->setup();
     }
 
@@ -91,15 +91,15 @@ class App
      * @return mixed
      */
     public static function __callStatic(string $name, array $arguments) {
-        return self::getInstance()->{$name}(...$arguments);
+        return static::getInstance()->{$name}(...$arguments);
     }
 
     public static function getInstance() : App {
-        if (!isset(self::$instance)) {
+        if (!isset(static::$instance)) {
             // @phpstan-ignore-next-line
-            self::$instance = self::getService('app');
+            static::$instance = static::getService('app');
         }
-        return self::$instance;
+        return static::$instance;
     }
 
     /**
@@ -111,14 +111,14 @@ class App
      */
     public static function getService(string $name) : object {
         /** @phpstan-ignore return.type */
-        return self::getContainer()->getService($name);
+        return static::getContainer()->getService($name);
     }
 
     /**
      * @return Container
      */
     public static function getContainer() : Container {
-        return self::$container;
+        return static::$container;
     }
 
     /**
@@ -127,7 +127,7 @@ class App
      * @return void
      */
     public static function setupDi() : void {
-        if (isset(self::$container)) {
+        if (isset(static::$container)) {
             return;
         }
         Timer::start('core.setup.di');
@@ -144,7 +144,7 @@ class App
               }
           }
         );
-        self::$container = new $class;
+        static::$container = new $class;
         Timer::stop('core.setup.di');
     }
 
@@ -155,7 +155,7 @@ class App
      * @since   1.0
      */
     public static function uglyUrl() : void {
-        self::$prettyUrl = false;
+        static::$prettyUrl = false;
     }
 
     /**
@@ -165,7 +165,7 @@ class App
      * @since   1.0
      */
     public static function prettyUrl() : void {
-        self::$prettyUrl = true;
+        static::$prettyUrl = true;
     }
 
     public static function sendResponse(ResponseInterface $response) : never {
@@ -215,7 +215,7 @@ class App
      */
     public static function getLinkObject(array $request = []) : UriInterface {
         /** @var Generator $generator */
-        $generator = self::getService('links.generator');
+        $generator = static::getService('links.generator');
         return $generator->getLinkObject($request);
     }
 
@@ -228,7 +228,7 @@ class App
      * @since   1.0
      */
     public static function isPrettyUrl() : bool {
-        return self::$prettyUrl;
+        return static::$prettyUrl;
     }
 
     /**
@@ -239,7 +239,7 @@ class App
      */
     public static function getMenu(string $type = 'menu') : array {
         /** @var MenuBuilder $menuBuilder */
-        $menuBuilder = self::getService('menu.builder');
+        $menuBuilder = static::getService('menu.builder');
         return $menuBuilder->getMenu($type);
     }
 
@@ -254,7 +254,7 @@ class App
      */
     public static function getServiceByType(string $type) : null | object {
         /** @var T|null $service */
-        $service = self::getContainer()->getByType($type);
+        $service = static::getContainer()->getByType($type);
         return $service;
     }
 
@@ -268,7 +268,7 @@ class App
      * @return T[]
      */
     public static function findServicesByType(string $type) : array {
-        $service = self::getContainer()->findByType($type);
+        $service = static::getContainer()->findByType($type);
         /** @var T[] $services */
         $services = array_map([static::class, 'getService'], $service);
         return $services;
@@ -347,7 +347,7 @@ class App
      * @deprecated Use DI for loading config instead
      */
     public static function getConfig() : array {
-        return self::getInstance()->config->getConfig();
+        return static::getInstance()->config->getConfig();
     }
 
     /**
@@ -477,19 +477,19 @@ class App
     ) : Response {
         $link = '';
         if ($to instanceof RouteInterface) {
-            $link = self::getLink($to->getPath());
+            $link = static::getLink($to->getPath());
         }
         elseif ($to instanceof UriInterface) {
             $link = (string) $to;
         }
         elseif (is_array($to)) {
-            $link = self::getLink($to);
+            $link = static::getLink($to);
         }
         elseif (is_string($to)) {
             /** @var Route|null $route */
             $route = $this->router->getRouteByName($to);
             if (isset($route)) {
-                $link = self::getLink($route->path);
+                $link = static::getLink($route->path);
             }
             else {
                 $link = $to;
@@ -518,7 +518,7 @@ class App
      */
     public static function getLink(array $request = []) : string {
         /** @var Generator $generator */
-        $generator = self::getService('links.generator');
+        $generator = static::getService('links.generator');
         return $generator->getLink($request);
     }
 
