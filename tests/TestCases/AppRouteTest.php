@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace TestCases;
 
-use Lsr\Caching\Cache;
 use Lsr\Core\App;
 use Lsr\Core\Routing\Router;
 use Lsr\Enums\RequestMethod;
@@ -15,7 +14,7 @@ class AppRouteTest extends TestCase
     public function testCachedRouteKeepsResolvedLocaleParameters(): void
     {
         $app = (new \ReflectionClass(App::class))->newInstanceWithoutConstructor();
-        $router = new Router($this->createStub(Cache::class));
+        $router = new Router();
         $router->unregisterAll();
         $router
             ->get('/ochrana-osobnich-udaju', static fn() => null)

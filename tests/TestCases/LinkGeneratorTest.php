@@ -7,7 +7,6 @@ use Lsr\Core\Links\Generator;
 use Lsr\Core\Translations;
 use Lsr\Core\Routing\Route;
 use Lsr\Core\Routing\Router;
-use Lsr\Caching\Cache;
 use Lsr\Enums\RequestMethod;
 use Nyholm\Psr7\Uri;
 use PHPUnit\Framework\TestCase;
@@ -26,10 +25,9 @@ class LinkGeneratorTest extends TestCase
         $app = $this->createStub(App::class);
         $app->method('getBaseUrlObject')->willReturn(new Uri('https://arena.test/'));
 
-        $cache = $this->createStub(Cache::class);
         $translations = $this->createStub(Translations::class);
         $translations->method('getLangId')->willReturn('cs');
-        $this->router = new Router($cache);
+        $this->router = new Router();
         $this->generator = new Generator($this->router, $app, translations: $translations);
 
         $route = Route::create(RequestMethod::GET, 'play', static fn() => null);
