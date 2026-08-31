@@ -30,12 +30,11 @@ readonly class LanguagePrefixer implements LinkModifier
             array_shift($link);
         }
 
-        // If the link already starts with a language prefix and it does not match the current language, remove it
+        // Remove an existing language prefix before applying the configured policy.
         if (
           isset($link[0])
-          && ($first = (string) $link[0]) !== $lang
-          && preg_match('/^[a-z]{2,3}$/', $first)
-          && $this->translations->supportsLanguage($first)
+          && preg_match('/^[a-z]{2,3}$/', (string) $link[0])
+          && $this->translations->supportsLanguage((string) $link[0])
         ) {
             array_shift($link);
         }

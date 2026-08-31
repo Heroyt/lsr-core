@@ -5,6 +5,7 @@ namespace Lsr\Core\Middleware;
 
 use Lsr\Core\App;
 use Lsr\Core\Exceptions\InvalidLanguageException;
+use Lsr\Core\Translations;
 use Lsr\Core\Requests\Response;
 use Lsr\Core\Routing\Middleware;
 use Psr\Http\Message\ResponseInterface;
@@ -16,38 +17,47 @@ use Psr\Http\Server\RequestHandlerInterface;
  */
 class DefaultLanguageRedirect implements Middleware
 {
+    public function __construct(
+      private readonly ?Translations $translations = null,
+    ) {}
+
     /**
      * @inheritDoc
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler) : ResponseInterface {
-        // Check request for 'lang' attribute
         $lang = $request->getAttribute('lang');
-        if (empty($lang)) {
+        if (!is_string($lang) || $lang === '') {
             return $handler->handle($request);
         }
-        // If the language is the default language, it should redirect to the equivalent URL without the language prefix.
+
         try {
-            if ($lang === App::getInstance()->translations->getDefaultLangId()) {
-                // Get the current path
-                $path = $request->getUri()->getPath();
-                // If the path does not start with the language prefix, continue processing the request
-                if (!str_contains($path, $lang)) {
-                    return $handler->handle($request);
-                }
-                // Remove the language prefix from the path
-                $newPath = explode('/', str_replace($lang, '', $path));
-                // Create a new response with a 301 redirect
-                return Response::create(
-                  308,
-                  [
-                    'Location' => App::getLink($newPath),
-                  ]
-                );
+            $translations = $this->translations ?? App::getInstance()->translations;
+            if ($lang !== $translations->getDefaultLangId()) {
+                return $handler->handle($request);
             }
         } catch (InvalidLanguageException) {
-            // Ignore
+            return $handler->handle($request);
         }
-        // If the language is not the default language, continue processing the request
-        return $handler->handle($request);
+
+        $path = $request->getUri()->getPath();
+        $prefix = '/'.$lang;
+        if ($path !== $prefix && !str_starts_with($path, $prefix.'/')) {
+            return $handler->handle($request);
+        }
+
+        $newPath = substr($path, strlen($prefix));
+        if ($newPath === '') {
+            $newPath = '/';
+        }
+        $location = $newPath;
+        $query = $request->getUri()->getQuery();
+        if ($query !== '') {
+            $location .= '?'.$query;
+        }
+        if ($location === $request->getRequestTarget()) {
+            return $handler->handle($request);
+        }
+
+        return Response::create(308, ['Location' => $location]);
     }
 }

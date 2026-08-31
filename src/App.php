@@ -65,6 +65,8 @@ class App
     /** @var RequestInterface $request Current request object */
     protected RequestInterface $request;
     protected ?RouteInterface $route;
+    /** @var array<string, mixed> */
+    protected array $routeParams = [];
     protected Logger $logger;
     protected ?CookieJarInterface $cookieJar = null;
 
@@ -316,6 +318,7 @@ class App
     public function setRequest(RequestInterface $request) : void {
         $this->request = $request;
         $this->route = null;
+        $this->routeParams = [];
         $this->cookieJar = null;
     }
 
@@ -570,7 +573,15 @@ class App
      * @see App::getRequest()
      */
     public function getRoute(array &$params) : ?RouteInterface {
-        $this->route ??= Router::getRoute($this->getRequest()->getType(), $this->getRequest()->getPath(), $params);
+        if ($this->route === null) {
+            $this->routeParams = [];
+            $this->route = Router::getRoute(
+                $this->getRequest()->getType(),
+                $this->getRequest()->getPath(),
+                $this->routeParams
+            );
+        }
+        $params = $this->routeParams;
         return $this->route;
     }
 

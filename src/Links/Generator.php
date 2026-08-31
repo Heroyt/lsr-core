@@ -4,6 +4,8 @@
 namespace Lsr\Core\Links;
 
 use Lsr\Core\App;
+use Lsr\Core\Routing\Interfaces\LocalizableRouteInterface;
+use Lsr\Core\Translations;
 use Lsr\Core\Routing\Router;
 use Nyholm\Psr7\Uri;
 use Psr\Http\Message\UriInterface;
@@ -22,6 +24,7 @@ readonly class Generator
       protected Router $router,
       App              $app,
       protected array  $modifiers = [],
+      protected ?Translations $translations = null,
     ) {
         $this->baseUrl = $app->getBaseUrlObject();
         $this->prettyUrl = App::isPrettyUrl();
@@ -44,6 +47,108 @@ readonly class Generator
      */
     public function getAbsoluteLink(array | string ...$request) : string {
         return (string) $this->getLinkObject(...$request);
+    }
+
+    /**
+     * Generate a URL for a named logical route.
+     *
+     * Localized routes require an exact variant for the requested or current
+     * locale. Nonlocalized routes remain locale-neutral.
+     *
+     * @param array<string,mixed> $parameters
+     */
+    public function route(
+      string $name,
+      array $parameters = [],
+      ?string $locale = null,
+      ?string $fragment = null,
+    ): string {
+        $route = $this->router->getRouteByName($name);
+        if ($route === null) {
+            throw new RuntimeException(sprintf('Named route "%s" was not found.', $name));
+        }
+
+        if ($route instanceof LocalizableRouteInterface && $route->hasLocalizedRoutes()) {
+            $locale ??= $this->translations?->getLangId();
+            if ($locale === null) {
+                throw new RuntimeException(
+                  sprintf('Cannot generate localized route "%s" without a locale.', $name)
+                );
+            }
+            $localizedRoute = $route->getRouteForLocale($locale);
+            if ($localizedRoute === null) {
+                throw new RuntimeException(
+                  sprintf('Route "%s" has no path for locale "%s".', $name, $locale)
+                );
+            }
+            $route = $localizedRoute;
+        }
+
+        $path = $this->substituteRouteParameters($route->getPath(), $parameters, $name);
+        $url = $this->buildUrlFromPath($path);
+        if ($parameters !== []) {
+            $query = http_build_query($parameters, encoding_type: PHP_QUERY_RFC3986);
+            if ($url->getQuery() !== '') {
+                $query = $url->getQuery().'&'.$query;
+            }
+            $url = $url->withQuery($query);
+        }
+        if ($fragment !== null) {
+            $url = $url->withFragment($fragment);
+        }
+        return $this->formatLocalLink($url);
+    }
+
+    /**
+     * @param string[]           $path
+     * @param array<string,mixed> $parameters
+     *
+     * @return string[]
+     */
+    private function substituteRouteParameters(array $path, array &$parameters, string $routeName): array
+    {
+        $resolved = [];
+        foreach ($path as $part) {
+            if (preg_match('/^\\[([^\\]=]+)(?:=([^\\]]*))?]$/', $part, $optional) === 1) {
+                $name = $optional[1];
+                if (array_key_exists($name, $parameters)) {
+                    $resolved[] = $this->encodeRouteParameter($parameters[$name], $name, $routeName);
+                    unset($parameters[$name]);
+                } elseif (array_key_exists(2, $optional) && $optional[2] !== '') {
+                    $resolved[] = rawurlencode($optional[2]);
+                }
+                continue;
+            }
+
+            $part = preg_replace_callback(
+              '/\\{([^}]+)}/',
+              function (array $match) use (&$parameters, $routeName): string {
+                  $name = $match[1];
+                  if (!array_key_exists($name, $parameters)) {
+                      throw new RuntimeException(
+                        sprintf('Missing parameter "%s" for route "%s".', $name, $routeName)
+                      );
+                  }
+                  $value = $this->encodeRouteParameter($parameters[$name], $name, $routeName);
+                  unset($parameters[$name]);
+                  return $value;
+              },
+              $part,
+            );
+            assert($part !== null);
+            $resolved[] = $part;
+        }
+        return $resolved;
+    }
+
+    private function encodeRouteParameter(mixed $value, string $name, string $routeName): string
+    {
+        if (!is_scalar($value) && !$value instanceof \Stringable) {
+            throw new RuntimeException(
+              sprintf('Parameter "%s" for route "%s" must be scalar or stringable.', $name, $routeName)
+            );
+        }
+        return rawurlencode((string) $value);
     }
 
     /**

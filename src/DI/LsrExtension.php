@@ -146,6 +146,7 @@ class LsrExtension extends CompilerExtension
             Generator::class,
             [
               'modifiers' => $this->config->links->modifiers,
+              'translations' => '@'.$this->prefix('translations'),
             ]
           )
                 ->setTags(['lsr', 'core']);

@@ -8,7 +8,6 @@ use Lsr\Core\Attributes\MapRequest;
 use Lsr\Core\Requests\Request;
 use Lsr\Core\Requests\Response;
 use Lsr\Core\Requests\Validation\RequestValidationMapper;
-use Lsr\Core\Routing\AliasRoute;
 use Lsr\Core\Routing\Dispatcher;
 use Lsr\Core\Routing\Exceptions\ModelNotFoundException as RouteModelNotFoundException;
 use Lsr\Core\Routing\Middleware;
@@ -53,19 +52,6 @@ class RouteHandler implements RequestHandlerInterface
 
         // No more middleware to process, call the handler
         if ($middleware === false) {
-            // Handle route redirect (alias)
-            if ($this->route instanceof AliasRoute) {
-                $link = App::getLink($this->route->redirectTo->getPath());
-                foreach ($request->params as $name => $value) {
-                    $link = str_replace('{'.$name.'}', $value, $link);
-                }
-                return $this->withCookies(
-                  Response::create(
-                    308,
-                    ['Location' => $link]
-                  )
-                );
-            }
 
             $handler = $this->route->getHandler();
 
