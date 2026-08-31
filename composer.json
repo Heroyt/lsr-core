@@ -54,7 +54,7 @@
     "ext-pdo_sqlite": "*",
     "latte/latte": "^3.0",
     "nette/di": "^3.2",
-    "lsr/routing": "^0.3.15",
+    "lsr/routing": "^0.4",
     "lsr/request": "^0.3",
     "lsr/db": "^0.3",
     "lsr/serializer": "^0.3",
