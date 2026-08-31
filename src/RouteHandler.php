@@ -10,7 +10,6 @@ use Lsr\Core\Requests\Response;
 use Lsr\Core\Requests\Validation\RequestValidationMapper;
 use Lsr\Core\Routing\Dispatcher;
 use Lsr\Core\Routing\Exceptions\ModelNotFoundException as RouteModelNotFoundException;
-use Lsr\Core\Routing\Middleware;
 use Lsr\Core\Routing\Route;
 use Lsr\Enums\RequestMethod;
 use Lsr\Helpers\Tools\Strings;
@@ -24,6 +23,7 @@ use Nette\DI\MissingServiceException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Http\Server\MiddlewareInterface;
 use ReflectionAttribute;
 use ReflectionFunction;
 use ReflectionIntersectionType;
@@ -39,6 +39,10 @@ class RouteHandler implements RequestHandlerInterface
 
     protected Route $route;
 
+    /** @var list<MiddlewareInterface> */
+    private array $routeMiddleware = [];
+    private int $routeMiddlewareIndex = 0;
+
     public function __construct(
       protected readonly Cache  $cache,
       protected readonly Mapper $mapper,
@@ -47,11 +51,10 @@ class RouteHandler implements RequestHandlerInterface
     public function handle(ServerRequestInterface $request) : ResponseInterface {
         assert(isset($this->route) && $request instanceof Request);
 
-        /** @var Middleware|false $middleware */
-        $middleware = current($this->route->middleware);
+        $middleware = $this->routeMiddleware[$this->routeMiddlewareIndex] ?? null;
 
         // No more middleware to process, call the handler
-        if ($middleware === false) {
+        if ($middleware === null) {
 
             $handler = $this->route->getHandler();
 
@@ -102,8 +105,7 @@ class RouteHandler implements RequestHandlerInterface
             return $this->withCookies($response);
         }
 
-        // Iterate to the next middleware
-        next($this->route->middleware);
+        $this->routeMiddlewareIndex++;
 
         // Process route-wide middleware
         return $middleware->process($request, $this);
@@ -470,6 +472,8 @@ class RouteHandler implements RequestHandlerInterface
 
     public function setRoute(Route $route) : RouteHandler {
         $this->route = $route;
+        $this->routeMiddleware = $route->getMiddleware();
+        $this->routeMiddlewareIndex = 0;
         return $this;
     }
 }
