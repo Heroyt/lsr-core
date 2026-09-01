@@ -302,15 +302,8 @@ class App
             }
             $this->request = $request;
 
-            /** @var string|null $previousRequest */
-            $previousRequest = $this->session->getFlash('fromRequest');
-            if (isset($previousRequest)) {
-                /** @var Request|false $previousRequest */
-                $previousRequest = unserialize($previousRequest, ['allowed_classes' => true,]);
-                if ($previousRequest instanceof RequestInterface) {
-                    $this->request->setPreviousRequest($previousRequest);
-                }
-            }
+            $previousRequestState = $this->session->getFlash(PreviousRequestState::FLASH_KEY);
+            PreviousRequestState::restore($this->request, $previousRequestState);
         }
         return $this->request;
     }
@@ -500,7 +493,7 @@ class App
             }
         }
         if (isset($from)) {
-            $this->session->flash('fromRequest', serialize($from));
+            $this->session->flash(PreviousRequestState::FLASH_KEY, PreviousRequestState::capture($from));
         }
 
         return new Response(new \Nyholm\Psr7\Response($type, headers: ['Location' => $link]));

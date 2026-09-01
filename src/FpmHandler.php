@@ -8,7 +8,6 @@ use Lsr\Core\Http\ExceptionHandlerInterface;
 use Lsr\Core\Requests\Request;
 use Lsr\Exceptions\DispatchBreakException;
 use Lsr\Interfaces\RequestFactoryInterface;
-use Lsr\Interfaces\RequestInterface;
 use Lsr\Interfaces\SessionInterface;
 use Psr\Http\Message\ResponseInterface;
 use RuntimeException;
@@ -80,14 +79,8 @@ readonly class FpmHandler
             $request = new Request($request); // Wrap the PSR-7 request into our Request class
         }
 
-        /** @var string|null $previousRequest */
-        $previousRequest = $this->session->getFlash('fromRequest');
-        if ($previousRequest !== null) {
-            $previousRequest = unserialize($previousRequest, ['allowed_classes' => true,]);
-            if ($previousRequest instanceof RequestInterface) {
-                $request->setPreviousRequest($previousRequest);
-            }
-        }
+        $previousRequestState = $this->session->getFlash(PreviousRequestState::FLASH_KEY);
+        PreviousRequestState::restore($request, $previousRequestState);
 
         return $request;
     }
