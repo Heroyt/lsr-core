@@ -1,10 +1,13 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Lsr\Core;
 
 use Lsr\Core\Http\AsyncHandlerInterface;
 use Lsr\Core\Http\ExceptionHandlerInterface;
+use Lsr\Core\Http\Lifecycle\RequestLifecycleHookInterface;
+use Lsr\Core\Http\Lifecycle\RequestLifecycleScopeInterface;
 use Lsr\Core\Requests\Request;
 use Lsr\Exceptions\DispatchBreakException;
 use Lsr\Interfaces\RequestFactoryInterface;
@@ -15,18 +18,18 @@ use RuntimeException;
 use Throwable;
 use Tracy\Debugger;
 
-readonly class FpmHandler
+class FpmHandler
 {
-
     /**
      * @param  ExceptionHandlerInterface[]  $exceptionHandlers  Exceptions are handled by the first valid handler.
      * @param  AsyncHandlerInterface[]  $asyncHandlers  Handlers that are run after the response is sent.
      */
     public function __construct(
-      protected RequestFactoryInterface $requestFactory,
-      protected SessionInterface        $session,
-      protected array                   $exceptionHandlers = [],
-      protected array                   $asyncHandlers = [],
+        protected RequestFactoryInterface $requestFactory,
+        protected SessionInterface $session,
+        protected array $exceptionHandlers = [],
+        protected array $asyncHandlers = [],
+        protected ?RequestLifecycleHookInterface $requestLifecycle = null,
     ) {
         // Validate that all handlers are of the correct type
         /** @phpstan-ignore instanceof.alwaysTrue */
@@ -35,46 +38,139 @@ readonly class FpmHandler
         assert(array_all($this->asyncHandlers, static fn($val) => $val instanceof AsyncHandlerInterface));
     }
 
-    protected function handleAsync() : void {
+    public function setRequestLifecycleHook(RequestLifecycleHookInterface $hook): static
+    {
+        $this->requestLifecycle = $hook;
+        return $this;
+    }
+
+    public function addAsyncHandler(AsyncHandlerInterface $handler): static
+    {
+        $this->asyncHandlers[] = $handler;
+        return $this;
+    }
+
+    protected function handleAsync(): void
+    {
         foreach ($this->asyncHandlers as $handler) {
             $handler->run();
         }
     }
 
-    public function run() : void {
+    public function run(): void
+    {
         $app = App::getInstance();
 
         try {
             // Parse request
             $request = $this->createRequest();
         } catch (DispatchBreakException $e) {
-            $response = $e->getResponse(); // Cannot add cookies if the request cannot be created
-            $this->finishRequest($response);
+            $this->finishRequest($e->getResponse(), null);
             return;
         }
 
+        $scope = $this->beginLifecycle($request);
+        $response = null;
+        $failure = null;
+
         try {
             $app->setRequest($request);
-            $response = $app->run();
+            $response = $this->withCookies($app->run());
         } catch (DispatchBreakException $e) {
             $response = $this->withCookies($e->getResponse());
         } catch (Throwable $e) {
-            $response = $this->withCookies($this->handleException($e, $request));
-        } finally {
-            /** @phpstan-ignore variable.undefined */
-            $this->finishRequest($response);
+            $this->recordLifecycleException($scope, $e);
+            try {
+                $response = $this->withCookies($this->handleException($e, $request));
+            } catch (Throwable $handlerException) {
+                $this->recordLifecycleException($scope, $handlerException);
+                $failure = $handlerException;
+            }
+        }
+
+        try {
+            $this->finishRequest($response, $scope);
+        } catch (Throwable $finishException) {
+            $failure ??= $finishException;
+        }
+
+        if ($failure !== null) {
+            throw $failure;
         }
     }
 
-    private function finishRequest(ResponseInterface $response) : void {
-        $this->sendResponse($response);
-        Debugger::shutdownHandler();
-        $this->session->close();
-        fastcgi_finish_request();
-        $this->handleAsync();
+    private function beginLifecycle(Request $request): ?RequestLifecycleScopeInterface
+    {
+        try {
+            return $this->requestLifecycle?->begin($request);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
-    public function createRequest() : Request {
+    private function recordLifecycleException(
+        ?RequestLifecycleScopeInterface $scope,
+        Throwable $exception
+    ): void {
+        try {
+            $scope?->recordException($exception);
+        } catch (Throwable) {
+            // Lifecycle hooks must never affect request handling.
+        }
+    }
+
+    private function finishRequest(
+        ?ResponseInterface $response,
+        ?RequestLifecycleScopeInterface $scope
+    ): void {
+        $failure = null;
+
+        if ($response !== null) {
+            try {
+                $this->sendResponse($response);
+            } catch (Throwable $exception) {
+                $this->recordLifecycleException($scope, $exception);
+                $failure = $exception;
+            }
+        }
+
+        try {
+            Debugger::shutdownHandler();
+        } catch (Throwable $exception) {
+            $this->recordLifecycleException($scope, $exception);
+            $failure ??= $exception;
+        }
+
+        try {
+            $this->session->close();
+        } catch (Throwable $exception) {
+            $this->recordLifecycleException($scope, $exception);
+            $failure ??= $exception;
+        }
+
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+
+        try {
+            $scope?->complete($response);
+        } catch (Throwable) {
+            // Lifecycle hooks must never affect request handling.
+        }
+
+        try {
+            $this->handleAsync();
+        } catch (Throwable $exception) {
+            $failure ??= $exception;
+        }
+
+        if ($failure !== null) {
+            throw $failure;
+        }
+    }
+
+    public function createRequest(): Request
+    {
         $request = $this->requestFactory->getHttpRequest();
         if (!($request instanceof Request)) {
             $request = new Request($request); // Wrap the PSR-7 request into our Request class
@@ -92,7 +188,8 @@ readonly class FpmHandler
         return $request;
     }
 
-    protected function withCookies(ResponseInterface $response) : ResponseInterface {
+    protected function withCookies(ResponseInterface $response): ResponseInterface
+    {
         $headers = App::cookieJar()->getHeaders();
         if (empty($headers)) {
             return $response;
@@ -100,7 +197,8 @@ readonly class FpmHandler
         return $response->withAddedHeader('Set-Cookie', $headers);
     }
 
-    protected function handleException(Throwable $exception, Request $request) : ResponseInterface {
+    protected function handleException(Throwable $exception, Request $request): ResponseInterface
+    {
         foreach ($this->exceptionHandlers as $handler) {
             if ($handler->handles($exception)) {
                 return $handler->handle($exception, $request);
@@ -111,7 +209,8 @@ readonly class FpmHandler
         throw $exception;
     }
 
-    protected function sendResponse(ResponseInterface $response) : void {
+    protected function sendResponse(ResponseInterface $response): void
+    {
         // Check if something is not already sent
         if (headers_sent()) {
             throw new RuntimeException('Headers were already sent. The response could not be emitted!');
