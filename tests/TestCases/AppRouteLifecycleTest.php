@@ -1,0 +1,64 @@
+<?php
+
+declare(strict_types=1);
+
+namespace TestCases;
+
+use Lsr\Core\App;
+use Lsr\Core\Http\Lifecycle\RouteResolutionEvent;
+use Lsr\Core\Routing\Router;
+use Lsr\Enums\RequestMethod;
+use Lsr\Interfaces\RequestInterface;
+use PHPUnit\Framework\TestCase;
+
+final class AppRouteLifecycleTest extends TestCase
+{
+    protected function tearDown(): void
+    {
+        (new Router())->unregisterAll();
+    }
+
+    public function testRouteResolutionReportsOnlyTheFirstMatchedResolution(): void
+    {
+        $app = $this->createApp('/observed');
+        $hook = new RecordingRouteResolutionHook();
+        $app->setRouteResolutionHook($hook);
+
+        $params = [];
+        $route = $app->getRoute($params);
+        $app->getRoute($params);
+
+        self::assertNotNull($route);
+        self::assertCount(1, $hook->events);
+        self::assertSame($route, $hook->events[0]->route);
+        self::assertSame(RequestMethod::GET, $hook->events[0]->method);
+        self::assertSame(RouteResolutionEvent::MATCHED, $hook->events[0]->outcome());
+        self::assertGreaterThanOrEqual(0.0, $hook->events[0]->durationSeconds);
+    }
+
+    public function testHookFailureDoesNotAffectRouteResolution(): void
+    {
+        $app = $this->createApp('/observed');
+        $hook = new RecordingRouteResolutionHook();
+        $hook->fail = true;
+        $app->setRouteResolutionHook($hook);
+
+        $params = [];
+        self::assertNotNull($app->getRoute($params));
+    }
+
+    private function createApp(string $path): App
+    {
+        $router = new Router();
+        $router->unregisterAll();
+        $router->get($path, static fn() => null);
+
+        $request = $this->createStub(RequestInterface::class);
+        $request->method('getType')->willReturn(RequestMethod::GET);
+        $request->method('getPath')->willReturn(explode('/', trim($path, '/')));
+
+        $app = (new \ReflectionClass(App::class))->newInstanceWithoutConstructor();
+        $app->setRequest($request);
+        return $app;
+    }
+}
