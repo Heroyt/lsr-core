@@ -14,6 +14,8 @@ namespace Lsr\Core;
 use Gettext\Languages\Language;
 use Lsr\Core\DataObjects\PageInfoDto;
 use Lsr\Core\Exceptions\InvalidLanguageException;
+use Lsr\Core\Http\Lifecycle\RouteResolutionEvent;
+use Lsr\Core\Http\Lifecycle\RouteResolutionHookInterface;
 use Lsr\Core\Links\Generator;
 use Lsr\Core\Menu\MenuBuilder;
 use Lsr\Core\Menu\MenuItem;
@@ -69,6 +71,7 @@ class App
     protected array $routeParams = [];
     protected Logger $logger;
     protected ?CookieJarInterface $cookieJar = null;
+    protected ?RouteResolutionHookInterface $routeResolutionHook = null;
 
     /**
      * @throws ReflectionException
@@ -313,6 +316,11 @@ class App
         $this->route = null;
         $this->routeParams = [];
         $this->cookieJar = null;
+    }
+
+    public function setRouteResolutionHook(RouteResolutionHookInterface $hook) : static {
+        $this->routeResolutionHook = $hook;
+        return $this;
     }
 
     /**
@@ -568,14 +576,47 @@ class App
     public function getRoute(array &$params) : ?RouteInterface {
         if ($this->route === null) {
             $this->routeParams = [];
-            $this->route = Router::getRoute(
-                $this->getRequest()->getType(),
-                $this->getRequest()->getPath(),
-                $this->routeParams
+            $request = $this->getRequest();
+            $startedAt = hrtime(true);
+            $method = $request->getType();
+            $path = $request->getPath();
+
+            try {
+                $this->route = Router::getRoute(
+                    $method,
+                    $path,
+                    $this->routeParams
+                );
+            } catch (\Throwable $exception) {
+                $this->recordRouteResolution(
+                    new RouteResolutionEvent(
+                        $method,
+                        null,
+                        (hrtime(true) - $startedAt) / 1_000_000_000,
+                        $exception::class,
+                    )
+                );
+                throw $exception;
+            }
+
+            $this->recordRouteResolution(
+                new RouteResolutionEvent(
+                    $method,
+                    $this->route,
+                    (hrtime(true) - $startedAt) / 1_000_000_000,
+                )
             );
         }
         $params = $this->routeParams;
         return $this->route;
+    }
+
+    private function recordRouteResolution(RouteResolutionEvent $event) : void {
+        try {
+            $this->routeResolutionHook?->record($event);
+        } catch (\Throwable) {
+            // Lifecycle hooks must never affect route resolution.
+        }
     }
 
     /**
