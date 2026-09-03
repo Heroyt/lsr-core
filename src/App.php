@@ -14,6 +14,9 @@ namespace Lsr\Core;
 use Gettext\Languages\Language;
 use Lsr\Core\DataObjects\PageInfoDto;
 use Lsr\Core\Exceptions\InvalidLanguageException;
+use Lsr\Core\Http\Lifecycle\RequestOperation;
+use Lsr\Core\Http\Lifecycle\RequestOperationLifecycleHookInterface;
+use Lsr\Core\Http\Lifecycle\RequestOperationLifecycleScopeInterface;
 use Lsr\Core\Http\Lifecycle\RouteResolutionEvent;
 use Lsr\Core\Http\Lifecycle\RouteResolutionHookInterface;
 use Lsr\Core\Links\Generator;
@@ -40,6 +43,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use ReflectionException;
 use RuntimeException;
+use Throwable;
 
 /**
  * @class   App
@@ -72,6 +76,7 @@ class App
     protected Logger $logger;
     protected ?CookieJarInterface $cookieJar = null;
     protected ?RouteResolutionHookInterface $routeResolutionHook = null;
+    protected ?RequestOperationLifecycleHookInterface $requestOperationLifecycleHook = null;
 
     /**
      * @throws ReflectionException
@@ -320,6 +325,11 @@ class App
 
     public function setRouteResolutionHook(RouteResolutionHookInterface $hook) : static {
         $this->routeResolutionHook = $hook;
+        return $this;
+    }
+
+    public function setRequestOperationLifecycleHook(RequestOperationLifecycleHookInterface $hook) : static {
+        $this->requestOperationLifecycleHook = $hook;
         return $this;
     }
 
@@ -580,6 +590,12 @@ class App
             $startedAt = hrtime(true);
             $method = $request->getType();
             $path = $request->getPath();
+            $operation = $this->beginRequestOperation(
+                RequestOperation::RouteResolution,
+                ['http.request.method' => $method->value],
+            );
+            $event = null;
+            $failure = null;
 
             try {
                 $this->route = Router::getRoute(
@@ -587,25 +603,26 @@ class App
                     $path,
                     $this->routeParams
                 );
-            } catch (\Throwable $exception) {
-                $this->recordRouteResolution(
-                    new RouteResolutionEvent(
-                        $method,
-                        null,
-                        (hrtime(true) - $startedAt) / 1_000_000_000,
-                        $exception::class,
-                    )
-                );
-                throw $exception;
-            }
-
-            $this->recordRouteResolution(
-                new RouteResolutionEvent(
+                $event = new RouteResolutionEvent(
                     $method,
                     $this->route,
                     (hrtime(true) - $startedAt) / 1_000_000_000,
-                )
-            );
+                );
+            } catch (Throwable $exception) {
+                $failure = $exception;
+                $event = new RouteResolutionEvent(
+                    $method,
+                    null,
+                    (hrtime(true) - $startedAt) / 1_000_000_000,
+                    $exception::class,
+                );
+                throw $exception;
+            } finally {
+                $this->completeRequestOperation($operation, $failure);
+                if ($event !== null) {
+                    $this->recordRouteResolution($event);
+                }
+            }
         }
         $params = $this->routeParams;
         return $this->route;
@@ -616,6 +633,31 @@ class App
             $this->routeResolutionHook?->record($event);
         } catch (\Throwable) {
             // Lifecycle hooks must never affect route resolution.
+        }
+    }
+
+    /**
+     * @param array<non-empty-string, bool|int|float|string|list<bool|int|float|string>|null> $attributes
+     */
+    private function beginRequestOperation(
+        RequestOperation $operation,
+        array $attributes = [],
+    ) : ?RequestOperationLifecycleScopeInterface {
+        try {
+            return $this->requestOperationLifecycleHook?->begin($operation, $attributes);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function completeRequestOperation(
+        ?RequestOperationLifecycleScopeInterface $scope,
+        ?Throwable $exception = null,
+    ) : void {
+        try {
+            $scope?->complete(exception: $exception);
+        } catch (Throwable) {
+            // Lifecycle hooks must never affect request handling.
         }
     }
 
@@ -663,9 +705,23 @@ class App
         $this->request = $request;
 
         assert($route instanceof Route);
-        return $this->routeHandler
-          ->setRoute($route)
-          ->handle($request);
+        $routeAttributes = ['http.route' => '/' . implode('/', $route->getPath())];
+        if ($route->getName() !== '') {
+            $routeAttributes['lsr.routing.route.name'] = $route->getName();
+        }
+        $operation = $this->beginRequestOperation(RequestOperation::RouteDispatch, $routeAttributes);
+        $failure = null;
+
+        try {
+            return $this->routeHandler
+              ->setRoute($route)
+              ->handle($request);
+        } catch (Throwable $exception) {
+            $failure = $exception;
+            throw $exception;
+        } finally {
+            $this->completeRequestOperation($operation, $failure);
+        }
     }
 
     /**

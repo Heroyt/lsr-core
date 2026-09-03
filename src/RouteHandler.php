@@ -5,6 +5,9 @@ namespace Lsr\Core;
 
 use Lsr\Caching\Cache;
 use Lsr\Core\Attributes\MapRequest;
+use Lsr\Core\Http\Lifecycle\RequestOperation;
+use Lsr\Core\Http\Lifecycle\RequestOperationLifecycleHookInterface;
+use Lsr\Core\Http\Lifecycle\RequestOperationLifecycleScopeInterface;
 use Lsr\Core\Requests\Request;
 use Lsr\Core\Requests\Response;
 use Lsr\Core\Requests\Validation\RequestValidationMapper;
@@ -42,11 +45,18 @@ class RouteHandler implements RequestHandlerInterface
     /** @var list<MiddlewareInterface> */
     private array $routeMiddleware = [];
     private int $routeMiddlewareIndex = 0;
+    private ?RequestOperationLifecycleHookInterface $requestOperationLifecycleHook = null;
 
     public function __construct(
       protected readonly Cache  $cache,
       protected readonly Mapper $mapper,
     ) {}
+
+    public function setRequestOperationLifecycleHook(RequestOperationLifecycleHookInterface $hook): static
+    {
+        $this->requestOperationLifecycleHook = $hook;
+        return $this;
+    }
 
     public function handle(ServerRequestInterface $request) : ResponseInterface {
         assert(isset($this->route) && $request instanceof Request);
@@ -76,7 +86,7 @@ class RouteHandler implements RequestHandlerInterface
                 assert(!empty($func));
 
                 /** @var object $controller */
-                $controller = is_object($class) ? $class : App::getContainer()->getByType($class);
+                $controller = is_object($class) ? $class : $this->resolveService($class, 'controller');
 
                 // Controller-wide middleware
                 if (isset($controller->middleware) && is_array($controller->middleware) && count(
@@ -94,21 +104,60 @@ class RouteHandler implements RequestHandlerInterface
                         ]
                       )
                     );
-                    return $dispatcher->handle($request);
+                    $scope = $this->beginRequestOperation(
+                        RequestOperation::Middleware,
+                        ['lsr.middleware.scope' => 'controller'],
+                    );
+                    $failure = null;
+                    try {
+                        return $dispatcher->handle($request);
+                    } catch (Throwable $exception) {
+                        $failure = $exception;
+                        throw $exception;
+                    } finally {
+                        $this->completeRequestOperation($scope, $failure);
+                    }
                 }
 
                 return $this->handleControllerRequest($controller, $request, $func);
             }
 
-            /** @var ResponseInterface $response */
-            $response = $handler($request);
-            return $this->withCookies($response);
+            $scope = $this->beginRequestOperation(
+                RequestOperation::ControllerAction,
+                ['lsr.controller.handler' => $this->handlerToString($handler)],
+            );
+            $failure = null;
+            try {
+                /** @var ResponseInterface $response */
+                $response = $handler($request);
+                return $this->withCookies($response);
+            } catch (Throwable $exception) {
+                $failure = $exception;
+                throw $exception;
+            } finally {
+                $this->completeRequestOperation($scope, $failure);
+            }
         }
 
         $this->routeMiddlewareIndex++;
 
         // Process route-wide middleware
-        return $middleware->process($request, $this);
+        $scope = $this->beginRequestOperation(
+            RequestOperation::Middleware,
+            [
+                'lsr.middleware.scope' => 'route',
+                'lsr.middleware.class' => $middleware::class,
+            ],
+        );
+        $failure = null;
+        try {
+            return $middleware->process($request, $this);
+        } catch (Throwable $exception) {
+            $failure = $exception;
+            throw $exception;
+        } finally {
+            $this->completeRequestOperation($scope, $failure);
+        }
     }
 
     protected function withCookies(ResponseInterface $response) : ResponseInterface {
@@ -131,14 +180,53 @@ class RouteHandler implements RequestHandlerInterface
       RequestInterface $request,
       string           $func
     ) : ResponseInterface {
-        if (method_exists($controller, 'init')) {
-            $controller->init($request);
-        }
-        $args = $this->getHandlerArgs($request);
+        $controllerAttributes = [
+            'lsr.controller.class' => $controller::class,
+            'lsr.controller.action' => $func,
+        ];
 
-        /** @var ResponseInterface $response */
-        $response = $controller->$func(...$args);
-        return $this->withCookies($response);
+        if (method_exists($controller, 'init')) {
+            $scope = $this->beginRequestOperation(
+                RequestOperation::ControllerInitialization,
+                $controllerAttributes,
+            );
+            $failure = null;
+            try {
+                $controller->init($request);
+            } catch (Throwable $exception) {
+                $failure = $exception;
+                throw $exception;
+            } finally {
+                $this->completeRequestOperation($scope, $failure);
+            }
+        }
+
+        $scope = $this->beginRequestOperation(
+            RequestOperation::ActionArgumentResolution,
+            $controllerAttributes,
+        );
+        $failure = null;
+        try {
+            $args = $this->getHandlerArgs($request);
+        } catch (Throwable $exception) {
+            $failure = $exception;
+            throw $exception;
+        } finally {
+            $this->completeRequestOperation($scope, $failure);
+        }
+
+        $scope = $this->beginRequestOperation(RequestOperation::ControllerAction, $controllerAttributes);
+        $failure = null;
+        try {
+            /** @var ResponseInterface $response */
+            $response = $controller->$func(...$args);
+            return $this->withCookies($response);
+        } catch (Throwable $exception) {
+            $failure = $exception;
+            throw $exception;
+        } finally {
+            $this->completeRequestOperation($scope, $failure);
+        }
     }
 
     /**
@@ -400,7 +488,7 @@ class RouteHandler implements RequestHandlerInterface
 
                 // Try to get class from DI
                 try {
-                    $class = App::getContainer()->getByType($type['type']);
+                    $class = $this->resolveService($type['type'], 'argument');
                 } catch (MissingServiceException $e) {
                     if (!$type['nullable']) {
                         throw $e;
@@ -429,6 +517,59 @@ class RouteHandler implements RequestHandlerInterface
         }
 
         return $argsValues;
+    }
+
+    /**
+     * @template T of object
+     * @param class-string<T> $type
+     * @return T
+     */
+    private function resolveService(string $type, string $kind): object
+    {
+        $scope = $this->beginRequestOperation(
+            RequestOperation::DependencyResolution,
+            [
+                'lsr.di.service' => $type,
+                'lsr.di.kind' => $kind,
+            ],
+        );
+        $failure = null;
+
+        try {
+            /** @var T $service */
+            $service = App::getContainer()->getByType($type);
+            return $service;
+        } catch (Throwable $exception) {
+            $failure = $exception;
+            throw $exception;
+        } finally {
+            $this->completeRequestOperation($scope, $failure);
+        }
+    }
+
+    /**
+     * @param array<non-empty-string, bool|int|float|string|list<bool|int|float|string>|null> $attributes
+     */
+    private function beginRequestOperation(
+        RequestOperation $operation,
+        array $attributes = [],
+    ): ?RequestOperationLifecycleScopeInterface {
+        try {
+            return $this->requestOperationLifecycleHook?->begin($operation, $attributes);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function completeRequestOperation(
+        ?RequestOperationLifecycleScopeInterface $scope,
+        ?Throwable $exception = null,
+    ): void {
+        try {
+            $scope?->complete(exception: $exception);
+        } catch (Throwable) {
+            // Lifecycle hooks must never affect request handling.
+        }
     }
 
     /**
