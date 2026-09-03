@@ -7,6 +7,7 @@ use Gettext\Generator\PoGenerator;
 use Gettext\Languages\Language;
 use Gettext\Loader\PoLoader;
 use Gettext\Translation;
+use InvalidArgumentException;
 use Lsr\Core\Exceptions\InvalidLanguageException;
 use Lsr\Core\Tracy\TranslationTracyPanel;
 use Lsr\Helpers\Tools\Timer;
@@ -277,20 +278,61 @@ class Translations implements Translator
         }
 
         if (!empty($params['format']) && is_array($params['format'])) {
-            assert(
-              array_all(
-                $params['format'],
-                static fn($val) => $val === null || is_string($val) || is_int($val) || is_float($val) || is_bool($val)
-              )
-            );
-            /** @phpstan-ignore argument.type */
-            $translated = sprintf($translated, ...$params['format']);
+            $format = $params['format'];
+            foreach ($format as $value) {
+                if (
+                  $value !== null
+                  && !is_string($value)
+                  && !is_int($value)
+                  && !is_float($value)
+                  && !is_bool($value)
+                ) {
+                    throw new InvalidArgumentException(
+                      'Format parameter values must be scalar or null.'
+                    );
+                }
+            }
+            /** @var array<int|string, bool|float|int|string|null> $format */
+            $translated = $this->formatTranslation($translated, $format);
         }
 
         TranslationTracyPanel::incrementTranslations();
         Timer::stop('translation');
 
         return $translated;
+    }
+
+    /**
+     * @param array<int|string, bool|float|int|string|null> $parameters
+     */
+    private function formatTranslation(string $translation, array $parameters) : string {
+        $hasNumericKeys = false;
+        $hasStringKeys = false;
+        foreach ($parameters as $key => $_) {
+            $hasNumericKeys = $hasNumericKeys || is_int($key);
+            $hasStringKeys = $hasStringKeys || is_string($key);
+            if ($hasNumericKeys && $hasStringKeys) {
+                throw new InvalidArgumentException(
+                  'Format parameters must use either only numeric keys or only string keys.'
+                );
+            }
+        }
+
+        if ($hasNumericKeys) {
+            return sprintf($translation, ...array_values($parameters));
+        }
+
+        return preg_replace_callback(
+          '/%\{((?:.|\n)+?)\}/',
+          static function (array $matches) use ($parameters) : string {
+              $key = trim($matches[1]);
+              if (!array_key_exists($key, $parameters)) {
+                  return $matches[0];
+              }
+              return (string) $parameters[$key];
+          },
+          $translation
+        ) ?? $translation;
     }
 
     private function translateModular(string $message, string $plural, int $num, string $domain) : string {

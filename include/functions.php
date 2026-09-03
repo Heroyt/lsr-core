@@ -13,7 +13,8 @@ if (!function_exists('lang')) {
      * @param  int  $num
      * @param  string|null  $context
      * @param  string|null  $domain
-     * @param  array  $format
+     * @param  array<int|string, bool|float|int|string|null>  $format  Integer keys use sprintf; string keys use
+     *     vue-gettext placeholders.
      * @return string Translated message
      *
      * @version 1.0
