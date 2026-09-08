@@ -65,6 +65,8 @@ class RouteHandler implements RequestHandlerInterface
         // No more middleware to process, call the handler
         if ($middleware === null) {
 
+            // Route configuration and cached definitions can contain unvalidated array values.
+            /** @var array<array-key, mixed>|callable $handler */
             $handler = $this->route->getHandler();
 
             if (is_array($handler)) {
@@ -243,7 +245,7 @@ class RouteHandler implements RequestHandlerInterface
                 /** @var array{0:class-string|object,1:string}|callable $handler */
                 $handler = $this->route->getHandler();
                 $reflection = is_array($handler) ?
-                  new ReflectionMethod($handler[0], $handler[1]) : // @phpstan-ignore-line
+                  new ReflectionMethod($handler[0], $handler[1]) :
                   new ReflectionFunction($handler); // @phpstan-ignore argument.type
                 $arguments = $reflection->getParameters();
                 $args = [];
@@ -574,7 +576,8 @@ class RouteHandler implements RequestHandlerInterface
      */
     private function handlerToString(array | callable $handler): string {
         if (is_array($handler)) {
-            return implode('::', $handler);
+            $class = is_object($handler[0]) ? $handler[0]::class : $handler[0];
+            return $class . '::' . $handler[1];
         }
         if (is_string($handler)) {
             return $handler;
