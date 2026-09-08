@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Lsr\Core\Config;
 use Lsr\Core\Translations;
 use PHPUnit\Framework\TestCase;
+use Stringable;
 
 defined('CHECK_TRANSLATIONS') || define('CHECK_TRANSLATIONS', false);
 defined('LANGUAGE_DIR') || define('LANGUAGE_DIR', __DIR__ . '/../languages/');
@@ -22,6 +23,25 @@ class TranslationsTest extends TestCase
         $this->translations = new Translations(
             new Config(sys_get_temp_dir()),
             supportedLanguages: ['cs' => 'CZ'],
+        );
+    }
+
+    public function test_stringable_message_supports_translation_and_formatting(): void {
+        $message = new class implements Stringable {
+            public function __toString(): string {
+                return 'Player %s';
+            }
+        };
+
+        self::assertSame(
+            'Player Ada',
+            $this->translations->translate(
+                $message,
+                format: ['Ada'],
+                plural: null,
+                num: null,
+                domain: null,
+            ),
         );
     }
 

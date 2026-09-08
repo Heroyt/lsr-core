@@ -5,8 +5,6 @@ declare(strict_types=1);
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use Lsr\Caching\Cache;
-use Lsr\Core\App;
 
 define('ROOT', dirname(__DIR__) . '/');
 const PRIVATE_DIR = ROOT . 'tests/private/';
@@ -23,6 +21,10 @@ const ASSETS_DIR = ROOT . 'assets/';
 
 ini_set('open_basedir', ROOT);
 
+if ( ! is_dir(TMP_DIR) && ! mkdir(TMP_DIR, 0777, true) && ! is_dir(TMP_DIR)) {
+    throw new \RuntimeException('Cannot create temporary directory: ' . TMP_DIR);
+}
+
 require_once ROOT . 'vendor/autoload.php';
 
 /**
@@ -34,24 +36,4 @@ enum TestEnum: string
     case B = 'B';
     case C = 'C';
     case D = 'D';
-}
-
-if ( ! file_exists(ROOT . "tests/tmp/db.db")) {
-    touch(ROOT . "tests/tmp/db.db");
-}
-if ( ! file_exists(ROOT . "tests/tmp/dbc.db")) {
-    touch(ROOT . "tests/tmp/dbc.db");
-}
-
-App::setupDi();
-
-$cache = App::getService('cache');
-assert($cache instanceof Cache);
-$cache->clean([Cache::All => true]);
-
-// Clear model cache
-$files = glob(TMP_DIR . 'models/*');
-assert(is_array($files));
-foreach ($files as $file) {
-    unlink($file);
 }

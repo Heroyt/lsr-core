@@ -12,6 +12,7 @@ use Lsr\Core\RouteHandler;
 use Lsr\Core\Routing\Route;
 use Lsr\Enums\RequestMethod;
 use Lsr\Serializer\Mapper;
+use Nette\Caching\Storages\MemoryStorage;
 use Nette\DI\Container;
 use Nyholm\Psr7\Response;
 use Nyholm\Psr7\ServerRequest;
@@ -22,6 +23,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use ReflectionProperty;
+use RuntimeException;
 
 final class RouteHandlerTest extends TestCase
 {
@@ -54,6 +56,23 @@ final class RouteHandlerTest extends TestCase
             array_column($hook->begun, 'operation'),
         );
         self::assertCount(2, $hook->completed);
+    }
+
+    #[BackupStaticProperties(true)]
+    public function test_object_handler_keeps_argument_errors_as_runtime_exceptions(): void {
+        $controller = new class {
+            public function show(int|float $value): ResponseInterface {
+                return new Response();
+            }
+        };
+        $route = Route::create(RequestMethod::GET, '/missing-value', [$controller, 'show']);
+        $handler = new RouteHandler(
+            new Cache(new MemoryStorage(), debug: false),
+            $this->createStub(Mapper::class),
+        );
+
+        $this->expectException(RuntimeException::class);
+        $handler->setRoute($route)->handle(new Request(new ServerRequest('GET', '/missing-value')));
     }
 
     #[BackupStaticProperties(true)]
