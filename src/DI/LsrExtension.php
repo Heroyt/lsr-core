@@ -42,8 +42,8 @@ use Nette\Schema\Expect;
  *      modifiers: string[],
  *     },
  *     http: object{
- *      exceptionHandlers: (class-string<ExceptionHandlerInterface>|Nette\DI\Definitions\Statement)[],
- *      asyncHandlers: (class-string<ExceptionHandlerInterface>|Nette\DI\Definitions\Statement)[],
+ *      exceptionHandlers: (string|Nette\DI\Definitions\Statement)[],
+ *      asyncHandlers: (string|Nette\DI\Definitions\Statement)[],
  *     }
  *  } $config
  */
@@ -55,20 +55,20 @@ class LsrExtension extends CompilerExtension
                 'appDir'       => Expect::string()
                     ->required()
                     ->assert(
-                        static fn (string $value) => file_exists($value) && is_dir($value),
+                        static fn (mixed $value) => is_string($value) && file_exists($value) && is_dir($value),
                         'App directory must be a valid directory',
                     ),
                 'tempDir'      => Expect::string()
                     ->required()
                     ->assert(
-                        static fn (string $value) => file_exists($value) && is_dir($value),
+                        static fn (mixed $value) => is_string($value) && file_exists($value) && is_dir($value),
                         'Temp directory must be a valid directory',
                     ),
                 'latte'        => Expect::structure(
                     [
                         'tempDir' => Expect::string()
                             ->assert(
-                                static fn (string $value) => file_exists($value) && is_dir($value),
+                                static fn (mixed $value) => is_string($value) && file_exists($value) && is_dir($value),
                                 'Temp directory must be a valid directory',
                             ),
                     ],
@@ -77,13 +77,13 @@ class LsrExtension extends CompilerExtension
                     [
                         'defaultLang'        => Expect::string()
                             ->assert(
-                                static fn (string $value) => Language::getById($value) !== null,
+                                static fn (mixed $value) => is_string($value) && Language::getById($value) !== null,
                                 'Default language must be a valid language code',
                             )
                             ->default('cs_CZ'),
                         'supportedLanguages' => Expect::listOf('string')
                             ->assert(
-                                static fn (array $values) => array_all(
+                                static fn (mixed $values) => is_array($values) && array_all(
                                     $values,
                                     static fn ($value) => is_string($value)
                                   && Language::getById($value) !== null,
@@ -130,17 +130,17 @@ class LsrExtension extends CompilerExtension
                 [$this->config->tempDir],
             )
             ->addSetup('init')
-            ->setTags(['lsr', 'core']);
+            ->setTags(['lsr' => true, 'core' => true]);
         $builder->addDefinition($this->prefix('session'))
             ->setFactory([Session::class, 'getInstance'])
             ->addSetup('init')
-            ->setTags(['lsr', 'core']);
+            ->setTags(['lsr' => true, 'core' => true]);
         $builder->addDefinition($this->prefix('routeHandler'))
             ->setFactory(RouteHandler::class)
-            ->setTags(['lsr', 'core']);
+            ->setTags(['lsr' => true, 'core' => true]);
         $builder->addDefinition($this->prefix('app'))
             ->setFactory(App::class)
-            ->setTags(['lsr', 'core']);
+            ->setTags(['lsr' => true, 'core' => true]);
         $builder->addDefinition($this->prefix('links.generator'))
             ->setFactory(
                 Generator::class,
@@ -149,13 +149,13 @@ class LsrExtension extends CompilerExtension
                     'translations' => '@' . $this->prefix('translations'),
                 ],
             )
-            ->setTags(['lsr', 'core']);
+            ->setTags(['lsr' => true, 'core' => true]);
         $builder->addDefinition($this->prefix('menu.builder'))
             ->setFactory(MenuBuilder::class)
-            ->setTags(['lsr', 'core']);
+            ->setTags(['lsr' => true, 'core' => true]);
         $builder->addDefinition($this->prefix('csrf.helper'))
             ->setFactory([TokenHelper::class, 'getInstance'], ['@' . $this->prefix('session')])
-            ->setTags(['lsr', 'core']);
+            ->setTags(['lsr' => true, 'core' => true]);
 
         /** @var list<Nette\DI\Definitions\Statement|Nette\DI\Definitions\Definition> $exceptionHandlers */
         $exceptionHandlers = [];
@@ -169,7 +169,6 @@ class LsrExtension extends CompilerExtension
         }
         foreach ($this->config->http->exceptionHandlers as $handler) {
             if (is_string($handler)) {
-                /** @phpstan-ignore function.alreadyNarrowedType */
                 if ( ! class_exists($handler) || ! is_subclass_of($handler, ExceptionHandlerInterface::class)) {
                     throw new Nette\InvalidArgumentException(
                         sprintf('Exception handler class "%s" is not a valid ExceptionHandler.', $handler),
@@ -183,7 +182,7 @@ class LsrExtension extends CompilerExtension
                         ->setType($class)
                         ->setFactory($class)
                         ->setAutowired()
-                        ->setTags(['lsr', 'core', 'exceptionHandler']);
+                        ->setTags(['lsr' => true, 'core' => true, 'exceptionHandler' => true]);
                 }
             }
 
@@ -208,7 +207,7 @@ class LsrExtension extends CompilerExtension
                         ->setType($class)
                         ->setFactory($class)
                         ->setAutowired()
-                        ->setTags(['lsr', 'core', 'asyncHandler']);
+                        ->setTags(['lsr' => true, 'core' => true, 'asyncHandler' => true]);
                 }
             }
 
@@ -226,7 +225,7 @@ class LsrExtension extends CompilerExtension
                 ],
             )
             ->setAutowired()
-            ->setTags(['lsr', 'core']);
+            ->setTags(['lsr' => true, 'core' => true]);
 
         $builder->addAlias('config', $this->prefix('config'));
         $builder->addAlias('session', $this->prefix('session'));
@@ -247,7 +246,7 @@ class LsrExtension extends CompilerExtension
                     $this->config->translations->domains,
                 ],
             )
-            ->setTags(['lsr', 'core', 'translations']);
+            ->setTags(['lsr' => true, 'core' => true, 'translations' => true]);
 
         $builder->addAlias('translations', $this->prefix('translations'));
 
@@ -257,13 +256,13 @@ class LsrExtension extends CompilerExtension
                 Nette\Bridges\CacheLatte\CacheExtension::class,
                 ['@cache.storage'],
             )
-            ->setTags(['latte', 'lsr']);
+            ->setTags(['latte' => true, 'lsr' => true]);
         $builder->addDefinition($this->prefix('latte.extension.lsr'))
             ->setFactory(LatteExtension::class)
-            ->setTags(['latte', 'lsr']);
+            ->setTags(['latte' => true, 'lsr' => true]);
         $builder->addDefinition($this->prefix('latte.extension.translator'))
             ->setFactory(TranslatorExtension::class, ['@' . $this->prefix('translations')])
-            ->setTags(['latte', 'lsr']);
+            ->setTags(['latte' => true, 'lsr' => true]);
         $tempDir = empty($this->config->latte->tempDir) ? $this->config->tempDir : $this->config->latte->tempDir;
         $builder->addDefinition($this->prefix('latte.engine'))
             ->setFactory(Engine::class)
@@ -271,10 +270,10 @@ class LsrExtension extends CompilerExtension
             ->addSetup('addExtension', ['@' . $this->prefix('latte.extension.lsr')])
             ->addSetup('addExtension', ['@' . $this->prefix('latte.extension.cache')])
             ->addSetup('addExtension', ['@' . $this->prefix('latte.extension.translator')])
-            ->setTags(['latte', 'lsr']);
+            ->setTags(['latte' => true, 'lsr' => true]);
         $builder->addDefinition($this->prefix('latte'))
             ->setFactory(Latte::class, ['@' . $this->prefix('latte.engine')])
-            ->setTags(['latte', 'lsr']);
+            ->setTags(['latte' => true, 'lsr' => true]);
 
         $builder->addAlias('cache.extension.latte', $this->prefix('latte.extension.cache'));
         $builder->addAlias('templating.latte.extension', $this->prefix('latte.extension.translator'));
