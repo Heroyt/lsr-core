@@ -7,7 +7,7 @@
 - PHP `>=8.4`.
 - PHP extensions: `fileinfo`, `gettext`, `simplexml`, `ctype`, `mbstring` and `pdo_sqlite`.
 - Nette DI `^3.2`, Latte `^3.0`, PHP dotenv `^5.6` and Nette PHP Generator `^4.1`.
-- LSR interfaces, logging, routing (`^0.4`), request, DB, serializer, cache and ORM dependencies; see [composer.json](composer.json) for exact constraints and transitive platform requirements.
+- LSR interfaces, logging, routing (`^0.5`), request, DB, serializer, cache and ORM dependencies; see [composer.json](composer.json) for exact constraints and transitive platform requirements.
 - An application-owned bootstrap and service configuration, writable temporary/cache and log locations, and database/cache configuration appropriate to the application. This is a framework library, not an application skeleton.
 
 ## Installation
@@ -40,6 +40,38 @@ $handler->run();
 ```
 
 [`FpmHandler`](src/FpmHandler.php) creates the request, invokes the application, handles dispatch-break responses and configured exception handlers, and finishes the response lifecycle. [`RouteHandler`](src/RouteHandler.php) performs controller/handler dispatch. [`LsrExtension`](src/DI/LsrExtension.php) wires the session, translation, link, menu and Latte services; use it as the integration reference rather than manually reproducing the service graph.
+
+## Exact-host routing and links
+
+Core 0.5 passes the current request URI host to `lsr/routing` 0.5. Routes on that exact normalized host take priority over unrestricted routes; unrestricted routes remain the fallback. Hosts are case-insensitive and a terminal DNS dot is ignored. The host constraint does not select a scheme or port. Requests with no URI host only match unrestricted routes.
+
+In application route files, use the router's domain groups and optionally declare aliases after the routes:
+
+```php
+$this->domain('league')
+    ->get('/results/{id}', [ResultsController::class, 'show'])
+    ->name('league.results')
+    ->localize('cs')
+    ->localize('en', '/en/results/{id}');
+
+$this->declareDomain('league.example.com', 'league');
+```
+
+Aliases resolve after all route sources load, using one lookup rather than recursive alias expansion. A reference with no declared alias is a literal host, including single-label hosts. Conflicting declarations fail, and alias declarations cannot change after resolution. For manually assembled routers, call `resolveDomains()` before routing or generating domain-bound links; normal `setup()`/`loadRoutes()` performs resolution.
+
+`Links\Generator::route('league.results', ['id' => 42], locale: 'en')` uses the localized route's resolved domain. Links to another host are absolute; links to the current normalized host remain relative. The current request's scheme and port are preserved, including nonstandard ports: a domain constraint alone never upgrades HTTP to HTTPS or selects a destination-specific port. Configure that policy at the application/proxy layer.
+
+Legacy `Generator::getLink('route.name')`, `getLinkObject('route.name')`, and `getAbsoluteLink('route.name')` also preserve the route domain and continue applying legacy path modifiers. `getRouteLink($route)` does the same for a route object. `App::redirect('route.name')` and `App::redirect($route)` preserve domain destinations; literal strings, URI objects and path arrays retain their previous behavior. The newer `route()` API selects exact localized variants and substitutes parameters; legacy calls and redirects keep their existing declared-path/modifier behavior rather than selecting a locale automatically.
+
+The generator reads the current application's base URI for each call, so a shared generator can serve successive requests on different hosts without reusing the first request's host. Menu entries configured by route name retain their domain destination and only become active on the appropriate host; serialized named menu items refresh their URL and active state when restored. The Tracy routing panel shows the request host, the selected route's domain and the domain-specific routing trees.
+
+Controller argument metadata caches include the resolved domain, so handlers sharing a method/path on different hosts can have different argument types. Request arguments accept compatible PSR request interfaces as well as the LSR request interface, including the PSR request used by redirect aliases.
+
+### Trusted hosts, proxies and deployment
+
+The request URI is the authority for both routing and generated URLs. Validate accepted hosts at the web server or trusted request-factory boundary; routing is not a host allowlist because unrestricted routes deliberately accept other hosts. Only trust forwarded host/scheme headers from explicitly configured proxies. Core does not read forwarded headers itself. Host declarations accept ASCII DNS/punycode names and IP literals, not schemes, paths, credentials, ports or wildcards; convert internationalized names to punycode before configuration.
+
+Deploy core and routing 0.5 together in each consuming application and rebuild its compiled route cache whenever domain declarations or alias targets change. Compiled routes store resolved hosts, so changing environment-specific aliases without rebuilding the cache does not retarget cached routes. The routing 0.5 cache format rejects older cache payloads; use a cache path/version appropriate to each independently deployed application and restart long-running workers after deploying route changes.
 
 ## Development
 
