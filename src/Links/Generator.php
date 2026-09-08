@@ -5,10 +5,14 @@ declare(strict_types=1);
 
 namespace Lsr\Core\Links;
 
+use InvalidArgumentException;
 use Lsr\Core\App;
+use Lsr\Core\Routing\Domain\Hostname;
+use Lsr\Core\Routing\Interfaces\DomainRouteInterface;
 use Lsr\Core\Routing\Interfaces\LocalizableRouteInterface;
 use Lsr\Core\Routing\Router;
 use Lsr\Core\Translations;
+use Lsr\Interfaces\RouteInterface;
 use Nyholm\Psr7\Uri;
 use Psr\Http\Message\UriInterface;
 use RuntimeException;
@@ -16,7 +20,6 @@ use Stringable;
 
 readonly class Generator
 {
-    private UriInterface $baseUrl;
     private bool $prettyUrl;
 
     /**
@@ -24,11 +27,10 @@ readonly class Generator
      */
     public function __construct(
         protected Router $router,
-        App              $app,
+        protected App    $app,
         protected array  $modifiers = [],
         protected ?Translations $translations = null,
     ) {
-        $this->baseUrl = $app->getBaseUrlObject();
         $this->prettyUrl = App::isPrettyUrl();
     }
 
@@ -87,7 +89,7 @@ readonly class Generator
         }
 
         $path = $this->substituteRouteParameters($route->getPath(), $parameters, $name);
-        $url = $this->buildUrlFromPath($path);
+        $url = $this->applyRouteDomain($this->buildUrlFromPath($path), $route);
         if ($parameters !== []) {
             $query = http_build_query($parameters, encoding_type: PHP_QUERY_RFC3986);
             if ($url->getQuery() !== '') {
@@ -169,14 +171,7 @@ readonly class Generator
                 // Try to get route by name
                 $route = $this->router->getRouteByName($request);
                 if (isset($route)) {
-                    $path = $route->getPath();
-
-                    // Apply modifiers
-                    foreach ($this->modifiers as $modifier) {
-                        $path = $modifier->modifyLinkPath($path);
-                    }
-
-                    return $this->buildUrlFromPath($path);
+                    return $this->buildRouteUrl($route);
                 }
 
                 // Route is given as a string
@@ -206,7 +201,27 @@ readonly class Generator
             return $this->buildUrlFromPath($request);
         }
 
-        return $this->baseUrl;
+        return $this->app->getBaseUrlObject();
+    }
+
+    /**
+     * Generate a route's declared path with the legacy link modifiers.
+     */
+    public function getRouteLink(RouteInterface $route): string {
+        return $this->formatLocalLink($this->buildRouteUrl($route));
+    }
+
+    private function buildRouteUrl(RouteInterface $route): UriInterface {
+        $path = array_values($route->getPath());
+        foreach ($this->modifiers as $modifier) {
+            $path = $modifier->modifyLinkPath($path);
+        }
+        return $this->applyRouteDomain($this->buildUrlFromPath($path), $route);
+    }
+
+    private function applyRouteDomain(UriInterface $url, RouteInterface $route): UriInterface {
+        $domain = $route instanceof DomainRouteInterface ? $route->getDomain() : null;
+        return $domain === null ? $url : $url->withHost($domain);
     }
 
     private function formatLocalLink(UriInterface $link): string {
@@ -242,8 +257,23 @@ readonly class Generator
             return true;
         }
 
-        return strcasecmp($host, $this->baseUrl->getHost()) === 0
-            && $link->getPort() === $this->baseUrl->getPort();
+        $baseUrl = $this->app->getBaseUrlObject();
+        $baseHost = $baseUrl->getHost();
+        if ($link->getPort() !== $baseUrl->getPort()) {
+            return false;
+        }
+        if (strcasecmp($host, $baseHost) === 0) {
+            return true;
+        }
+        if ($baseHost === '') {
+            return false;
+        }
+        try {
+            return Hostname::normalize($host) === Hostname::normalize($baseHost);
+        } catch (InvalidArgumentException) {
+            // Explicit URLs can use URI reg-names outside the domain routing grammar.
+            return false;
+        }
     }
 
     /**
@@ -262,10 +292,11 @@ readonly class Generator
             }
         }
 
+        $baseUrl = $this->app->getBaseUrlObject();
         if ($this->prettyUrl) {
-            return $this->baseUrl->withPath(implode('/', $path));
+            return $baseUrl->withPath(implode('/', $path));
         }
-        return $this->baseUrl->withQuery(http_build_query(['p' => $path]));
+        return $baseUrl->withQuery(http_build_query(['p' => $path]));
     }
 
 }

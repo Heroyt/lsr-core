@@ -52,8 +52,10 @@ readonly class MenuBuilder
             if ( ! self::checkAccess($item)) {
                 continue;
             }
+            $route = null;
             if (isset($item['route'])) {
-                $path = $this->router->getRouteByName($item['route'])?->getPath();
+                $route = $this->router->getRouteByName($item['route']);
+                $path = $route?->getPath();
             } else {
                 $path = $item['path'] ?? ['E404'];
             }
@@ -62,13 +64,16 @@ readonly class MenuBuilder
                 icon : $item['icon'] ?? '',
                 path : $path ?? [],
                 order: $item['order'] ?? 0,
+                routeName: $route?->getName(),
             );
             foreach ($item['children'] ?? [] as $child) {
                 if ( ! self::checkAccess($child)) {
                     continue;
                 }
+                $route = null;
                 if (isset($child['route'])) {
-                    $path = $this->router->getRouteByName($child['route'])?->getPath();
+                    $route = $this->router->getRouteByName($child['route']);
+                    $path = $route?->getPath();
                 } else {
                     $path = $child['path'] ?? ['E404'];
                 }
@@ -77,6 +82,7 @@ readonly class MenuBuilder
                     icon : $child['icon'] ?? '',
                     path : $path ?? [],
                     order: $item['order'] ?? 0,
+                    routeName: $route?->getName(),
                 );
             }
             if ( ! empty($menuItem->children)) {

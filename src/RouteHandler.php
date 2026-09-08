@@ -23,6 +23,7 @@ use Lsr\Orm\Model;
 use Lsr\Serializer\Mapper;
 use Nette\Caching\Cache as CacheParent;
 use Nette\DI\MissingServiceException;
+use Psr\Http\Message\RequestInterface as PsrRequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -238,15 +239,19 @@ class RouteHandler implements RequestHandlerInterface
      * @throws Throwable
      */
     private function getHandlerArgs(RequestInterface $request): array {
+        $domain = $this->route->getDomain();
         /** @var array<string,array{optional:bool,type:string|class-string|array<string|class-string>,nullable:bool,mapRequest:bool,union:bool,unionHasModel:bool}> $args */
         $args = $this->cache->load(
-            'route.' . $this->route->getMethod()->value . '.' . $this->route->getReadable() . '.args',
+            'route.' . ($domain === null ? '' : 'host[' . $domain . '].') . $this->route->getMethod()->value . '.' . $this->route->getReadable() . '.args',
             function () {
                 /** @var array{0:class-string|object,1:string}|callable $handler */
                 $handler = $this->route->getHandler();
-                $reflection = is_array($handler) ?
-                  new ReflectionMethod($handler[0], $handler[1]) :
-                  new ReflectionFunction($handler); // @phpstan-ignore argument.type
+                if (is_array($handler)) {
+                    /** @var array{0:class-string|object,1:string} $handler */
+                    $reflection = new ReflectionMethod($handler[0], $handler[1]);
+                } else {
+                    $reflection = new ReflectionFunction($handler); // @phpstan-ignore argument.type
+                }
                 $arguments = $reflection->getParameters();
                 $args = [];
                 foreach ($arguments as $argument) {
@@ -427,16 +432,13 @@ class RouteHandler implements RequestHandlerInterface
             }
 
             assert(is_string($type['type']));
+            if (is_a($type['type'], PsrRequestInterface::class, true) && is_a($request, $type['type'])) {
+                $argsValues[$name] = $request;
+                continue;
+            }
 
             // Handle objects
             if (class_exists($type['type'])) {
-                // Check for request
-                $implements = class_implements($type['type']);
-                if ($type['type'] === RequestInterface::class || isset($implements[RequestInterface::class])) {
-                    $argsValues[$name] = $request;
-                    continue;
-                }
-
                 // Check for model
                 if (is_subclass_of($type['type'], Model::class)) {
                     // Find ID
@@ -576,6 +578,7 @@ class RouteHandler implements RequestHandlerInterface
      */
     private function handlerToString(array | callable $handler): string {
         if (is_array($handler)) {
+            /** @var array{0:class-string|object,1:string} $handler */
             $class = is_object($handler[0]) ? $handler[0]::class : $handler[0];
             return $class . '::' . $handler[1];
         }

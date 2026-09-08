@@ -494,16 +494,19 @@ class App
     ): Response {
         $link = '';
         if ($to instanceof RouteInterface) {
-            $link = static::getLink($to->getPath());
+            /** @var Generator $generator */
+            $generator = static::getService('links.generator');
+            $link = $generator->getRouteLink($to);
         } elseif ($to instanceof UriInterface) {
             $link = (string) $to;
         } elseif (is_array($to)) {
             $link = static::getLink($to);
         } elseif (is_string($to)) {
-            /** @var Route|null $route */
             $route = $this->router->getRouteByName($to);
             if (isset($route)) {
-                $link = static::getLink($route->path);
+                /** @var Generator $generator */
+                $generator = static::getService('links.generator');
+                $link = $generator->getRouteLink($route);
             } else {
                 $link = $to;
             }
@@ -600,6 +603,7 @@ class App
                     $method,
                     $path,
                     $this->routeParams,
+                    host: $request->getUri()->getHost() ?: null,
                 );
                 $event = new RouteResolutionEvent(
                     $method,
