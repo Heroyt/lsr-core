@@ -7,7 +7,7 @@ namespace Lsr\Core\Http;
 use JsonException;
 use Lsr\Core\Requests\Dto\ErrorResponse;
 use Lsr\Core\Requests\Request;
-use Psr\Http\Message\ResponseFactoryInterface;
+use Lsr\Interfaces\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
 use Tracy\Debugger;
