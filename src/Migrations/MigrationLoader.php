@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Migrations;
 
 use Lsr\Core\Exceptions\CyclicDependencyException;
@@ -14,7 +16,6 @@ use Nette\Utils\Validators;
  */
 class MigrationLoader
 {
-
     /** @var array<string, MigrationData> */
     public array $migrations = [];
     /** @var array<string,bool> */
@@ -26,8 +27,9 @@ class MigrationLoader
      * @param  string  $configFile
      */
     public function __construct(
-      public readonly string $configFile
-    ) {}
+        public readonly string $configFile,
+    ) {
+    }
 
     /**
      * @return void
@@ -36,7 +38,7 @@ class MigrationLoader
      * @throws Exception
      * @throws FileException
      */
-    public function load() : void {
+    public function load(): void {
         ['tables' => $tables, 'views' => $views] = $this->loadFile($this->configFile);
         $this->migrations = $tables;
         $this->views = $views;
@@ -51,16 +53,16 @@ class MigrationLoader
      * @throws Exception
      * @throws FileException
      */
-    public function loadFile(string $file) : array {
-        if (!file_exists($file)) {
-            throw new FileException('File "'.$file.'" does not exit');
+    public function loadFile(string $file): array {
+        if ( ! file_exists($file)) {
+            throw new FileException('File "' . $file . '" does not exit');
         }
-        if (!is_readable($file)) {
-            throw new FileException('File "'.$file.'" is not readable');
+        if ( ! is_readable($file)) {
+            throw new FileException('File "' . $file . '" is not readable');
         }
 
         if (isset($this->loadedFiles[$file])) {
-            throw new CyclicDependencyException('Recursive included file "'.$file.'"');
+            throw new CyclicDependencyException('Recursive included file "' . $file . '"');
         }
 
         $this->loadedFiles[$file] = true;
@@ -81,8 +83,8 @@ class MigrationLoader
         }
 
         return [
-          'tables' => static::merge($data['tables'] ?? [], $tables),
-          'views'  => array_merge($data['views'] ?? [], $views),
+            'tables' => static::merge($data['tables'] ?? [], $tables),
+            'views'  => array_merge($data['views'] ?? [], $views),
         ];
     }
 
@@ -94,18 +96,16 @@ class MigrationLoader
      *
      * @return T
      */
-    public static function merge(?array $value, ?array $base) : array {
+    public static function merge(?array $value, ?array $base): array {
         if (is_array($value) && is_array($base)) {
             $index = 0;
             foreach ($value as $key => $val) {
                 if ($key === $index) {
                     $base[] = $val;
                     $index++;
-                }
-                elseif (!is_array($val)) {
+                } elseif ( ! is_array($val)) {
                     $base[$key] = $val;
-                }
-                else {
+                } else {
                     /** @phpstan-ignore argument.type */
                     $base[$key] = static::merge($val, $base[$key] ?? null);
                 }
@@ -126,7 +126,7 @@ class MigrationLoader
      * @param  array<string,MigrationData>  $data
      * @return array<string,Migration>
      */
-    public static function transformToDto(array $data) : array {
+    public static function transformToDto(array $data): array {
         $migrations = [];
         foreach ($data as $table => $migrationData) {
             $migrations[$table] = Migration::fromArray($table, $migrationData);

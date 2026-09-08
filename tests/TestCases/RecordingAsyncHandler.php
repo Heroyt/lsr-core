@@ -8,12 +8,10 @@ use Lsr\Core\Http\AsyncHandlerInterface;
 
 final readonly class RecordingAsyncHandler implements AsyncHandlerInterface
 {
-    public function __construct(private FpmLifecycleEvents $events)
-    {
+    public function __construct(private FpmLifecycleEvents $events) {
     }
 
-    public function run(): void
-    {
+    public function run(): void {
         $this->events->record('async.run');
     }
 }

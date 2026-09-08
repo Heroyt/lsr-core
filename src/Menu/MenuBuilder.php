@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Menu;
 
 use Lsr\Core\App;
@@ -10,8 +12,8 @@ use Nette\DI\MissingServiceException;
 
 readonly class MenuBuilder
 {
-
-    public function __construct(private Router $router) {}
+    public function __construct(private Router $router) {
+    }
 
     /**
      * @param  string  $type
@@ -19,9 +21,9 @@ readonly class MenuBuilder
      * @return MenuItem[]
      * @throws FileException
      */
-    public function getMenu(string $type = 'menu') : array {
-        if (!file_exists(ROOT.'config/nav/'.$type.'.php')) {
-            throw new FileException('Menu configuration file "'.$type.'.php" does not exist.');
+    public function getMenu(string $type = 'menu'): array {
+        if ( ! file_exists(ROOT . 'config/nav/' . $type . '.php')) {
+            throw new FileException('Menu configuration file "' . $type . '.php" does not exist.');
         }
         /** @var array{
          *     name:string,
@@ -44,42 +46,40 @@ readonly class MenuBuilder
          *     loggedOutOnly?:bool
          * }[] $config
          */
-        $config = require ROOT.'config/nav/'.$type.'.php';
+        $config = require ROOT . 'config/nav/' . $type . '.php';
         $menu = [];
         foreach ($config as $item) {
-            if (!self::checkAccess($item)) {
+            if ( ! self::checkAccess($item)) {
                 continue;
             }
             if (isset($item['route'])) {
                 $path = $this->router->getRouteByName($item['route'])?->getPath();
-            }
-            else {
+            } else {
                 $path = $item['path'] ?? ['E404'];
             }
             $menuItem = new MenuItem(
-              name : $item['name'],
-              icon : $item['icon'] ?? '',
-              path : $path ?? [],
-              order: $item['order'] ?? 0
+                name : $item['name'],
+                icon : $item['icon'] ?? '',
+                path : $path ?? [],
+                order: $item['order'] ?? 0,
             );
             foreach ($item['children'] ?? [] as $child) {
-                if (!self::checkAccess($child)) {
+                if ( ! self::checkAccess($child)) {
                     continue;
                 }
                 if (isset($child['route'])) {
                     $path = $this->router->getRouteByName($child['route'])?->getPath();
-                }
-                else {
+                } else {
                     $path = $child['path'] ?? ['E404'];
                 }
                 $menuItem->children[] = new MenuItem(
-                  name : $child['name'],
-                  icon : $child['icon'] ?? '',
-                  path : $path ?? [],
-                  order: $item['order'] ?? 0
+                    name : $child['name'],
+                    icon : $child['icon'] ?? '',
+                    path : $path ?? [],
+                    order: $item['order'] ?? 0,
                 );
             }
-            if (!empty($menuItem->children)) {
+            if ( ! empty($menuItem->children)) {
                 $this->sortItems($menuItem->children);
             }
             $menu[] = $menuItem;
@@ -97,7 +97,7 @@ readonly class MenuBuilder
      *
      * @return bool
      */
-    private static function checkAccess(array $item) : bool {
+    private static function checkAccess(array $item): bool {
         try {
             /**
              * @var AuthInterface $auth
@@ -108,25 +108,24 @@ readonly class MenuBuilder
             return true;
         }
 
-        if (isset($item['loggedInOnly']) && $item['loggedInOnly'] && !$auth->loggedIn()) {
+        if (isset($item['loggedInOnly']) && $item['loggedInOnly'] && ! $auth->loggedIn()) {
             return false;
         }
         if (isset($item['loggedOutOnly']) && $item['loggedOutOnly'] && $auth->loggedIn()) {
             return false;
         }
-        if (!isset($item['access'])) {
+        if ( ! isset($item['access'])) {
             return true;
         }
 
         if (is_string($item['access'])) {
             $access = [$item['access']];
-        }
-        else {
+        } else {
             $access = $item['access'];
         }
 
         foreach ($access as $right) {
-            if (!$auth->hasRight($right)) {
+            if ( ! $auth->hasRight($right)) {
                 return false;
             }
         }
@@ -139,8 +138,8 @@ readonly class MenuBuilder
      *
      * @return void
      */
-    private function sortItems(array &$items) : void {
-        usort($items, static fn(MenuItem $a, MenuItem $b) => $a->order - $b->order);
+    private function sortItems(array &$items): void {
+        usort($items, static fn (MenuItem $a, MenuItem $b) => $a->order - $b->order);
     }
 
 }

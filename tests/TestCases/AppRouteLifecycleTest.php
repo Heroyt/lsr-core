@@ -11,16 +11,15 @@ use Lsr\Core\Routing\Router;
 use Lsr\Enums\RequestMethod;
 use Lsr\Interfaces\RequestInterface;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 final class AppRouteLifecycleTest extends TestCase
 {
-    protected function tearDown(): void
-    {
+    protected function tearDown(): void {
         (new Router())->unregisterAll();
     }
 
-    public function testRouteResolutionReportsOnlyTheFirstMatchedResolution(): void
-    {
+    public function test_route_resolution_reports_only_the_first_matched_resolution(): void {
         $app = $this->createApp('/observed');
         $hook = new RecordingRouteResolutionHook();
         $operationHook = new RecordingRequestOperationHook();
@@ -45,8 +44,7 @@ final class AppRouteLifecycleTest extends TestCase
         self::assertCount(1, $operationHook->completed);
     }
 
-    public function testHookFailureDoesNotAffectRouteResolution(): void
-    {
+    public function test_hook_failure_does_not_affect_route_resolution(): void {
         $app = $this->createApp('/observed');
         $hook = new RecordingRouteResolutionHook();
         $hook->fail = true;
@@ -56,8 +54,7 @@ final class AppRouteLifecycleTest extends TestCase
         self::assertNotNull($app->getRoute($params));
     }
 
-    public function testOperationHookFailuresDoNotAffectRouteResolution(): void
-    {
+    public function test_operation_hook_failures_do_not_affect_route_resolution(): void {
         $beginFailure = new RecordingRequestOperationHook();
         $beginFailure->failBegin = true;
         $app = $this->createApp('/begin-failure');
@@ -73,17 +70,16 @@ final class AppRouteLifecycleTest extends TestCase
         self::assertNotNull($app->getRoute($params));
     }
 
-    private function createApp(string $path): App
-    {
+    private function createApp(string $path): App {
         $router = new Router();
         $router->unregisterAll();
-        $router->get($path, static fn() => null);
+        $router->get($path, static fn () => null);
 
         $request = $this->createStub(RequestInterface::class);
         $request->method('getType')->willReturn(RequestMethod::GET);
         $request->method('getPath')->willReturn(explode('/', trim($path, '/')));
 
-        $app = (new \ReflectionClass(App::class))->newInstanceWithoutConstructor();
+        $app = (new ReflectionClass(App::class))->newInstanceWithoutConstructor();
         $app->setRequest($request);
         return $app;
     }

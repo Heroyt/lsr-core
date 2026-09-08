@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Templating\Nodes;
 
 use InvalidArgumentException;
@@ -28,13 +30,13 @@ class LinkNode extends StatementNode
      * @return Node
      * @throws CompileException
      */
-    public static function create(Tag $tag) : Node {
+    public static function create(Tag $tag): Node {
         $tag->expectArguments();
 
-        $node = $tag->node = new self;
+        $node = $tag->node = new self();
         $node->args = $args = $tag->parser->parseArguments();
         $node->modifier = $tag->parser->parseModifier();
-        $node->modifier->escape = !$node->modifier->removeFilter('noescape');
+        $node->modifier->escape = ! $node->modifier->removeFilter('noescape');
 
         try {
             /** @var array<array<string|int,string>|string> $constArgs */
@@ -47,37 +49,36 @@ class LinkNode extends StatementNode
         return $node;
     }
 
-    public function print(PrintContext $context) : string {
+    public function print(PrintContext $context): string {
         if (isset($this->static)) {
             return $context->format(
-              <<<'XX'
+                <<<'XX'
 					$ʟ_fi = new LR\FilterInfo(%dump);
 					echo %modifyContent(%dump) %line;
 					XX,
-              $context->getEscaper()->export(),
-              $this->modifier,
-              $this->static->content,
-              $this->position,
+                $context->getEscaper()->export(),
+                $this->modifier,
+                $this->static->content,
+                $this->position,
             );
         }
 
         return $context->format(
-          <<<'XX'
+            <<<'XX'
 			$ʟ_fi = new LR\FilterInfo(%dump);
 			echo %modifyContent(\Lsr\Core\App::getService('links.generator')->getLink(%args)) %line;
 			XX,
-          $context->getEscaper()->export(),
-          $this->modifier,
-          $this->args,
-          $this->position,
+            $context->getEscaper()->export(),
+            $this->modifier,
+            $this->args,
+            $this->position,
         );
     }
 
-    public function &getIterator() : \Generator {
+    public function &getIterator(): \Generator {
         if (isset($this->static)) {
             yield $this->static;
-        }
-        else {
+        } else {
             foreach ($this->args as $arg) {
                 yield $arg;
             }

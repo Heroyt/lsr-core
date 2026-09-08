@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core;
 
 use Dotenv\Dotenv;
@@ -11,18 +13,17 @@ use Nette\Neon\Neon;
  */
 class Config
 {
-
     private const array ENV_DEFAULTS = [
-      'APP_NAME'    => '',
-      'DB_HOST'     => 'localhost',
-      'DB_PORT'     => 3306,
-      'DB_NAME'     => '',
-      'DB_USER'     => '',
-      'DB_PASSWORD' => '',
-      'DB_DATABASE' => '',
-      'DB_COLLATE'  => 'utf8mb4',
-      'DB_DRIVER'   => 'mysqli',
-      'DB_PREFIX'   => '',
+        'APP_NAME'    => '',
+        'DB_HOST'     => 'localhost',
+        'DB_PORT'     => 3306,
+        'DB_NAME'     => '',
+        'DB_USER'     => '',
+        'DB_PASSWORD' => '',
+        'DB_DATABASE' => '',
+        'DB_COLLATE'  => 'utf8mb4',
+        'DB_DRIVER'   => 'mysqli',
+        'DB_PREFIX'   => '',
     ];
 
     private static Config $instance;
@@ -31,7 +32,7 @@ class Config
 
     /** @var array<string,ConfigCategory> */
     private array $config = [
-      'ENV' => [],
+        'ENV' => [],
     ];
 
     public private(set) string $iniFile;
@@ -39,7 +40,7 @@ class Config
     public private(set) string $envFile;
 
     public function __construct(
-      private readonly string $cacheDir = TMP_DIR
+        private readonly string $cacheDir = TMP_DIR,
     ) {
         $this->config['ENV'] = self::ENV_DEFAULTS;
     }
@@ -49,11 +50,11 @@ class Config
      *
      * @return Config
      */
-    public static function getInstance(string $cacheDir = TMP_DIR) : Config {
-        if (!isset(self::$instance)) {
+    public static function getInstance(string $cacheDir = TMP_DIR): Config {
+        if ( ! isset(self::$instance)) {
             self::$instance = new self($cacheDir);
         }
-        if (!self::$instance->isInitialized()) {
+        if ( ! self::$instance->isInitialized()) {
             self::$instance->init();
         }
         return self::$instance;
@@ -62,7 +63,7 @@ class Config
     /**
      * @return bool
      */
-    public function isInitialized() : bool {
+    public function isInitialized(): bool {
         return $this->initialized;
     }
 
@@ -76,7 +77,7 @@ class Config
      *
      * @return void
      */
-    public function init() : void {
+    public function init(): void {
         if ($this->initialized || $this->checkCache()) {
             return;
         }
@@ -91,7 +92,7 @@ class Config
             try {
                 /** @var array<string,mixed>|null $neon */
                 $neon = Neon::decodeFile($neonFile);
-                if (!is_array($neon)) {
+                if ( ! is_array($neon)) {
                     $neon = [];
                 }
             } catch (Exception) {
@@ -117,9 +118,9 @@ class Config
      *
      * @return bool If the cache file is valid and loaded
      */
-    public function checkCache() : bool {
-        $cacheFile = $this->cacheDir.'config.cache';
-        if (!file_exists($cacheFile)) {
+    public function checkCache(): bool {
+        $cacheFile = $this->cacheDir . 'config.cache';
+        if ( ! file_exists($cacheFile)) {
             return false;
         }
 
@@ -140,7 +141,7 @@ class Config
 
         // Load cache
         $content = file_get_contents($cacheFile);
-        if (!$content) {
+        if ( ! $content) {
             return false;
         }
         /** @var false|array<string,ConfigCategory> $config */
@@ -153,8 +154,8 @@ class Config
         return true;
     }
 
-    public function clearCache() : void {
-        $cacheFile = $this->cacheDir.'config.cache';
+    public function clearCache(): void {
+        $cacheFile = $this->cacheDir . 'config.cache';
         if (file_exists($cacheFile)) {
             unlink($cacheFile);
         }
@@ -165,24 +166,24 @@ class Config
     /**
      * @return string Absolute file path or empty string if the file does not exist
      */
-    public function getIniFile() : string {
-        $this->iniFile ??= file_exists(PRIVATE_DIR.'config.ini') ? PRIVATE_DIR.'config.ini' : '';
+    public function getIniFile(): string {
+        $this->iniFile ??= file_exists(PRIVATE_DIR . 'config.ini') ? PRIVATE_DIR . 'config.ini' : '';
         return $this->iniFile;
     }
 
     /**
      * @return string Absolute file path or empty string if the file does not exist
      */
-    public function getNeonFile() : string {
-        $this->neonFile ??= file_exists(PRIVATE_DIR.'config.neon') ? PRIVATE_DIR.'config.neon' : '';
+    public function getNeonFile(): string {
+        $this->neonFile ??= file_exists(PRIVATE_DIR . 'config.neon') ? PRIVATE_DIR . 'config.neon' : '';
         return $this->neonFile;
     }
 
     /**
      * @return string Absolute file path or empty string if the file does not exist
      */
-    public function getEnvFile() : string {
-        $this->envFile ??= file_exists(ROOT.'.env') ? ROOT.'.env' : '';
+    public function getEnvFile(): string {
+        $this->envFile ??= file_exists(ROOT . '.env') ? ROOT . '.env' : '';
         return $this->envFile;
     }
 
@@ -191,8 +192,8 @@ class Config
      *
      * @return bool If save was successful
      */
-    public function saveCache() : bool {
-        $success = file_put_contents($this->cacheDir.'config.cache', serialize($this->config));
+    public function saveCache(): bool {
+        $success = file_put_contents($this->cacheDir . 'config.cache', serialize($this->config));
         return $success !== false && $success > 0;
     }
 
@@ -201,7 +202,7 @@ class Config
      *
      * @return void
      */
-    public function extendEnvDefault(array $defaults) : void {
+    public function extendEnvDefault(array $defaults): void {
         $this->config['ENV'] = array_merge($this->config['ENV'], $defaults);
     }
 
@@ -212,8 +213,8 @@ class Config
      *                    array<string,ConfigCategory> :
      *                    ConfigCategory)
      */
-    public function getConfig(?string $category = null) : array {
-        if (!$this->initialized) {
+    public function getConfig(?string $category = null): array {
+        if ( ! $this->initialized) {
             return [];
         }
         if (isset($category)) {

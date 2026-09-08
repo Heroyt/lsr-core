@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @noinspection PhpUnreachableStatementInspection
  * @noinspection PhpInconsistentReturnPointsInspection
@@ -12,8 +13,7 @@ use Generator;
 
 trait NoIteratorNode
 {
-
-    public function &getIterator() : Generator {
+    public function &getIterator(): Generator {
         return;
         /** @phpstan-ignore deadCode.unreachable */
         yield;

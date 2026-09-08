@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Controllers;
 
 use AllowDynamicProperties;
@@ -34,7 +36,7 @@ class TemplateParameters implements TemplateParametersInterface
      * @param  string  $offset
      * @return bool
      */
-    public function offsetExists($offset) : bool {
+    public function offsetExists($offset): bool {
         return isset($this->{$offset});
     }
 
@@ -42,7 +44,7 @@ class TemplateParameters implements TemplateParametersInterface
      * @param  string  $offset
      * @return mixed
      */
-    public function offsetGet($offset) : mixed {
+    public function offsetGet($offset): mixed {
         return $this->{$offset};
     }
 
@@ -51,7 +53,7 @@ class TemplateParameters implements TemplateParametersInterface
      * @param  mixed  $value
      * @return void
      */
-    public function offsetSet($offset, mixed $value) : void {
+    public function offsetSet($offset, mixed $value): void {
         $this->{$offset} = $value;
     }
 
@@ -61,19 +63,18 @@ class TemplateParameters implements TemplateParametersInterface
      * @param  string  $offset
      * @return void
      */
-    public function offsetUnset($offset) : void {
+    public function offsetUnset($offset): void {
         throw new UnsupportedOperationException('Cannot call unset() on a template parameter');
     }
 
     /**
      * @return array<string,mixed>
      */
-    public function jsonSerialize() : array {
+    public function jsonSerialize(): array {
         return get_object_vars($this);
     }
 
-    public function getProps(): array
-    {
+    public function getProps(): array {
         $props = get_object_vars($this);
         unset($props['page'], $props['app'], $props['request'], $props['addCss'], $props['addJs']);
         return $props;

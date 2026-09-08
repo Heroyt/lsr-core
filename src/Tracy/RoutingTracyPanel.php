@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * @author Tomáš Vojík <xvojik00@stud.fit.vutbr.cz>, <vojik@wboy.cz>
  */
@@ -18,7 +20,7 @@ class RoutingTracyPanel implements IBarPanel
     /**
      * @inheritDoc
      */
-    public function getTab() : string {
+    public function getTab(): string {
         return <<<HTML
         <span title="Routing">
             <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="512" height="512" x="0" y="0" viewBox="0 0 480 480"
@@ -41,7 +43,7 @@ class RoutingTracyPanel implements IBarPanel
     /**
      * @inheritDoc
      */
-    public function getPanel() : string {
+    public function getPanel(): string {
         /** @phpstan-ignore argument.type */
         $routes = $this->formatRoutes(['' => Router::$availableRoutes]);
         $requestObj = App::getInstance()->getRequest();
@@ -51,8 +53,7 @@ class RoutingTracyPanel implements IBarPanel
         if ($requestObj instanceof Request) {
             $request = $requestObj->getParsedBody();
             $path = $requestObj->getPath();
-        }
-        else {
+        } else {
             $request = $_REQUEST;
             $path = explode('/', $requestObj->getUri()->getPath());
         }
@@ -68,7 +69,7 @@ class RoutingTracyPanel implements IBarPanel
             <div class="p-3 my-2 rounded border">
                 <h5 class="fs-5">Route</h5>
                 <p><strong>Name:</strong> {$route->getName()}</p>
-                <p><strong>Path:</strong> $routePath</p>
+                <p><strong>Path:</strong> {$routePath}</p>
             </div>
             HTML;
 
@@ -107,22 +108,22 @@ class RoutingTracyPanel implements IBarPanel
      *
      * @return array<string,string|array<string,string>>
      */
-    private function formatRoutes(array | RouteParameter $routes) : array {
+    private function formatRoutes(array | RouteParameter $routes): array {
         $formatted = [];
         foreach ($routes as $key => $route) {
             if ($route instanceof RouteInterface) {
                 $name = $route->getName();
-                $formatted[$key] = (!empty($name) ? $name.': ' : '').$this->formatHandler($route->getHandler());
+                $formatted[$key] = ( ! empty($name) ? $name . ': ' : '') . $this->formatHandler($route->getHandler());
                 continue;
             }
             assert(is_array($route)); // This is to keep phpstan happy: if it's not a RouteInterface, it must be an array of RouteInterfaces.
             if (count($route) === 1 && (($route[0] ?? null) instanceof RouteInterface)) {
                 $name = $route[0]->getName();
-                $formatted[$key] = (!empty($name) ? $name.': ' : '').$this->formatHandler($route[0]->getHandler());
+                $formatted[$key] = ( ! empty($name) ? $name . ': ' : '') . $this->formatHandler($route[0]->getHandler());
                 continue;
             }
 
-            $formatted[$key.'/'] = $this->formatRoutes($route);
+            $formatted[$key . '/'] = $this->formatRoutes($route);
         }
         /** @phpstan-ignore return.type */
         return $formatted;
@@ -135,14 +136,14 @@ class RoutingTracyPanel implements IBarPanel
      *
      * @return string
      */
-    private function formatHandler(callable | array $handler) : string {
+    private function formatHandler(callable | array $handler): string {
         if (is_string($handler)) {
-            return $handler.'()';
+            return $handler . '()';
         }
         if (is_array($handler)) {
             $class = array_shift($handler);
             assert(is_string($class));
-            return $class.'::'.implode('()->', $handler).'()';
+            return $class . '::' . implode('()->', $handler) . '()';
         }
         return 'closure';
     }

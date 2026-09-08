@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Lsr\Core;
@@ -9,7 +10,6 @@ use Lsr\Core\Http\Lifecycle\RequestOperation;
 use Lsr\Core\Http\Lifecycle\RequestOperationLifecycleHookInterface;
 use Lsr\Core\Http\Lifecycle\RequestOperationLifecycleScopeInterface;
 use Lsr\Core\Requests\Request;
-use Lsr\Core\Requests\Response;
 use Lsr\Core\Requests\Validation\RequestValidationMapper;
 use Lsr\Core\Routing\Dispatcher;
 use Lsr\Core\Routing\Exceptions\ModelNotFoundException as RouteModelNotFoundException;
@@ -25,8 +25,8 @@ use Nette\Caching\Cache as CacheParent;
 use Nette\DI\MissingServiceException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Http\Server\MiddlewareInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 use ReflectionAttribute;
 use ReflectionFunction;
 use ReflectionIntersectionType;
@@ -39,7 +39,6 @@ use Throwable;
 
 class RouteHandler implements RequestHandlerInterface
 {
-
     protected Route $route;
 
     /** @var list<MiddlewareInterface> */
@@ -48,17 +47,17 @@ class RouteHandler implements RequestHandlerInterface
     private ?RequestOperationLifecycleHookInterface $requestOperationLifecycleHook = null;
 
     public function __construct(
-      protected readonly Cache  $cache,
-      protected readonly Mapper $mapper,
-    ) {}
+        protected readonly Cache  $cache,
+        protected readonly Mapper $mapper,
+    ) {
+    }
 
-    public function setRequestOperationLifecycleHook(RequestOperationLifecycleHookInterface $hook): static
-    {
+    public function setRequestOperationLifecycleHook(RequestOperationLifecycleHookInterface $hook): static {
         $this->requestOperationLifecycleHook = $hook;
         return $this;
     }
 
-    public function handle(ServerRequestInterface $request) : ResponseInterface {
+    public function handle(ServerRequestInterface $request): ResponseInterface {
         assert(isset($this->route) && $request instanceof Request);
 
         $middleware = $this->routeMiddleware[$this->routeMiddlewareIndex] ?? null;
@@ -70,39 +69,39 @@ class RouteHandler implements RequestHandlerInterface
 
             if (is_array($handler)) {
                 if (
-                  !(is_object($handler[0]) || (is_string($handler[0]) && class_exists($handler[0])))
-                  || !is_string($handler[1])
+                    ! (is_object($handler[0]) || (is_string($handler[0]) && class_exists($handler[0])))
+                    || ! is_string($handler[1])
                 ) {
                     throw new RuntimeException(
-                      sprintf(
-                        "Invalid route handler in %s. Expected [class, method] or [object, method], got %s.",
-                        $this->route->getReadable(),
-                        print_r($handler, true),
-                      )
+                        sprintf(
+                            "Invalid route handler in %s. Expected [class, method] or [object, method], got %s.",
+                            $this->route->getReadable(),
+                            print_r($handler, true),
+                        ),
                     );
                 }
 
                 [$class, $func] = $handler;
-                assert(!empty($func));
+                assert( ! empty($func));
 
                 /** @var object $controller */
                 $controller = is_object($class) ? $class : $this->resolveService($class, 'controller');
 
                 // Controller-wide middleware
                 if (isset($controller->middleware) && is_array($controller->middleware) && count(
-                    $controller->middleware
-                  ) > 0) {
+                    $controller->middleware,
+                ) > 0) {
                     // Create a dispatcher
                     $dispatcher = new Dispatcher(
-                    /** @phpstan-ignore argument.type */
-                      array_merge(
-                        $controller->middleware,
-                        [
-                          function (RequestInterface $request) use ($controller, $func) : ResponseInterface {
-                              return $this->handleControllerRequest($controller, $request, $func);
-                          },
-                        ]
-                      )
+                        /** @phpstan-ignore argument.type */
+                        array_merge(
+                            $controller->middleware,
+                            [
+                                function (RequestInterface $request) use ($controller, $func): ResponseInterface {
+                                    return $this->handleControllerRequest($controller, $request, $func);
+                                },
+                            ],
+                        ),
                     );
                     $scope = $this->beginRequestOperation(
                         RequestOperation::Middleware,
@@ -160,9 +159,9 @@ class RouteHandler implements RequestHandlerInterface
         }
     }
 
-    protected function withCookies(ResponseInterface $response) : ResponseInterface {
+    protected function withCookies(ResponseInterface $response): ResponseInterface {
         $cookieHeaders = App::cookieJar()->getHeaders();
-        if (!empty($cookieHeaders)) {
+        if ( ! empty($cookieHeaders)) {
             return $response->withAddedHeader('Set-Cookie', $cookieHeaders);
         }
         return $response;
@@ -176,10 +175,10 @@ class RouteHandler implements RequestHandlerInterface
      * @throws Throwable
      */
     protected function handleControllerRequest(
-      object           $controller,
-      RequestInterface $request,
-      string           $func
-    ) : ResponseInterface {
+        object           $controller,
+        RequestInterface $request,
+        string           $func,
+    ): ResponseInterface {
         $controllerAttributes = [
             'lsr.controller.class' => $controller::class,
             'lsr.controller.action' => $func,
@@ -236,108 +235,106 @@ class RouteHandler implements RequestHandlerInterface
      * @throws ValidationException
      * @throws Throwable
      */
-    private function getHandlerArgs(RequestInterface $request) : array {
+    private function getHandlerArgs(RequestInterface $request): array {
         /** @var array<string,array{optional:bool,type:string|class-string|array<string|class-string>,nullable:bool,mapRequest:bool,union:bool,unionHasModel:bool}> $args */
         $args = $this->cache->load(
-          'route.'.$this->route->getMethod()->value.'.'.$this->route->getReadable().'.args',
-          function () {
-              /** @var array{0:class-string|object,1:string}|callable $handler */
-              $handler = $this->route->getHandler();
-              $reflection = is_array($handler) ?
-                new ReflectionMethod($handler[0], $handler[1]) : // @phpstan-ignore-line
-                new ReflectionFunction($handler); // @phpstan-ignore argument.type
-              $arguments = $reflection->getParameters();
-              $args = [];
-              foreach ($arguments as $argument) {
-                  $name = $argument->getName();
-                  $optional = $argument->isOptional();
+            'route.' . $this->route->getMethod()->value . '.' . $this->route->getReadable() . '.args',
+            function () {
+                /** @var array{0:class-string|object,1:string}|callable $handler */
+                $handler = $this->route->getHandler();
+                $reflection = is_array($handler) ?
+                  new ReflectionMethod($handler[0], $handler[1]) : // @phpstan-ignore-line
+                  new ReflectionFunction($handler); // @phpstan-ignore argument.type
+                $arguments = $reflection->getParameters();
+                $args = [];
+                foreach ($arguments as $argument) {
+                    $name = $argument->getName();
+                    $optional = $argument->isOptional();
 
-                  /** @var ReflectionType|ReflectionUnionType|null $type */
-                  $type = $argument->getType();
+                    /** @var ReflectionType|ReflectionUnionType|null $type */
+                    $type = $argument->getType();
 
-                  if ($type instanceof ReflectionNamedType) {
-                      $args[$name] = [
-                        'optional'      => $optional,
-                        'union'         => false,
-                        'unionHasModel' => false,
-                        'type'          => $type->getName(),
-                        'nullable'      => $type->allowsNull(),
-                        'mapRequest'    => !empty(
-                        $argument->getAttributes(
-                          MapRequest::class,
-                          ReflectionAttribute::IS_INSTANCEOF
-                        )
-                        ),
-                      ];
-                  }
-                  elseif ($type instanceof ReflectionUnionType) {
-                      $subTypes = [];
-                      $hasModel = false;
-                      foreach ($type->getTypes() as $subtype) {
-                          if (
-                            !$subtype instanceof ReflectionNamedType
-                            || (
-                              !($model = is_subclass_of($subtype->getName(), Model::class))
-                              && !$subtype->isBuiltin()
-                            )
-                          ) {
-                              throw new RuntimeException(
-                                sprintf(
-                                  "Unsupported route handler method union type in %s(%s). Only built-in types, RequestInterface and Model classes are supported. On type: %s.",
-                                  $this->handlerToString($this->route->getHandler()),
-                                  $name,
-                                  $subtype instanceof ReflectionIntersectionType ?
-                                    implode(
-                                      '&',
-                                      array_map(
-                                        fn(ReflectionType $type) => $type instanceof ReflectionNamedType ?
-                                          $type->getName() : 'unknown',
-                                        $subtype->getTypes()
-                                      )
-                                    )
-                                    : $subtype->getName()
+                    if ($type instanceof ReflectionNamedType) {
+                        $args[$name] = [
+                            'optional'      => $optional,
+                            'union'         => false,
+                            'unionHasModel' => false,
+                            'type'          => $type->getName(),
+                            'nullable'      => $type->allowsNull(),
+                            'mapRequest'    => ! empty(
+                                $argument->getAttributes(
+                                    MapRequest::class,
+                                    ReflectionAttribute::IS_INSTANCEOF,
                                 )
-                              );
-                          }
-                          if ($model) {
-                              $hasModel = true;
-                          }
-                          $subTypes[] = $subtype->getName();
-                      }
-                      $args[$name] = [
-                        'optional'      => $optional,
-                        'union'         => true,
-                        'unionHasModel' => $hasModel,
-                        'type'          => $subTypes,
-                        'nullable'      => $type->allowsNull(),
-                        'mapRequest'    => !empty(
-                        $argument->getAttributes(
-                          MapRequest::class,
-                          ReflectionAttribute::IS_INSTANCEOF
-                        )
-                        ),
-                      ];
-                  }
-                  else {
-                      throw new RuntimeException(
-                        sprintf(
-                          "Unsupported route handler method type in %s(%s). Only built-in types, RequestInterface and Model classes are supported.",
-                          $this->handlerToString($this->route->getHandler()),
-                          $name
-                        )
-                      );
-                  }
-              }
-              return $args;
-          },
-          [
-            CacheParent::Expire => '1 days',
-            CacheParent::Tags   => ['routes', 'core'],
-          ]
+                            ),
+                        ];
+                    } elseif ($type instanceof ReflectionUnionType) {
+                        $subTypes = [];
+                        $hasModel = false;
+                        foreach ($type->getTypes() as $subtype) {
+                            if (
+                                ! $subtype instanceof ReflectionNamedType
+                                || (
+                                    ! ($model = is_subclass_of($subtype->getName(), Model::class))
+                              && ! $subtype->isBuiltin()
+                                )
+                            ) {
+                                throw new RuntimeException(
+                                    sprintf(
+                                        "Unsupported route handler method union type in %s(%s). Only built-in types, RequestInterface and Model classes are supported. On type: %s.",
+                                        $this->handlerToString($this->route->getHandler()),
+                                        $name,
+                                        $subtype instanceof ReflectionIntersectionType ?
+                                    implode(
+                                        '&',
+                                        array_map(
+                                            fn (ReflectionType $type) => $type instanceof ReflectionNamedType ?
+                                          $type->getName() : 'unknown',
+                                            $subtype->getTypes(),
+                                        ),
+                                    )
+                                    : $subtype->getName(),
+                                    ),
+                                );
+                            }
+                            if ($model) {
+                                $hasModel = true;
+                            }
+                            $subTypes[] = $subtype->getName();
+                        }
+                        $args[$name] = [
+                            'optional'      => $optional,
+                            'union'         => true,
+                            'unionHasModel' => $hasModel,
+                            'type'          => $subTypes,
+                            'nullable'      => $type->allowsNull(),
+                            'mapRequest'    => ! empty(
+                                $argument->getAttributes(
+                                    MapRequest::class,
+                                    ReflectionAttribute::IS_INSTANCEOF,
+                                )
+                            ),
+                        ];
+                    } else {
+                        throw new RuntimeException(
+                            sprintf(
+                                "Unsupported route handler method type in %s(%s). Only built-in types, RequestInterface and Model classes are supported.",
+                                $this->handlerToString($this->route->getHandler()),
+                                $name,
+                            ),
+                        );
+                    }
+                }
+                return $args;
+            },
+            [
+                CacheParent::Expire => '1 days',
+                CacheParent::Tags   => ['routes', 'core'],
+            ],
         );
 
         $requestMapper = new RequestValidationMapper($this->mapper);
-        if (!($request instanceof Request)) {
+        if ( ! ($request instanceof Request)) {
             $request = new Request($request);
         }
         $requestMapper->setRequest($request);
@@ -350,14 +347,14 @@ class RouteHandler implements RequestHandlerInterface
 
                 // Handle null value
                 if ($value === null) {
-                    if (!$type['nullable'] || !$type['optional']) {
+                    if ( ! $type['nullable'] || ! $type['optional']) {
                         throw new RuntimeException(
-                          sprintf(
-                            "Cannot instantiate union type for route. No value for parameter %s in %s(%s).",
-                            $name,
-                            $this->handlerToString($this->route->getHandler()),
-                            $name
-                          )
+                            sprintf(
+                                "Cannot instantiate union type for route. No value for parameter %s in %s(%s).",
+                                $name,
+                                $this->handlerToString($this->route->getHandler()),
+                                $name,
+                            ),
                         );
                     }
                     $argsValues[$name] = null;
@@ -367,11 +364,11 @@ class RouteHandler implements RequestHandlerInterface
                 // Handle model value
                 if ($type['unionHasModel']) {
                     /** @var class-string<Model>|false|null $modelType */
-                    $modelType = array_find($type['type'], static fn($type) => is_subclass_of($type, Model::class));
+                    $modelType = array_find($type['type'], static fn ($type) => is_subclass_of($type, Model::class));
                     if (is_string($modelType)) {
                         // Found model type
                         $id = $this->findID($name, $request);
-                        if (!empty($id)) {
+                        if ( ! empty($id)) {
                             try {
                                 $model = $modelType::get((int) $id);
                                 $argsValues[$name] = $model;
@@ -385,8 +382,8 @@ class RouteHandler implements RequestHandlerInterface
 
                 // Handle float value
                 if (
-                  is_numeric($value)
-                  && (in_array('float', $type['type'], true) || in_array('double', $type['type'], true))
+                    is_numeric($value)
+                    && (in_array('float', $type['type'], true) || in_array('double', $type['type'], true))
                 ) {
                     $argsValues[$name] = (float) $value;
                     continue;
@@ -394,8 +391,8 @@ class RouteHandler implements RequestHandlerInterface
 
                 // Handle int value
                 if (
-                  is_numeric($value)
-                  && (in_array('int', $type['type'], true) || in_array('integer', $type['type'], true))
+                    is_numeric($value)
+                    && (in_array('int', $type['type'], true) || in_array('integer', $type['type'], true))
                 ) {
                     $argsValues[$name] = (int) $value;
                     continue;
@@ -403,8 +400,8 @@ class RouteHandler implements RequestHandlerInterface
 
                 // Handle boolean value
                 if (
-                  (is_numeric($value) || in_array(strtolower($value), ['true', 'false'], true))
-                  && (in_array('bool', $type['type'], true) || in_array('boolean', $type['type'], true))
+                    (is_numeric($value) || in_array(strtolower($value), ['true', 'false'], true))
+                    && (in_array('bool', $type['type'], true) || in_array('boolean', $type['type'], true))
                 ) {
                     $argsValues[$name] = is_numeric($value) ? ((int) $value) > 0 : strtolower($value) === 'true';
                     continue;
@@ -417,13 +414,13 @@ class RouteHandler implements RequestHandlerInterface
                 }
 
                 // Invalid value
-                throw new RunTimeException(
-                  sprintf(
-                    "Unsupported route handler method type in %s(%s \$%s). Only built-in types, RequestInterface and Model classes are supported.",
-                    $this->handlerToString($this->route->getHandler()),
-                    implode('|', $type['type']),
-                    $name
-                  )
+                throw new RuntimeException(
+                    sprintf(
+                        "Unsupported route handler method type in %s(%s \$%s). Only built-in types, RequestInterface and Model classes are supported.",
+                        $this->handlerToString($this->route->getHandler()),
+                        implode('|', $type['type']),
+                        $name,
+                    ),
                 );
             }
 
@@ -446,30 +443,30 @@ class RouteHandler implements RequestHandlerInterface
                         if ($type['optional']) {
                             continue;
                         }
-                        $paramName = Strings::toCamelCase($name.'_id');
+                        $paramName = Strings::toCamelCase($name . '_id');
                         throw new RuntimeException(
-                          sprintf(
-                            "Cannot instantiate Model for route. No ID route parameter. %s - argument: %s \$%s. Expecting parameter \"id\" or \"%s\".",
-                            $this->route->getReadable(),
-                            $type['type'],
-                            $name,
-                            $paramName
-                          )
+                            sprintf(
+                                "Cannot instantiate Model for route. No ID route parameter. %s - argument: %s \$%s. Expecting parameter \"id\" or \"%s\".",
+                                $this->route->getReadable(),
+                                $type['type'],
+                                $name,
+                                $paramName,
+                            ),
                         );
                     }
 
                     try {
                         $model = $type['type']::get((int) $id);
                     } catch (ModelNotFoundException $e) {
-                        if (!$type['nullable']) {
+                        if ( ! $type['nullable']) {
                             throw new RouteModelNotFoundException(
-                                        sprintf(
-                                          "Cannot instantiate Model for route. Model not found. %s - argument: %s \$%s.",
-                                          $this->route->getReadable(),
-                                          $type['type'],
-                                          $name
-                                        ),
-                              previous: $e
+                                sprintf(
+                                    "Cannot instantiate Model for route. Model not found. %s - argument: %s \$%s.",
+                                    $this->route->getReadable(),
+                                    $type['type'],
+                                    $name,
+                                ),
+                                previous: $e,
                             );
                         }
                         $model = null;
@@ -490,7 +487,7 @@ class RouteHandler implements RequestHandlerInterface
                 try {
                     $class = $this->resolveService($type['type'], 'argument');
                 } catch (MissingServiceException $e) {
-                    if (!$type['nullable']) {
+                    if ( ! $type['nullable']) {
                         throw $e;
                     }
                     $class = null;
@@ -505,13 +502,13 @@ class RouteHandler implements RequestHandlerInterface
                 'integer', 'int'  => (int) $request->getParam($name),
                 'double', 'float' => (float) $request->getParam($name),
                 'boolean', 'bool' => (bool) $request->getParam($name),
-                default           => throw new RunTimeException(
-                  sprintf(
-                    "Unsupported route handler method type in %s(%s \$%s). Only built-in types, RequestInterface and Model classes are supported.",
-                    $this->handlerToString($this->route->getHandler()),
-                    $type['type'],
-                    $name
-                  )
+                default           => throw new RuntimeException(
+                    sprintf(
+                        "Unsupported route handler method type in %s(%s \$%s). Only built-in types, RequestInterface and Model classes are supported.",
+                        $this->handlerToString($this->route->getHandler()),
+                        $type['type'],
+                        $name,
+                    ),
                 ),
             };
         }
@@ -524,8 +521,7 @@ class RouteHandler implements RequestHandlerInterface
      * @param class-string<T> $type
      * @return T
      */
-    private function resolveService(string $type, string $kind): object
-    {
+    private function resolveService(string $type, string $kind): object {
         $scope = $this->beginRequestOperation(
             RequestOperation::DependencyResolution,
             [
@@ -576,7 +572,7 @@ class RouteHandler implements RequestHandlerInterface
      * @param  array{0:class-string|object, 1:string}|callable  $handler
      * @return string
      */
-    private function handlerToString(array | callable $handler) : string {
+    private function handlerToString(array | callable $handler): string {
         if (is_array($handler)) {
             return implode('::', $handler);
         }
@@ -589,8 +585,8 @@ class RouteHandler implements RequestHandlerInterface
     /**
      * @return non-empty-string|int|null
      */
-    private function findID(string $name, RequestInterface $request) : int | string | null {
-        $paramName = Strings::toCamelCase($name.'_id');
+    private function findID(string $name, RequestInterface $request): int | string | null {
+        $paramName = Strings::toCamelCase($name . '_id');
         /** @var numeric-string|null $id */
         $id = $request->getParam($paramName);
         if (empty($id)) {
@@ -611,7 +607,7 @@ class RouteHandler implements RequestHandlerInterface
         return $id;
     }
 
-    public function setRoute(Route $route) : RouteHandler {
+    public function setRoute(Route $route): RouteHandler {
         $this->route = $route;
         $this->routeMiddleware = $route->getMiddleware();
         $this->routeMiddlewareIndex = 0;

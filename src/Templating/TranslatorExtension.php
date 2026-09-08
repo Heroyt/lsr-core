@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Templating;
 
 use Closure;
@@ -21,18 +23,17 @@ use Stringable;
 
 final class TranslatorExtension extends Extension
 {
-
-
-    public function __construct(private readonly Translations $translator) {}
+    public function __construct(private readonly Translations $translator) {
+    }
 
 
     /**
      * @return array{_: array{0: TranslatorExtension, 1: string}, translate: Closure}
      */
-    public function getTags() : array {
+    public function getTags(): array {
         return [
-          '_'         => [$this, 'parseTranslate'],
-          'translate' => fn(Tag $tag) => yield from Nodes\TranslateNode::create($tag, $this->translator),
+            '_'         => [$this, 'parseTranslate'],
+            'translate' => fn (Tag $tag) => yield from Nodes\TranslateNode::create($tag, $this->translator),
         ];
     }
 
@@ -40,17 +41,18 @@ final class TranslatorExtension extends Extension
     /**
      * @return array{translate: Closure}
      */
-    public function getFilters() : array {
+    public function getFilters(): array {
         return [
-          'translate' => fn(FilterInfo          $fi,
-                            string | Stringable $message,
-                            mixed               ...$args
-          ) : string => $this->translator->translate($message, ...$args),
+            'translate' => fn (
+                FilterInfo          $fi,
+                string | Stringable $message,
+                mixed               ...$args,
+            ): string => $this->translator->translate($message, ...$args),
         ];
     }
 
 
-    public function getCacheKey(Engine $engine) : string {
+    public function getCacheKey(Engine $engine): string {
         return $this->translator->getLang();
     }
 
@@ -60,18 +62,18 @@ final class TranslatorExtension extends Extension
      *
      * @throws CompileException
      */
-    public function parseTranslate(Tag $tag) : PrintNode {
+    public function parseTranslate(Tag $tag): PrintNode {
         $tag->outputMode = $tag::OutputKeepIndentation;
         $tag->expectArguments();
-        $node = new PrintNode;
+        $node = new PrintNode();
         $node->expression = $tag->parser->parseUnquotedStringOrExpression();
-        $args = new ArrayNode;
+        $args = new ArrayNode();
         if ($tag->parser->stream->tryConsume(',')) {
             $args = $tag->parser->parseArguments();
         }
 
         $node->modifier = $tag->parser->parseModifier();
-        $node->modifier->escape = !$node->modifier->removeFilter('noescape');
+        $node->modifier->escape = ! $node->modifier->removeFilter('noescape');
 
         /** @noinspection NotOptimalIfConditionsInspection */
         if (($expr = self::toValue($node->expression)) && is_array($values = self::toValue($args)) && (is_string($expr) || $expr instanceof Stringable)) {
@@ -81,14 +83,14 @@ final class TranslatorExtension extends Extension
         }
 
         array_unshift(
-          $node->modifier->filters,
-          new FilterNode(new IdentifierNode('translate'), $args->toArguments())
+            $node->modifier->filters,
+            new FilterNode(new IdentifierNode('translate'), $args->toArguments()),
         );
         return $node;
     }
 
 
-    public static function toValue(ExpressionNode $args) : mixed {
+    public static function toValue(ExpressionNode $args): mixed {
         try {
             return NodeHelpers::toValue($args, constants: true);
         } catch (InvalidArgumentException) {

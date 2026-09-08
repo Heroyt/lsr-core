@@ -1,40 +1,43 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Lsr\Core\Http;
 
+use JsonException;
 use Lsr\Core\Requests\Dto\ErrorResponse;
 use Lsr\Core\Requests\Request;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
+use Throwable;
 use Tracy\Debugger;
 use Tracy\Helpers;
 use Tracy\ILogger;
 
 final readonly class TracyExceptionHandler implements ExceptionHandlerInterface
 {
-
     public function __construct(
-      private ResponseFactoryInterface $responseFactory,
-    ) {}
+        private ResponseFactoryInterface $responseFactory,
+    ) {
+    }
 
     /**
      * @inheritDoc
      */
-    public function handles(\Throwable $exception) : bool {
+    public function handles(Throwable $exception): bool {
         return true; // Handles any exception
     }
 
     /**
-     * @param  \Throwable  $exception
+     * @param  Throwable  $exception
      * @param  Request  $request
      * @inheritDoc
      */
-    public function handle(\Throwable $exception, Request $request) : ResponseInterface {
+    public function handle(Throwable $exception, Request $request): ResponseInterface {
         Helpers::improveException($exception);
         Debugger::log($exception, ILogger::EXCEPTION);
 
-        if (!Debugger::$productionMode) {
+        if ( ! Debugger::$productionMode) {
             ob_start(); // double buffer prevents sending HTTP headers in some PHP
             ob_start();
             Debugger::getBlueScreen()->render($exception);
@@ -43,46 +46,46 @@ final readonly class TracyExceptionHandler implements ExceptionHandlerInterface
             ob_end_clean();
 
             return $this->responseFactory->createFullResponse(
-              500,
-              [
-                'Content-Type' => 'text/html',
-              ],
-              $blueScreen
+                500,
+                [
+                    'Content-Type' => 'text/html',
+                ],
+                $blueScreen,
             );
         }
 
         $acceptTypes = array_filter(
-          array_map(
-            static fn(string $header) => strtolower(trim(explode(';', $header, 2)[0])),
-            $request->getHeader('Accept')
-          )
+            array_map(
+                static fn (string $header) => strtolower(trim(explode(';', $header, 2)[0])),
+                $request->getHeader('Accept'),
+            ),
         );
 
         if (in_array('application/json', $acceptTypes, true)) {
             try {
                 $data = json_encode(
-                  new ErrorResponse(
-                               'Something Went wrong!',
-                    detail   : $exception->getMessage(),
-                    exception: $exception
-                  ),
-                  JSON_THROW_ON_ERROR
+                    new ErrorResponse(
+                        'Something Went wrong!',
+                        detail   : $exception->getMessage(),
+                        exception: $exception,
+                    ),
+                    JSON_THROW_ON_ERROR,
                 );
-            } catch (\JsonException) {
+            } catch (JsonException) {
                 $data = '{"type":"internal","title":"Something Went wrong!"}';
             }
             return $this->responseFactory->createFullResponse(
-              500,
-              ['Content-Type' => 'application/json'],
-              $data
+                500,
+                ['Content-Type' => 'application/json'],
+                $data,
             );
         }
 
         if (in_array('text/html', $acceptTypes, true)) {
             return $this->responseFactory->createFullResponse(
-              500,
-              ['Content-Type' => 'text/html'],
-              <<<HTML
+                500,
+                ['Content-Type' => 'text/html'],
+                <<<HTML
                 <!doctype html>
                 <html lang="en">
                 <head>
@@ -96,14 +99,14 @@ final readonly class TracyExceptionHandler implements ExceptionHandlerInterface
                   <p>{$exception->getMessage()}</p>
                 </body>
                 </html>
-                HTML
+                HTML,
             );
         }
 
         return $this->responseFactory->createFullResponse(
-          500,
-          ['Content-Type' => 'text/plain'],
-          'Internal server error - '.$exception->getMessage()
+            500,
+            ['Content-Type' => 'text/plain'],
+            'Internal server error - ' . $exception->getMessage(),
         );
     }
 }

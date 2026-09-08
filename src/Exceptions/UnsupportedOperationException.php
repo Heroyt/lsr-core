@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Exceptions;
 
-class UnsupportedOperationException extends \RuntimeException
-{
+use RuntimeException;
 
+class UnsupportedOperationException extends RuntimeException
+{
 }

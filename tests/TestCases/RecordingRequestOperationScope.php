@@ -20,8 +20,7 @@ final class RecordingRequestOperationScope implements RequestOperationLifecycleS
     ) {
     }
 
-    public function complete(array $attributes = [], ?Throwable $exception = null): void
-    {
+    public function complete(array $attributes = [], ?Throwable $exception = null): void {
         if ($this->completed) {
             return;
         }

@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * @author Tomáš Vojík <xvojik00@stud.fit.vutbr.cz>, <vojik@wboy.cz>
  */
@@ -10,7 +12,6 @@ use Lsr\Core\Routing\Router;
 
 class MenuItem
 {
-
     public bool $active = false;
     public string $url = '';
 
@@ -22,11 +23,11 @@ class MenuItem
      * @param  int  $order
      */
     public function __construct(
-      public string $name = '',
-      public string $icon = '',
-      public array  $path = [],
-      public array  $children = [],
-      public int    $order = 0,
+        public string $name = '',
+        public string $icon = '',
+        public array  $path = [],
+        public array  $children = [],
+        public int    $order = 0,
     ) {
         $this->url = App::getLink($this->path);
         $this->checkActive();
@@ -37,7 +38,7 @@ class MenuItem
      *
      * @return bool
      */
-    public function checkActive() : bool {
+    public function checkActive(): bool {
         $activePath = App::getInstance()->getRequest()->getPath();
         $this->active = Router::comparePaths(array_values($this->path), $activePath);
         foreach ($this->children as $child) {
@@ -51,7 +52,7 @@ class MenuItem
      *
      * @return void
      */
-    public function __wakeup() : void {
+    public function __wakeup(): void {
         $this->checkActive();
     }
 }

@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * @file      App.php
  * @brief     Core\App class
@@ -7,7 +9,6 @@
  * @version   1.0
  * @since     1.0
  */
-
 
 namespace Lsr\Core;
 
@@ -82,11 +83,11 @@ class App
      * @throws ReflectionException
      */
     public function __construct(
-      public readonly Router           $router,
-      public readonly RouteHandler $routeHandler,
-      public readonly SessionInterface $session,
-      public readonly Config           $config,
-      public readonly Translations     $translations,
+        public readonly Router           $router,
+        public readonly RouteHandler $routeHandler,
+        public readonly SessionInterface $session,
+        public readonly Config           $config,
+        public readonly Translations     $translations,
     ) {
         static::$instance = $this;
         $this->router->setup();
@@ -104,8 +105,8 @@ class App
         return static::getInstance()->{$name}(...$arguments);
     }
 
-    public static function getInstance() : App {
-        if (!isset(static::$instance)) {
+    public static function getInstance(): App {
+        if ( ! isset(static::$instance)) {
             // @phpstan-ignore-next-line
             static::$instance = static::getService('app');
         }
@@ -119,7 +120,7 @@ class App
      *
      * @return object
      */
-    public static function getService(string $name) : object {
+    public static function getService(string $name): object {
         /** @phpstan-ignore return.type */
         return static::getContainer()->getService($name);
     }
@@ -127,7 +128,7 @@ class App
     /**
      * @return Container
      */
-    public static function getContainer() : Container {
+    public static function getContainer(): Container {
         return static::$container;
     }
 
@@ -136,25 +137,25 @@ class App
      *
      * @return void
      */
-    public static function setupDi() : void {
+    public static function setupDi(): void {
         if (isset(static::$container)) {
             return;
         }
         Timer::start('core.setup.di');
-        $loader = new ContainerLoader(TMP_DIR.'di/');
+        $loader = new ContainerLoader(TMP_DIR . 'di/');
         /** @var class-string<Container> $class */
         $class = $loader->load(
-          function (Compiler $compiler) {
-              $compiler->addExtension('extensions', new ExtensionsExtension());
-              /** @var string[] $configs */
-              $configs = require ROOT.'config/services.php';
-              // This will load all found services.neon files in the whole application that are cached in one PHP file
-              foreach ($configs as $config) {
-                  $compiler->loadConfig($config);
-              }
-          }
+            function (Compiler $compiler): void {
+                $compiler->addExtension('extensions', new ExtensionsExtension());
+                /** @var string[] $configs */
+                $configs = require ROOT . 'config/services.php';
+                // This will load all found services.neon files in the whole application that are cached in one PHP file
+                foreach ($configs as $config) {
+                    $compiler->loadConfig($config);
+                }
+            },
         );
-        static::$container = new $class;
+        static::$container = new $class();
         Timer::stop('core.setup.di');
     }
 
@@ -164,7 +165,7 @@ class App
      * @version 1.0
      * @since   1.0
      */
-    public static function uglyUrl() : void {
+    public static function uglyUrl(): void {
         static::$prettyUrl = false;
     }
 
@@ -174,11 +175,11 @@ class App
      * @version 1.0
      * @since   1.0
      */
-    public static function prettyUrl() : void {
+    public static function prettyUrl(): void {
         static::$prettyUrl = true;
     }
 
-    public static function sendResponse(ResponseInterface $response) : never {
+    public static function sendResponse(ResponseInterface $response): never {
         // Check if something is not already sent
         if (headers_sent()) {
             throw new RuntimeException('Headers were already sent. The response could not be emitted!');
@@ -195,7 +196,7 @@ class App
         // Send body
         $stream = $response->getBody();
 
-        if (!$stream->isReadable()) {
+        if ( ! $stream->isReadable()) {
             exit;
         }
 
@@ -203,7 +204,7 @@ class App
             $stream->rewind();
         }
 
-        while (!$stream->eof()) {
+        while ( ! $stream->eof()) {
             echo $stream->read(8192);
         }
         exit;
@@ -224,7 +225,7 @@ class App
      * @version 1.0
      * @since   1.0
      */
-    public static function getLinkObject(array $request = []) : UriInterface {
+    public static function getLinkObject(array $request = []): UriInterface {
         /** @var Generator $generator */
         $generator = static::getService('links.generator');
         return $generator->getLinkObject($request);
@@ -238,7 +239,7 @@ class App
      * @version 1.0
      * @since   1.0
      */
-    public static function isPrettyUrl() : bool {
+    public static function isPrettyUrl(): bool {
         return static::$prettyUrl;
     }
 
@@ -248,7 +249,7 @@ class App
      * @return MenuItem[]
      * @throws FileException
      */
-    public static function getMenu(string $type = 'menu') : array {
+    public static function getMenu(string $type = 'menu'): array {
         /** @var MenuBuilder $menuBuilder */
         $menuBuilder = static::getService('menu.builder');
         return $menuBuilder->getMenu($type);
@@ -263,7 +264,7 @@ class App
      *
      * @return T|null
      */
-    public static function getServiceByType(string $type) : null | object {
+    public static function getServiceByType(string $type): null | object {
         /** @var T|null $service */
         $service = static::getContainer()->getByType($type);
         return $service;
@@ -278,14 +279,14 @@ class App
      *
      * @return T[]
      */
-    public static function findServicesByType(string $type) : array {
+    public static function findServicesByType(string $type): array {
         $service = static::getContainer()->findByType($type);
         /** @var T[] $services */
         $services = array_map([static::class, 'getService'], $service);
         return $services;
     }
 
-    public static function cookieJar() : CookieJarInterface {
+    public static function cookieJar(): CookieJarInterface {
         $app = static::getInstance();
         if ($app->cookieJar === null) {
             $app->cookieJar = CookieJar::fromRequest($app->getRequest());
@@ -301,8 +302,8 @@ class App
      * @version 1.0
      * @since   1.0
      */
-    public function getRequest() : RequestInterface {
-        if (!isset($this->request)) {
+    public function getRequest(): RequestInterface {
+        if ( ! isset($this->request)) {
             /** @var RequestInterface|null $request */
             $request = $this::getServiceByType(RequestFactoryInterface::class)?->getHttpRequest();
             if ($request === null) {
@@ -316,19 +317,19 @@ class App
         return $this->request;
     }
 
-    public function setRequest(RequestInterface $request) : void {
+    public function setRequest(RequestInterface $request): void {
         $this->request = $request;
         $this->route = null;
         $this->routeParams = [];
         $this->cookieJar = null;
     }
 
-    public function setRouteResolutionHook(RouteResolutionHookInterface $hook) : static {
+    public function setRouteResolutionHook(RouteResolutionHookInterface $hook): static {
         $this->routeResolutionHook = $hook;
         return $this;
     }
 
-    public function setRequestOperationLifecycleHook(RequestOperationLifecycleHookInterface $hook) : static {
+    public function setRequestOperationLifecycleHook(RequestOperationLifecycleHookInterface $hook): static {
         $this->requestOperationLifecycleHook = $hook;
         return $this;
     }
@@ -340,14 +341,14 @@ class App
      *
      * @return bool
      */
-    protected static function isValidLanguage(string $language) : bool {
+    protected static function isValidLanguage(string $language): bool {
         return Language::getById($language) !== null;
     }
 
     /**
      * @return string
      */
-    public function getTimezone() : string {
+    public function getTimezone(): string {
         if (empty($this->timezone)) {
             $this->timezone = (string) ($this->config->getConfig('General')['TIMEZONE'] ?? 'Europe/Prague');
         }
@@ -361,7 +362,7 @@ class App
      *
      * @deprecated Use DI for loading config instead
      */
-    public static function getConfig() : array {
+    public static function getConfig(): array {
         return static::getInstance()->config->getConfig();
     }
 
@@ -370,7 +371,7 @@ class App
      *
      * @return array<string, string|Language|null>
      */
-    public function getSupportedLanguages(bool $returnObjects = false) : array {
+    public function getSupportedLanguages(bool $returnObjects = false): array {
         $supported = $this->translations->supportedLanguages;
 
         if ($returnObjects) {
@@ -392,21 +393,21 @@ class App
      * @version 1.0
      * @since   1.0
      */
-    public function getCss() : string {
-        $files = glob(ROOT.'dist/*.css');
+    public function getCss(): string {
+        $files = glob(ROOT . 'dist/*.css');
         if ($files === false) {
             return '';
         }
         $return = '';
         foreach ($files as $file) {
-            if (!str_contains($file, '.min') && in_array(str_replace('.css', '.min.css', $file), $files, true)) {
+            if ( ! str_contains($file, '.min') && in_array(str_replace('.css', '.min.css', $file), $files, true)) {
                 continue;
             }
-            $return .= '<link rel="stylesheet" href="'.str_replace(
+            $return .= '<link rel="stylesheet" href="' . str_replace(
                 ROOT,
                 $this->getBaseUrl(),
-                $file
-              ).'?v='.$this->getCacheVersion().'" />'.PHP_EOL;
+                $file,
+            ) . '?v=' . $this->getCacheVersion() . '" />' . PHP_EOL;
         }
         return $return;
     }
@@ -416,7 +417,7 @@ class App
      *
      * @return non-empty-string
      */
-    public function getBaseUrl() : string {
+    public function getBaseUrl(): string {
         // @phpstan-ignore-next-line
         return (string) $this->getBaseUrlObject();
     }
@@ -426,7 +427,7 @@ class App
      *
      * @return UriInterface
      */
-    public function getBaseUrlObject() : UriInterface {
+    public function getBaseUrlObject(): UriInterface {
         return $this->getRequest()->getUri()->withPath('/')->withFragment('')->withQuery('');
     }
 
@@ -435,7 +436,7 @@ class App
      *
      * @return int
      */
-    public function getCacheVersion() : int {
+    public function getCacheVersion(): int {
         return (int) ($this->config->getConfig('General')['CACHE_VERSION'] ?? 1);
     }
 
@@ -447,21 +448,21 @@ class App
      * @version 1.0
      * @since   1.0
      */
-    public function getJs() : string {
-        $files = glob(ROOT.'dist/*.js');
+    public function getJs(): string {
+        $files = glob(ROOT . 'dist/*.js');
         if ($files === false) {
             return '';
         }
         $return = '';
         foreach ($files as $file) {
-            if (!str_contains($file, '.min') && in_array(str_replace('.js', '.min.js', $file), $files, true)) {
+            if ( ! str_contains($file, '.min') && in_array(str_replace('.js', '.min.js', $file), $files, true)) {
                 continue;
             }
-            $return .= '<script src="'.str_replace(
+            $return .= '<script src="' . str_replace(
                 ROOT,
                 $this->getBaseUrl(),
-                $file
-              ).'?v='.$this->getCacheVersion().'"></script>'.PHP_EOL;
+                $file,
+            ) . '?v=' . $this->getCacheVersion() . '"></script>' . PHP_EOL;
         }
         return $return;
     }
@@ -471,8 +472,8 @@ class App
      *
      * @return bool
      */
-    public function isProduction() : bool {
-        return !($this->config->getConfig('General')['DEBUG'] ?? false);
+    public function isProduction(): bool {
+        return ! ($this->config->getConfig('General')['DEBUG'] ?? false);
     }
 
     /**
@@ -486,27 +487,23 @@ class App
      * @noreturn
      */
     public function redirect(
-      UriInterface | RouteInterface | array | string $to,
-      ?RequestInterface                              $from = null,
-      int                                            $type = 302
-    ) : Response {
+        UriInterface | RouteInterface | array | string $to,
+        ?RequestInterface                              $from = null,
+        int                                            $type = 302,
+    ): Response {
         $link = '';
         if ($to instanceof RouteInterface) {
             $link = static::getLink($to->getPath());
-        }
-        elseif ($to instanceof UriInterface) {
+        } elseif ($to instanceof UriInterface) {
             $link = (string) $to;
-        }
-        elseif (is_array($to)) {
+        } elseif (is_array($to)) {
             $link = static::getLink($to);
-        }
-        elseif (is_string($to)) {
+        } elseif (is_string($to)) {
             /** @var Route|null $route */
             $route = $this->router->getRouteByName($to);
             if (isset($route)) {
                 $link = static::getLink($route->path);
-            }
-            else {
+            } else {
                 $link = $to;
             }
         }
@@ -531,7 +528,7 @@ class App
      * @version 1.0
      * @since   1.0
      */
-    public static function getLink(array $request = [], bool $absolute = false) : string {
+    public static function getLink(array $request = [], bool $absolute = false): string {
         /** @var Generator $generator */
         $generator = static::getService('links.generator');
         if ($absolute) {
@@ -540,8 +537,8 @@ class App
         return $generator->getLink($request);
     }
 
-    public function getLogger() : Logger {
-        if (!isset($this->logger)) {
+    public function getLogger(): Logger {
+        if ( ! isset($this->logger)) {
             $this->logger = new Logger(LOG_DIR, 'app');
         }
         return $this->logger;
@@ -550,7 +547,7 @@ class App
     /**
      * @return string[]
      */
-    public function getSupportedCountries() : array {
+    public function getSupportedCountries(): array {
         return $this->translations->supportedCountries;
     }
 
@@ -561,15 +558,15 @@ class App
      *
      * @return PageInfoDto
      */
-    public function getPageInfo() : PageInfoDto {
+    public function getPageInfo(): PageInfoDto {
         $request = $this->getRequest();
         $params = [];
         return new PageInfoDto(
-          $request->getType(),
-          $this->getRoute($params)?->getName(),
-          $request->getPath(),
-          /** @phpstan-ignore argument.type */
-          array_merge($request->getAttributes(), $params),
+            $request->getType(),
+            $this->getRoute($params)?->getName(),
+            $request->getPath(),
+            /** @phpstan-ignore argument.type */
+            array_merge($request->getAttributes(), $params),
         );
     }
 
@@ -583,7 +580,7 @@ class App
      *
      * @see App::getRequest()
      */
-    public function getRoute(array &$params) : ?RouteInterface {
+    public function getRoute(array &$params): ?RouteInterface {
         if ($this->route === null) {
             $this->routeParams = [];
             $request = $this->getRequest();
@@ -601,7 +598,7 @@ class App
                 $this->route = Router::getRoute(
                     $method,
                     $path,
-                    $this->routeParams
+                    $this->routeParams,
                 );
                 $event = new RouteResolutionEvent(
                     $method,
@@ -628,10 +625,10 @@ class App
         return $this->route;
     }
 
-    private function recordRouteResolution(RouteResolutionEvent $event) : void {
+    private function recordRouteResolution(RouteResolutionEvent $event): void {
         try {
             $this->routeResolutionHook?->record($event);
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // Lifecycle hooks must never affect route resolution.
         }
     }
@@ -642,7 +639,7 @@ class App
     private function beginRequestOperation(
         RequestOperation $operation,
         array $attributes = [],
-    ) : ?RequestOperationLifecycleScopeInterface {
+    ): ?RequestOperationLifecycleScopeInterface {
         try {
             return $this->requestOperationLifecycleHook?->begin($operation, $attributes);
         } catch (Throwable) {
@@ -653,7 +650,7 @@ class App
     private function completeRequestOperation(
         ?RequestOperationLifecycleScopeInterface $scope,
         ?Throwable $exception = null,
-    ) : void {
+    ): void {
         try {
             $scope?->complete(exception: $exception);
         } catch (Throwable) {
@@ -664,27 +661,27 @@ class App
     /**
      * Get current page HTML or run CLI command
      *
-     * @throws Requests\Exceptions\RouteNotFoundException
+     * @throws RouteNotFoundException
      * @throws InvalidLanguageException
      * @since   1.0
      * @version 1.0
      */
-    public function run() : ResponseInterface {
+    public function run(): ResponseInterface {
         $params = [];
         $request = $this->getRequest();
 
         // Serve static file
         // This is a fallback handler, because normally an HTTP server should handle static files.
         if ($request instanceof Request && $request->isStaticFile()) {
-            header('Content-Type: '.$request->getStaticFileMime());
-            $filePath = urldecode(ROOT.substr($request->getUri()->getPath(), 1));
+            header('Content-Type: ' . $request->getStaticFileMime());
+            $filePath = urldecode(ROOT . substr($request->getUri()->getPath(), 1));
             readfile($filePath);
             exit();
         }
 
         $route = $this->getRoute($params);
 
-        if (!isset($route)) {
+        if ( ! isset($route)) {
             throw new RouteNotFoundException($request);
         }
 
@@ -714,8 +711,8 @@ class App
 
         try {
             return $this->routeHandler
-              ->setRoute($route)
-              ->handle($request);
+                ->setRoute($route)
+                ->handle($request);
         } catch (Throwable $exception) {
             $failure = $exception;
             throw $exception;
@@ -731,7 +728,7 @@ class App
      *
      * @return string Language code
      */
-    protected function getDesiredLanguageCode() : string {
+    protected function getDesiredLanguageCode(): string {
         $request = $this->getRequest();
         /** @var string|null $lang */
         $lang = $request->getParam('lang');
@@ -772,20 +769,20 @@ class App
      *
      * @return bool
      */
-    protected function isSupportedLanguage(string $language) : bool {
+    protected function isSupportedLanguage(string $language): bool {
         preg_match('/([a-z]{2})[\-_]?/', $language, $matches);
-        if (!isset($matches[1])) {
+        if ( ! isset($matches[1])) {
             return false;
         }
         $id = $matches[1];
         return isset($this->translations->supportedLanguages[$id]);
     }
 
-    public function getAppName() : string {
+    public function getAppName(): string {
         return (string) ($this->config->getConfig('ENV')['APP_NAME'] ?? '');
     }
 
-    public function getLanguage() : Language {
+    public function getLanguage(): Language {
         return $this->translations->getLanguage();
     }
 

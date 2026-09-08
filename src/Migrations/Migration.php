@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Lsr\Core\Migrations;
@@ -14,22 +15,22 @@ namespace Lsr\Core\Migrations;
  *     foreignKeys?: ForeignKeyData[],
  * }
  */
-readonly final class Migration
+final readonly class Migration
 {
-
     /**
      * @param  array<string,string[]>  $modifications
      * @param  Index[]  $indexes
      * @param  ForeignKey[]  $foreignKeys
      */
     public function __construct(
-      public string $table,
-      public string $definition,
-      public ?int $order = null,
-      public array $modifications = [],
-      public array $indexes = [],
-      public array $foreignKeys = [],
-    ){}
+        public string $table,
+        public string $definition,
+        public ?int $order = null,
+        public array $modifications = [],
+        public array $indexes = [],
+        public array $foreignKeys = [],
+    ) {
+    }
 
 
     /**
@@ -37,7 +38,7 @@ readonly final class Migration
      * @param  MigrationData  $data
      * @return self
      */
-    public static function fromArray(string $table, array $data) : self {
+    public static function fromArray(string $table, array $data): self {
         $indexes = [];
         $foreignKeys = [];
 
@@ -49,12 +50,12 @@ readonly final class Migration
         }
 
         return new self(
-          $table,
-          $data['definition'],
-          (isset($data['order']) ? (int) $data['order'] : null),
-          $data['modifications'] ?? [],
-          $indexes,
-          $foreignKeys,
+            $table,
+            $data['definition'],
+            (isset($data['order']) ? (int) $data['order'] : null),
+            $data['modifications'] ?? [],
+            $indexes,
+            $foreignKeys,
         );
     }
 }

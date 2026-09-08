@@ -10,17 +10,14 @@ use Throwable;
 
 final readonly class RecordingRequestScope implements RequestLifecycleScopeInterface
 {
-    public function __construct(private FpmLifecycleEvents $events)
-    {
+    public function __construct(private FpmLifecycleEvents $events) {
     }
 
-    public function recordException(Throwable $exception): void
-    {
+    public function recordException(Throwable $exception): void {
         $this->events->record('request.exception');
     }
 
-    public function complete(?ResponseInterface $response = null): void
-    {
+    public function complete(?ResponseInterface $response = null): void {
         $this->events->response = $response;
         $this->events->record('request.complete');
     }

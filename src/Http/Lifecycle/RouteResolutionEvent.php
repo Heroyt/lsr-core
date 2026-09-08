@@ -21,8 +21,7 @@ final readonly class RouteResolutionEvent
     ) {
     }
 
-    public function outcome(): string
-    {
+    public function outcome(): string {
         if ($this->errorType !== null) {
             return self::ERROR;
         }

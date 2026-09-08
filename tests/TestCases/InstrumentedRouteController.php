@@ -12,13 +12,11 @@ final class InstrumentedRouteController
 {
     public bool $initialized = false;
 
-    public function init(RequestInterface $request): void
-    {
+    public function init(RequestInterface $request): void {
         $this->initialized = true;
     }
 
-    public function show(RouteHandlerDependency $dependency): ResponseInterface
-    {
+    public function show(RouteHandlerDependency $dependency): ResponseInterface {
         return new Response();
     }
 }

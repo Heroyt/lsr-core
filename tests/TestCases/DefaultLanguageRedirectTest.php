@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace TestCases;
@@ -14,14 +15,12 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class DefaultLanguageRedirectTest extends TestCase
 {
-    public function testOnlyExactLeadingDefaultLocaleSegmentIsRemoved(): void
-    {
+    public function test_only_exact_leading_default_locale_segment_is_removed(): void {
         $translations = $this->createStub(Translations::class);
         $translations->method('getDefaultLangId')->willReturn('cs');
         $middleware = new DefaultLanguageRedirect($translations);
         $handler = new class implements RequestHandlerInterface {
-            public function handle(ServerRequestInterface $request): ResponseInterface
-            {
+            public function handle(ServerRequestInterface $request): ResponseInterface {
                 return new Response();
             }
         };
@@ -33,14 +32,12 @@ class DefaultLanguageRedirectTest extends TestCase
         self::assertSame('/cast/cs?tab=score', $response->getHeaderLine('Location'));
     }
 
-    public function testRedirectPreservesTrailingSlash(): void
-    {
+    public function test_redirect_preserves_trailing_slash(): void {
         $translations = $this->createStub(Translations::class);
         $translations->method('getDefaultLangId')->willReturn('cs');
         $middleware = new DefaultLanguageRedirect($translations);
         $handler = new class implements RequestHandlerInterface {
-            public function handle(ServerRequestInterface $request): ResponseInterface
-            {
+            public function handle(ServerRequestInterface $request): ResponseInterface {
                 return new Response();
             }
         };
@@ -51,14 +48,12 @@ class DefaultLanguageRedirectTest extends TestCase
         self::assertSame('/cast/?tab=score', $response->getHeaderLine('Location'));
     }
 
-    public function testCanonicalPathNeverRedirectsToItself(): void
-    {
+    public function test_canonical_path_never_redirects_to_itself(): void {
         $translations = $this->createStub(Translations::class);
         $translations->method('getDefaultLangId')->willReturn('cs');
         $middleware = new DefaultLanguageRedirect($translations);
         $handler = new class implements RequestHandlerInterface {
-            public function handle(ServerRequestInterface $request): ResponseInterface
-            {
+            public function handle(ServerRequestInterface $request): ResponseInterface {
                 return new Response(204);
             }
         };

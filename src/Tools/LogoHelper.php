@@ -1,12 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Tools;
 
 use Lsr\Core\App;
 
 class LogoHelper
 {
-
     /**
      * Checks there exists an image of the arena
      *
@@ -14,7 +15,7 @@ class LogoHelper
      *
      * @return string URL of the image
      */
-    public static function getLogoUrl() : string {
+    public static function getLogoUrl(): string {
         $image = self::getLogoFileName();
         if (empty($image)) {
             return '';
@@ -29,20 +30,20 @@ class LogoHelper
      *
      * @return string Full path to image
      */
-    public static function getLogoFileName() : string {
-        $imageBase = UPLOAD_DIR.'logo';
-        if (file_exists($imageBase.'.svg')) {
-            return $imageBase.'.svg';
+    public static function getLogoFileName(): string {
+        $imageBase = UPLOAD_DIR . 'logo';
+        if (file_exists($imageBase . '.svg')) {
+            return $imageBase . '.svg';
         }
-        if (file_exists($imageBase.'.png')) {
-            return $imageBase.'.png';
+        if (file_exists($imageBase . '.png')) {
+            return $imageBase . '.png';
         }
-        $imageBase = ASSETS_DIR.'images/logo';
-        if (file_exists($imageBase.'.svg')) {
-            return $imageBase.'.svg';
+        $imageBase = ASSETS_DIR . 'images/logo';
+        if (file_exists($imageBase . '.svg')) {
+            return $imageBase . '.svg';
         }
-        if (file_exists($imageBase.'.png')) {
-            return $imageBase.'.png';
+        if (file_exists($imageBase . '.png')) {
+            return $imageBase . '.png';
         }
         return '';
     }
@@ -54,7 +55,7 @@ class LogoHelper
      *
      * @return string HTML or empty string if no logo exists
      */
-    public static function getLogoHtml() : string {
+    public static function getLogoHtml(): string {
         $image = self::getLogoFileName();
         if (empty($image)) {
             return '';
@@ -65,10 +66,10 @@ class LogoHelper
             assert(is_string($contents));
             return $contents;
         }
-        return '<img src="'.str_replace(
+        return '<img src="' . str_replace(
             ROOT,
             App::getInstance()->getBaseUrl(),
-            $image
-          ).'" class="img-fluid arena-logo" alt="Arena - Logo" id="arena-logo-image" />';
+            $image,
+        ) . '" class="img-fluid arena-logo" alt="Arena - Logo" id="arena-logo-image" />';
     }
 }

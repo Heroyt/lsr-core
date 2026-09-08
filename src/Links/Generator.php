@@ -1,19 +1,21 @@
 <?php
+
+declare(strict_types=1);
 /** @noinspection PhpUndefinedClassInspection */
 
 namespace Lsr\Core\Links;
 
 use Lsr\Core\App;
 use Lsr\Core\Routing\Interfaces\LocalizableRouteInterface;
-use Lsr\Core\Translations;
 use Lsr\Core\Routing\Router;
+use Lsr\Core\Translations;
 use Nyholm\Psr7\Uri;
 use Psr\Http\Message\UriInterface;
 use RuntimeException;
+use Stringable;
 
 readonly class Generator
 {
-
     private UriInterface $baseUrl;
     private bool $prettyUrl;
 
@@ -21,10 +23,10 @@ readonly class Generator
      * @param  LinkModifier[]  $modifiers
      */
     public function __construct(
-      protected Router $router,
-      App              $app,
-      protected array  $modifiers = [],
-      protected ?Translations $translations = null,
+        protected Router $router,
+        App              $app,
+        protected array  $modifiers = [],
+        protected ?Translations $translations = null,
     ) {
         $this->baseUrl = $app->getBaseUrlObject();
         $this->prettyUrl = App::isPrettyUrl();
@@ -35,7 +37,7 @@ readonly class Generator
      *
      * @return string
      */
-    public function getLink(array | string ...$request) : string {
+    public function getLink(array | string ...$request): string {
         $link = $this->getLinkObject(...$request);
         return $this->formatLocalLink($link);
     }
@@ -45,7 +47,7 @@ readonly class Generator
      *
      * @return string
      */
-    public function getAbsoluteLink(array | string ...$request) : string {
+    public function getAbsoluteLink(array | string ...$request): string {
         return (string) $this->getLinkObject(...$request);
     }
 
@@ -58,10 +60,10 @@ readonly class Generator
      * @param array<string,mixed> $parameters
      */
     public function route(
-      string $name,
-      array $parameters = [],
-      ?string $locale = null,
-      ?string $fragment = null,
+        string $name,
+        array $parameters = [],
+        ?string $locale = null,
+        ?string $fragment = null,
     ): string {
         $route = $this->router->getRouteByName($name);
         if ($route === null) {
@@ -72,13 +74,13 @@ readonly class Generator
             $locale ??= $this->translations?->getLangId();
             if ($locale === null) {
                 throw new RuntimeException(
-                  sprintf('Cannot generate localized route "%s" without a locale.', $name)
+                    sprintf('Cannot generate localized route "%s" without a locale.', $name),
                 );
             }
             $localizedRoute = $route->getRouteForLocale($locale);
             if ($localizedRoute === null) {
                 throw new RuntimeException(
-                  sprintf('Route "%s" has no path for locale "%s".', $name, $locale)
+                    sprintf('Route "%s" has no path for locale "%s".', $name, $locale),
                 );
             }
             $route = $localizedRoute;
@@ -89,7 +91,7 @@ readonly class Generator
         if ($parameters !== []) {
             $query = http_build_query($parameters, encoding_type: PHP_QUERY_RFC3986);
             if ($url->getQuery() !== '') {
-                $query = $url->getQuery().'&'.$query;
+                $query = $url->getQuery() . '&' . $query;
             }
             $url = $url->withQuery($query);
         }
@@ -105,8 +107,7 @@ readonly class Generator
      *
      * @return string[]
      */
-    private function substituteRouteParameters(array $path, array &$parameters, string $routeName): array
-    {
+    private function substituteRouteParameters(array $path, array &$parameters, string $routeName): array {
         $resolved = [];
         foreach ($path as $part) {
             if (preg_match('/^\\[([^\\]=]+)(?:=([^\\]]*))?]$/', $part, $optional) === 1) {
@@ -121,19 +122,19 @@ readonly class Generator
             }
 
             $part = preg_replace_callback(
-              '/\\{([^}]+)}/',
-              function (array $match) use (&$parameters, $routeName): string {
-                  $name = $match[1];
-                  if (!array_key_exists($name, $parameters)) {
-                      throw new RuntimeException(
-                        sprintf('Missing parameter "%s" for route "%s".', $name, $routeName)
-                      );
-                  }
-                  $value = $this->encodeRouteParameter($parameters[$name], $name, $routeName);
-                  unset($parameters[$name]);
-                  return $value;
-              },
-              $part,
+                '/\\{([^}]+)}/',
+                function (array $match) use (&$parameters, $routeName): string {
+                    $name = $match[1];
+                    if ( ! array_key_exists($name, $parameters)) {
+                        throw new RuntimeException(
+                            sprintf('Missing parameter "%s" for route "%s".', $name, $routeName),
+                        );
+                    }
+                    $value = $this->encodeRouteParameter($parameters[$name], $name, $routeName);
+                    unset($parameters[$name]);
+                    return $value;
+                },
+                $part,
             );
             assert($part !== null);
             $resolved[] = $part;
@@ -141,11 +142,10 @@ readonly class Generator
         return $resolved;
     }
 
-    private function encodeRouteParameter(mixed $value, string $name, string $routeName): string
-    {
-        if (!is_scalar($value) && !$value instanceof \Stringable) {
+    private function encodeRouteParameter(mixed $value, string $name, string $routeName): string {
+        if ( ! is_scalar($value) && ! $value instanceof Stringable) {
             throw new RuntimeException(
-              sprintf('Parameter "%s" for route "%s" must be scalar or stringable.', $name, $routeName)
+                sprintf('Parameter "%s" for route "%s" must be scalar or stringable.', $name, $routeName),
             );
         }
         return rawurlencode((string) $value);
@@ -156,7 +156,7 @@ readonly class Generator
      *
      * @return UriInterface
      */
-    public function getLinkObject(array | string ...$request) : UriInterface {
+    public function getLinkObject(array | string ...$request): UriInterface {
         $count = count($request);
         if ($count === 1) {
             /** @var LinkArray|string $request */
@@ -209,8 +209,8 @@ readonly class Generator
         return $this->baseUrl;
     }
 
-    private function formatLocalLink(UriInterface $link) : string {
-        if (!$this->isLocalUri($link)) {
+    private function formatLocalLink(UriInterface $link): string {
+        if ( ! $this->isLocalUri($link)) {
             return (string) $link;
         }
 
@@ -221,22 +221,22 @@ readonly class Generator
 
         $query = $link->getQuery();
         if ($query !== '') {
-            $path .= '?'.$query;
+            $path .= '?' . $query;
         }
 
         $fragment = $link->getFragment();
         if ($fragment !== '') {
-            $path .= '#'.$fragment;
+            $path .= '#' . $fragment;
         }
 
         return $path;
     }
 
-    private function isAbsoluteUrl(string $link) : bool {
+    private function isAbsoluteUrl(string $link): bool {
         return preg_match('#^[a-z][a-z0-9+.-]*://#i', $link) === 1;
     }
 
-    private function isLocalUri(UriInterface $link) : bool {
+    private function isLocalUri(UriInterface $link): bool {
         $host = $link->getHost();
         if ($host === '') {
             return true;
@@ -251,13 +251,13 @@ readonly class Generator
      *
      * @return UriInterface
      */
-    private function buildUrlFromPath(array $path) : UriInterface {
+    private function buildUrlFromPath(array $path): UriInterface {
         // Check validity
         foreach ($path as $part) {
             $part = (string) $part;
             if (preg_match('/\{([a-zA-Z\d]+)}/', $part) === 1) {
                 throw new RuntimeException(
-                  'Cannot build parametrized URL if the parameter is not provided. '.implode('/', $path)
+                    'Cannot build parametrized URL if the parameter is not provided. ' . implode('/', $path),
                 );
             }
         }

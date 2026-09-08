@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Templating\Nodes;
 
 use Latte\Compiler\Node;
@@ -18,20 +20,19 @@ class GetUrlNode extends StatementNode
      *
      * @return Node
      */
-    public static function create(Tag $tag): Node
-    {
+    public static function create(Tag $tag): Node {
         $node = new self();
         $node->modifier = $tag->parser->parseModifier();
-        $node->modifier->escape = !$node->modifier->removeFilter('noescape');
+        $node->modifier->escape = ! $node->modifier->removeFilter('noescape');
         return $node;
     }
 
-    public function print(PrintContext $context) : string {
+    public function print(PrintContext $context): string {
         return $context->format(
-          <<<'XX'
+            <<<'XX'
 			echo \Lsr\Core\App::getInstance()->getBaseUrl() %line;
 			XX,
-          $this->position,
+            $this->position,
         );
     }
 }

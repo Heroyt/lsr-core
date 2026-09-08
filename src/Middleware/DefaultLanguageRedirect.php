@@ -1,13 +1,14 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Lsr\Core\Middleware;
 
 use Lsr\Core\App;
 use Lsr\Core\Exceptions\InvalidLanguageException;
-use Lsr\Core\Translations;
 use Lsr\Core\Requests\Response;
 use Lsr\Core\Routing\Middleware;
+use Lsr\Core\Translations;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
@@ -18,15 +19,16 @@ use Psr\Http\Server\RequestHandlerInterface;
 class DefaultLanguageRedirect implements Middleware
 {
     public function __construct(
-      private readonly ?Translations $translations = null,
-    ) {}
+        private readonly ?Translations $translations = null,
+    ) {
+    }
 
     /**
      * @inheritDoc
      */
-    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler) : ResponseInterface {
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface {
         $lang = $request->getAttribute('lang');
-        if (!is_string($lang) || $lang === '') {
+        if ( ! is_string($lang) || $lang === '') {
             return $handler->handle($request);
         }
 
@@ -40,8 +42,8 @@ class DefaultLanguageRedirect implements Middleware
         }
 
         $path = $request->getUri()->getPath();
-        $prefix = '/'.$lang;
-        if ($path !== $prefix && !str_starts_with($path, $prefix.'/')) {
+        $prefix = '/' . $lang;
+        if ($path !== $prefix && ! str_starts_with($path, $prefix . '/')) {
             return $handler->handle($request);
         }
 
@@ -52,7 +54,7 @@ class DefaultLanguageRedirect implements Middleware
         $location = $newPath;
         $query = $request->getUri()->getQuery();
         if ($query !== '') {
-            $location .= '?'.$query;
+            $location .= '?' . $query;
         }
         if ($location === $request->getRequestTarget()) {
             return $handler->handle($request);

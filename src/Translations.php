@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core;
 
 use Gettext\Generator\MoGenerator;
@@ -17,7 +19,6 @@ use Tracy\Debugger;
 
 class Translations implements Translator
 {
-
     /** @var array<string,string> */
     public readonly array $supportedLanguages;
     /** @var array<string, string> */
@@ -46,23 +47,23 @@ class Translations implements Translator
      * @throws InvalidLanguageException
      */
     public function __construct(
-      private readonly Config $config,
-      string                  $defaultLang = 'cs_CZ',
-      array                   $supportedLanguages = [],
-      public readonly array   $textDomains = [],
+        private readonly Config $config,
+        string                  $defaultLang = 'cs_CZ',
+        array                   $supportedLanguages = [],
+        public readonly array   $textDomains = [],
     ) {
         if (empty($supportedLanguages)) {
             /** @var string[] $languages */
             $languages = $this->config->getConfig('languages');
             if (empty($languages)) {
                 // By default, load all languages in language directory
-                $files = glob(LANGUAGE_DIR.'*');
+                $files = glob(LANGUAGE_DIR . '*');
                 assert(is_array($files));
                 $languages = array_map(
-                  static function (string $dir) {
-                      return str_replace(LANGUAGE_DIR, '', $dir);
-                  },
-                  $files
+                    static function (string $dir) {
+                        return str_replace(LANGUAGE_DIR, '', $dir);
+                    },
+                    $files,
                 );
             }
 
@@ -74,8 +75,7 @@ class Translations implements Translator
                 [$lang, $country] = $explode;
                 $supportedLanguages[$lang] = $country;
             }
-        }
-        else {
+        } else {
             $modified = [];
             foreach ($supportedLanguages as $lang => $country) {
                 $split = explode('_', $country);
@@ -105,7 +105,7 @@ class Translations implements Translator
      * @return string
      * @throws InvalidLanguageException
      */
-    public function getDefaultLangId() : string {
+    public function getDefaultLangId(): string {
         $id = $this->getDefaultLanguage()->id;
         $split = explode('_', $id);
         if (count($split) === 2) {
@@ -114,7 +114,7 @@ class Translations implements Translator
         return $id;
     }
 
-    public function getDefaultLanguage() : Language {
+    public function getDefaultLanguage(): Language {
         return $this->defaultLanguage;
     }
 
@@ -123,16 +123,16 @@ class Translations implements Translator
      * @return $this
      * @throws InvalidLanguageException
      */
-    public function setDefaultLanguage(string $lang) : Translations {
+    public function setDefaultLanguage(string $lang): Translations {
         $language = $this->findLanguage($lang);
-        if (!isset($language)) {
-            throw new InvalidLanguageException('Invalid language "'.$lang.'"');
+        if ( ! isset($language)) {
+            throw new InvalidLanguageException('Invalid language "' . $lang . '"');
         }
         $this->defaultLanguage = $language;
         return $this;
     }
 
-    public function findLanguage(string $lang) : ?Language {
+    public function findLanguage(string $lang): ?Language {
         return Language::getById($lang);
     }
 
@@ -141,7 +141,7 @@ class Translations implements Translator
      *
      * @return string
      */
-    public function getLang() : string {
+    public function getLang(): string {
         return $this->lang;
     }
 
@@ -151,27 +151,27 @@ class Translations implements Translator
      * @return $this
      * @throws InvalidLanguageException
      */
-    public function setLang(string $lang) : Translations {
-        if (!isset($this->lang) || $this->lang !== $lang) {
+    public function setLang(string $lang): Translations {
+        if ( ! isset($this->lang) || $this->lang !== $lang) {
             $language = $this->findLanguage($lang);
-            if (!isset($language)) {
-                throw new InvalidLanguageException('Invalid language "'.$lang.'"');
+            if ( ! isset($language)) {
+                throw new InvalidLanguageException('Invalid language "' . $lang . '"');
             }
             $id = $language->id;
             $split = explode('_', $id);
             if (count($split) === 2) {
                 $id = $split[0];
             }
-            if (!isset($this->supportedLanguages[$id])) {
+            if ( ! isset($this->supportedLanguages[$id])) {
                 throw new InvalidLanguageException(
-                  'Unsupported language '.$lang.' ('.$id.'). Supported languages are: '.implode(
-                    ',',
-                    array_keys($this->supportedLanguages)
-                  )
+                    'Unsupported language ' . $lang . ' (' . $id . '). Supported languages are: ' . implode(
+                        ',',
+                        array_keys($this->supportedLanguages),
+                    ),
                 );
             }
             $this->language = $language;
-            $this->lang = $id.'_'.$this->supportedLanguages[$id];
+            $this->lang = $id . '_' . $this->supportedLanguages[$id];
             $this->langId = $id;
             $this->country = $this->supportedLanguages[$id];
             $this->initLanguage();
@@ -179,9 +179,9 @@ class Translations implements Translator
         return $this;
     }
 
-    public function supportsLanguage(string $lang) : bool {
+    public function supportsLanguage(string $lang): bool {
         $language = $this->findLanguage($lang);
-        if (!isset($language)) {
+        if ( ! isset($language)) {
             return false;
         }
         $id = $language->id;
@@ -192,12 +192,12 @@ class Translations implements Translator
         return isset($this->supportedLanguages[$id]);
     }
 
-    public function getLanguage() : Language {
+    public function getLanguage(): Language {
         return $this->language;
     }
 
-    public function updateTranslations() : void {
-        if (!$this->translationsChanged) {
+    public function updateTranslations(): void {
+        if ( ! $this->translationsChanged) {
             return;
         }
         Timer::startIncrementing('translation.update');
@@ -206,11 +206,11 @@ class Translations implements Translator
         $templates = [];
         foreach ($this->translations as $lang => $langTranslations) {
             foreach ($langTranslations as $domain => $translation) {
-                if (!isset($templates[$domain])) {
+                if ( ! isset($templates[$domain])) {
                     $templates[$domain] = clone $translation;
                 }
-                $poGenerator->generateFile($translation, LANGUAGE_DIR.$lang.'/LC_MESSAGES/'.$domain.'.po');
-                $moGenerator->generateFile($translation, LANGUAGE_DIR.$lang.'/LC_MESSAGES/'.$domain.'.mo');
+                $poGenerator->generateFile($translation, LANGUAGE_DIR . $lang . '/LC_MESSAGES/' . $domain . '.po');
+                $moGenerator->generateFile($translation, LANGUAGE_DIR . $lang . '/LC_MESSAGES/' . $domain . '.mo');
             }
         }
         foreach ($templates as $domain => $template) {
@@ -226,31 +226,30 @@ class Translations implements Translator
                     $string->translatePlural(...$plural);
                 }
             }
-            $poGenerator->generateFile($template, LANGUAGE_DIR.$domain.'.pot');
+            $poGenerator->generateFile($template, LANGUAGE_DIR . $domain . '.pot');
         }
         Timer::stop('translation.update');
         $this->translationsChanged = false;
     }
 
-    private function getTranslations(string $lang, string $domain = LANGUAGE_FILE_NAME) : \Gettext\Translations {
+    private function getTranslations(string $lang, string $domain = LANGUAGE_FILE_NAME): \Gettext\Translations {
         $this->translations[$lang] ??= [];
-        if (!isset($this->translations[$lang][$domain])) {
-            if (!isset($this->poLoader)) {
+        if ( ! isset($this->translations[$lang][$domain])) {
+            if ( ! isset($this->poLoader)) {
                 $this->poLoader = new PoLoader();
             }
 
-            $file = LANGUAGE_DIR.$lang.'/LC_MESSAGES/'.$domain.'.po';
+            $file = LANGUAGE_DIR . $lang . '/LC_MESSAGES/' . $domain . '.po';
             if (file_exists($file)) {
                 $this->translations[$lang][$domain] = $this->poLoader->loadFile($file);
-            }
-            else {
+            } else {
                 $this->translations[$lang][$domain] = \Gettext\Translations::create($domain, $lang);
             }
         }
         return $this->translations[$lang][$domain];
     }
 
-    public function translate(string | Stringable $message, mixed ...$params) : string {
+    public function translate(string | Stringable $message, mixed ...$params): string {
         if (empty($message)) {
             return '';
         }
@@ -259,8 +258,8 @@ class Translations implements Translator
 
         $context = $params['context'] ?? '';
         // Add context
-        if (is_string($context) && !empty($context)) {
-            $message = $context."\004".$message;
+        if (is_string($context) && ! empty($context)) {
+            $message = $context . "\004" . $message;
         }
 
         assert($params['plural'] === null || is_string($params['plural']));
@@ -277,18 +276,18 @@ class Translations implements Translator
             $translated = $split[1];
         }
 
-        if (!empty($params['format']) && is_array($params['format'])) {
+        if ( ! empty($params['format']) && is_array($params['format'])) {
             $format = $params['format'];
             foreach ($format as $value) {
                 if (
-                  $value !== null
-                  && !is_string($value)
-                  && !is_int($value)
-                  && !is_float($value)
-                  && !is_bool($value)
+                    $value !== null
+                    && ! is_string($value)
+                    && ! is_int($value)
+                    && ! is_float($value)
+                    && ! is_bool($value)
                 ) {
                     throw new InvalidArgumentException(
-                      'Format parameter values must be scalar or null.'
+                        'Format parameter values must be scalar or null.',
                     );
                 }
             }
@@ -305,7 +304,7 @@ class Translations implements Translator
     /**
      * @param array<int|string, bool|float|int|string|null> $parameters
      */
-    private function formatTranslation(string $translation, array $parameters) : string {
+    private function formatTranslation(string $translation, array $parameters): string {
         $hasNumericKeys = false;
         $hasStringKeys = false;
         foreach ($parameters as $key => $_) {
@@ -313,7 +312,7 @@ class Translations implements Translator
             $hasStringKeys = $hasStringKeys || is_string($key);
             if ($hasNumericKeys && $hasStringKeys) {
                 throw new InvalidArgumentException(
-                  'Format parameters must use either only numeric keys or only string keys.'
+                    'Format parameters must use either only numeric keys or only string keys.',
                 );
             }
         }
@@ -323,36 +322,35 @@ class Translations implements Translator
         }
 
         return preg_replace_callback(
-          '/%\{((?:.|\n)+?)\}/',
-          static function (array $matches) use ($parameters) : string {
-              $key = trim($matches[1]);
-              if (!array_key_exists($key, $parameters)) {
-                  return $matches[0];
-              }
-              return (string) $parameters[$key];
-          },
-          $translation
+            '/%\{((?:.|\n)+?)\}/',
+            static function (array $matches) use ($parameters): string {
+                $key = trim($matches[1]);
+                if ( ! array_key_exists($key, $parameters)) {
+                    return $matches[0];
+                }
+                return (string) $parameters[$key];
+            },
+            $translation,
         ) ?? $translation;
     }
 
-    private function translateModular(string $message, string $plural, int $num, string $domain) : string {
+    private function translateModular(string $message, string $plural, int $num, string $domain): string {
         /** @phpstan-ignore-next-line */
         if (CHECK_TRANSLATIONS && Debugger::isEnabled()) {
             $split = explode("\004", $message);
             if (count($split) === 2) {
                 [$context, $msgTmp] = $split;
-            }
-            else {
+            } else {
                 $msgTmp = $message;
                 $context = null;
             }
             foreach ($this->getAllTranslations() as $lang => $langTranslations) {
-                if (!isset($langTranslations[$domain])) {
+                if ( ! isset($langTranslations[$domain])) {
                     $langTranslations[$domain] = \Gettext\Translations::create($domain, $lang);
                 }
 
                 $translations = $langTranslations[$domain];
-                if (!($translations->find($context, $msgTmp))) {
+                if ( ! ($translations->find($context, $msgTmp))) {
                     $translation = Translation::create($context, $msgTmp);
                     if ($plural !== '') {
                         $translation->setPlural($plural);
@@ -381,10 +379,10 @@ class Translations implements Translator
     /**
      * @return \Gettext\Translations[][]
      */
-    private function getAllTranslations() : array {
-        if (!$this->loadedAllTranslations) {
+    private function getAllTranslations(): array {
+        if ( ! $this->loadedAllTranslations) {
             foreach ($this->supportedLanguages as $lang => $country) {
-                $langConcat = $lang.'_'.$country;
+                $langConcat = $lang . '_' . $country;
                 $this->translations[$langConcat][LANGUAGE_FILE_NAME] = $this->getTranslations($langConcat);
                 foreach ($this->textDomains as $textdomain) {
                     $this->translations[$langConcat][$textdomain] = $this->getTranslations($langConcat, $textdomain);
@@ -400,7 +398,7 @@ class Translations implements Translator
      *
      * @return string
      */
-    public function getLangId() : string {
+    public function getLangId(): string {
         return $this->langId;
     }
 
@@ -409,30 +407,30 @@ class Translations implements Translator
      *
      * @return string
      */
-    public function getCountry() : string {
+    public function getCountry(): string {
         return $this->country;
     }
 
-    private function initLanguage() : void {
+    private function initLanguage(): void {
         // Set target language
-        putenv('LANG='.$this->lang);
-        putenv('LC_ALL='.$this->lang);
+        putenv('LANG=' . $this->lang);
+        putenv('LC_ALL=' . $this->lang);
         setlocale(LC_ALL, '0');
         setlocale(
-          LC_ALL,
-          $this->lang,
-          $this->lang.'.UTF8',
-          $this->lang.'.UTF-8',
-          $this->lang.'.utf-8',
-          $this->language->name
+            LC_ALL,
+            $this->lang,
+            $this->lang . '.UTF8',
+            $this->lang . '.UTF-8',
+            $this->lang . '.utf-8',
+            $this->language->name,
         );
         setlocale(
-          LC_MESSAGES,
-          $this->lang,
-          $this->lang.'.UTF8',
-          $this->lang.'.UTF-8',
-          $this->lang.'.utf-8',
-          $this->language->name
+            LC_MESSAGES,
+            $this->lang,
+            $this->lang . '.UTF8',
+            $this->lang . '.UTF-8',
+            $this->lang . '.utf-8',
+            $this->language->name,
         );
         bindtextdomain(LANGUAGE_FILE_NAME, substr(LANGUAGE_DIR, 0, -1));
         bind_textdomain_codeset(LANGUAGE_FILE_NAME, "UTF-8");

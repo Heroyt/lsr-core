@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Templating\Nodes;
 
 use Generator;
@@ -25,26 +27,26 @@ class DumpNode extends StatementNode
      * @return Node
      * @throws CompileException
      */
-    public static function create(Tag $tag) : Node {
+    public static function create(Tag $tag): Node {
         $tag->expectArguments();
         $node = new self();
         $node->args = $tag->parser->parseArguments();
         $node->modifier = $tag->parser->parseModifier();
-        $node->modifier->escape = !$node->modifier->removeFilter('noescape');
+        $node->modifier->escape = ! $node->modifier->removeFilter('noescape');
         return $node;
     }
 
-    public function print(PrintContext $context) : string {
+    public function print(PrintContext $context): string {
         return $context->format(
-          <<<'XX'
+            <<<'XX'
 			echo \Tracy\Dumper::toHtml(%args) %line;
 			XX,
-          $this->args,
-          $this->position,
+            $this->args,
+            $this->position,
         );
     }
 
-    public function &getIterator() : Generator {
+    public function &getIterator(): Generator {
         foreach ($this->args as $arg) {
             yield $arg;
         }

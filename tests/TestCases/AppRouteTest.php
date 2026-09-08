@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace TestCases;
@@ -8,16 +9,16 @@ use Lsr\Core\Routing\Router;
 use Lsr\Enums\RequestMethod;
 use Lsr\Interfaces\RequestInterface;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 class AppRouteTest extends TestCase
 {
-    public function testCachedRouteKeepsResolvedLocaleParameters(): void
-    {
-        $app = (new \ReflectionClass(App::class))->newInstanceWithoutConstructor();
+    public function test_cached_route_keeps_resolved_locale_parameters(): void {
+        $app = (new ReflectionClass(App::class))->newInstanceWithoutConstructor();
         $router = new Router();
         $router->unregisterAll();
         $router
-            ->get('/ochrana-osobnich-udaju', static fn() => null)
+            ->get('/ochrana-osobnich-udaju', static fn () => null)
             ->localize('cs')
             ->localize('en', '/en/privacy');
         $request = $this->createStub(RequestInterface::class);

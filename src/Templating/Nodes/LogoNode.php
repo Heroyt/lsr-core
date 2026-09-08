@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Templating\Nodes;
 
 use Latte\Compiler\Node;
@@ -18,20 +20,19 @@ class LogoNode extends StatementNode
      *
      * @return Node
      */
-    public static function create(Tag $tag): Node
-    {
+    public static function create(Tag $tag): Node {
         $node = new self();
         $node->modifier = $tag->parser->parseModifier();
         $node->modifier->escape = false;
         return $node;
     }
 
-    public function print(PrintContext $context) : string {
+    public function print(PrintContext $context): string {
         return $context->format(
-          <<<'XX'
+            <<<'XX'
 			echo \Lsr\Core\Tools\LogoHelper::getLogoHtml() %line;
 			XX,
-          $this->position,
+            $this->position,
         );
     }
 }

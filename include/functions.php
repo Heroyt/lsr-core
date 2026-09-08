@@ -1,10 +1,11 @@
 <?php
+
 declare(strict_types=1);
 
 
 use Lsr\Core\App;
 
-if (!function_exists('lang')) {
+if ( ! function_exists('lang')) {
     /**
      * Wrapper for gettext function
      *
@@ -21,29 +22,29 @@ if (!function_exists('lang')) {
      * @author  Tomáš Vojík <vojik@wboy.cz>
      */
     function lang(
-      ?string $msg = null,
-      ?string $plural = null,
-      int     $num = 1,
-      ?string $context = null,
-      ?string $domain = null,
-      array   $format = []
-    ) : string {
+        ?string $msg = null,
+        ?string $plural = null,
+        int     $num = 1,
+        ?string $context = null,
+        ?string $domain = null,
+        array   $format = [],
+    ): string {
         return App::getInstance()->translations->translate(
-                   $msg,
-          plural : $plural,
-          num    : $num,
-          domain : $domain,
-          context: $context,
-          format : $format
+            $msg,
+            plural : $plural,
+            num    : $num,
+            domain : $domain,
+            context: $context,
+            format : $format,
         );
     }
 }
 
-if (!function_exists('updateTranslations')) {
+if ( ! function_exists('updateTranslations')) {
     /**
      * Regenerate the translation .po files
      */
-    function updateTranslations() : void {
+    function updateTranslations(): void {
         App::getInstance()->translations->updateTranslations();
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\DataObjects;
 
 use JsonSerializable;
@@ -7,7 +9,6 @@ use Lsr\Enums\RequestMethod;
 
 readonly class PageInfoDto implements JsonSerializable
 {
-
     /**
      * @param  RequestMethod  $type
      * @param  string|null  $routeName
@@ -15,18 +16,19 @@ readonly class PageInfoDto implements JsonSerializable
      * @param  array<string, string|numeric-string>  $params
      */
     public function __construct(
-      public RequestMethod $type,
-      public ?string       $routeName = null,
-      public array         $path = [],
-      public array         $params = [],
-    ) {}
+        public RequestMethod $type,
+        public ?string       $routeName = null,
+        public array         $path = [],
+        public array         $params = [],
+    ) {
+    }
 
     /**
      * @inheritDoc
      *
      * @return array<string,mixed>
      */
-    public function jsonSerialize() : array {
+    public function jsonSerialize(): array {
         return get_object_vars($this);
     }
 }

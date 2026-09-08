@@ -8,13 +8,14 @@ use Lsr\Core\Http\Lifecycle\RequestOperation;
 use Lsr\Core\Http\Lifecycle\RequestOperationLifecycleHookInterface;
 use Lsr\Core\Http\Lifecycle\RequestOperationLifecycleScopeInterface;
 use RuntimeException;
+use Throwable;
 
 final class RecordingRequestOperationHook implements RequestOperationLifecycleHookInterface
 {
     /** @var list<array{operation: RequestOperation, attributes: array<string, mixed>}> */
     public array $begun = [];
 
-    /** @var list<array{operation: RequestOperation, attributes: array<string, mixed>, exception: ?\Throwable}> */
+    /** @var list<array{operation: RequestOperation, attributes: array<string, mixed>, exception: ?Throwable}> */
     public array $completed = [];
 
     public bool $failBegin = false;

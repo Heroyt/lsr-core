@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * @file      Page.php
  * @brief     Core\Page class
@@ -40,7 +42,6 @@ use Psr\Http\Message\UriInterface;
  */
 abstract class Controller implements ControllerInterface
 {
-
     /** @var Middleware[] */
     public array $middleware = [];
     /**
@@ -82,7 +83,7 @@ abstract class Controller implements ControllerInterface
      * @version 1.0
      * @since   1.0
      */
-    public function init(RequestInterface $request) : void {
+    public function init(RequestInterface $request): void {
         $this->request = $request;
         $this->params['page'] = $this;
         $this->params['app'] = $this->getApp();
@@ -92,8 +93,8 @@ abstract class Controller implements ControllerInterface
         $this->params['flashMessages'] = $this->app->session->getFlashMessages();
     }
 
-    public function getApp() : App {
-        if (!isset($this->app)) {
+    public function getApp(): App {
+        if ( ! isset($this->app)) {
             $this->app = App::getInstance();
         }
         return $this->app;
@@ -107,12 +108,13 @@ abstract class Controller implements ControllerInterface
      * @version 1.0
      * @since   1.0
      */
-    public function getTitle() : string {
-        return $this->getApp()->getAppName().
-          (!empty($this->title) ?
-            ' - '.sprintf(
-                 lang($this->title, context: 'pageTitles'),
-              ...$this->titleParams
+    public function getTitle(): string {
+        return $this->getApp()->getAppName() .
+          (
+              ! empty($this->title) ?
+            ' - ' . sprintf(
+                lang($this->title, context: 'pageTitles'),
+                ...$this->titleParams,
             )
             : ''
           );
@@ -126,15 +128,15 @@ abstract class Controller implements ControllerInterface
      * @version 1.0
      * @since   1.0
      */
-    public function getDescription() : string {
+    public function getDescription(): string {
         return sprintf(lang($this->description, context: 'pageDescription'), ...$this->descriptionParams);
     }
 
-    public function injectLatte(Latte $latte) : void {
+    public function injectLatte(Latte $latte): void {
         $this->latte = $latte;
     }
 
-    public function injectApp(App $app) : void {
+    public function injectApp(App $app): void {
         $this->app = $app;
     }
 
@@ -145,13 +147,13 @@ abstract class Controller implements ControllerInterface
      * @throws JsonException
      * @throws TemplateDoesNotExistException
      */
-    protected function view(string $template) : ResponseInterface {
+    protected function view(string $template): ResponseInterface {
         return $this->respond(
-          $this->latte
-            ->setLocale($this->app->translations->getLang())
-            ->viewToString($template, $this->params)
+            $this->latte
+                ->setLocale($this->app->translations->getLang())
+                ->viewToString($template, $this->params),
         )
-                    ->withHeader('Content-Type', 'text/html; charset=utf-8');
+            ->withHeader('Content-Type', 'text/html; charset=utf-8');
     }
 
     /**
@@ -162,10 +164,10 @@ abstract class Controller implements ControllerInterface
      * @return ResponseInterface
      */
     protected function respond(
-      string | array | object $data,
-      int                     $code = 200,
-      array                   $headers = []
-    ) : ResponseInterface {
+        string | array | object $data,
+        int                     $code = 200,
+        array                   $headers = [],
+    ): ResponseInterface {
         $response = new Response(new \Nyholm\Psr7\Response($code, $headers));
 
         if (is_string($data)) {
@@ -188,7 +190,7 @@ abstract class Controller implements ControllerInterface
      * @param  ServerRequestInterface  $request
      * @return string[]
      */
-    protected function getAcceptTypes(ServerRequestInterface $request) : array {
+    protected function getAcceptTypes(ServerRequestInterface $request): array {
         $types = [];
         foreach ($request->getHeader('Accept') as $value) {
             $str = strtolower(trim(explode(';', $value, 2)[0]));
@@ -207,30 +209,30 @@ abstract class Controller implements ControllerInterface
      * @return ResponseInterface
      */
     protected function redirect(
-      UriInterface | RouteInterface | array | string $to,
-      ?RequestInterface                              $from = null,
-      int                                            $type = 302
-    ) : ResponseInterface {
+        UriInterface | RouteInterface | array | string $to,
+        ?RequestInterface                              $from = null,
+        int                                            $type = 302,
+    ): ResponseInterface {
         return App::getInstance()->redirect($to, $from, $type);
     }
 
-    protected function flashSuccess(string $message) : void {
+    protected function flashSuccess(string $message): void {
         $this->app->session->flashSuccess($message);
     }
 
-    protected function flashError(string $message) : void {
+    protected function flashError(string $message): void {
         $this->app->session->flashError($message);
     }
 
-    protected function flashWarning(string $message) : void {
+    protected function flashWarning(string $message): void {
         $this->app->session->flashWarning($message);
     }
 
-    protected function flashInfo(string $message) : void {
+    protected function flashInfo(string $message): void {
         $this->app->session->flashInfo($message);
     }
 
-    protected function flashNotice(Notice $notice) : void {
+    protected function flashNotice(Notice $notice): void {
         $this->app->session->flashNotice($notice);
     }
 

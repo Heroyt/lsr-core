@@ -14,15 +14,15 @@ use Lsr\Interfaces\SessionInterface;
 use Nyholm\Psr7\Response;
 use Nyholm\Psr7\ServerRequest;
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 
 final class FpmHandlerLifecycleTest extends TestCase
 {
-    public function testLifecycleCompletesBeforeAsyncFlush(): void
-    {
-        if (!defined('TMP_DIR')) {
+    public function test_lifecycle_completes_before_async_flush(): void {
+        if ( ! defined('TMP_DIR')) {
             define('TMP_DIR', sys_get_temp_dir() . DIRECTORY_SEPARATOR);
         }
-        $appProperty = new \ReflectionProperty(App::class, 'instance');
+        $appProperty = new ReflectionProperty(App::class, 'instance');
         $hadOriginalApp = $appProperty->isInitialized();
         $originalApp = $hadOriginalApp ? $appProperty->getValue() : null;
         $events = new FpmLifecycleEvents();

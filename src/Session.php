@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core;
 
 use InvalidArgumentException;
@@ -13,7 +15,6 @@ use Tracy\SessionStorage;
 
 class Session implements SessionInterface, SessionStorage
 {
-
     private const string SESSION_KEY_PREFIX = 'session_';
     private const string SESSION_COOKIE_NAME = 'SESSID';
     private const string SESSION_FLASH_KEY = 'session_flash';
@@ -36,16 +37,16 @@ class Session implements SessionInterface, SessionStorage
     private string $serializer = 'igbinary';
 
     public function __construct(
-      string $directory = TMP_DIR.'sessions',
+        string $directory = TMP_DIR . 'sessions',
     ) {
-        if (!file_exists($directory) && !mkdir($directory, 0777, true) && !is_dir($directory)) {
+        if ( ! file_exists($directory) && ! mkdir($directory, 0777, true) && ! is_dir($directory)) {
             throw new RuntimeException(
-              sprintf('Session directory "%s" was not created', $directory)
+                sprintf('Session directory "%s" was not created', $directory),
             );
         }
-        $this->filePrefix = trailingSlashIt($directory).self::SESSION_KEY_PREFIX;
+        $this->filePrefix = trailingSlashIt($directory) . self::SESSION_KEY_PREFIX;
 
-        if (!extension_loaded('igbinary')) {
+        if ( ! extension_loaded('igbinary')) {
             $this->serializer = 'php';
         }
     }
@@ -53,27 +54,27 @@ class Session implements SessionInterface, SessionStorage
     /**
      * @inheritDoc
      */
-    public static function getInstance() : static {
-        if (!isset(self::$instance)) {
+    public static function getInstance(): static {
+        if ( ! isset(self::$instance)) {
             self::$instance = new self();
         }
         // @phpstan-ignore-next-line
         return self::$instance;
     }
 
-    public function __wakeup() : void {
+    public function __wakeup(): void {
         $this->init();
     }
 
     /**
      * @inheritDoc
      */
-    public function init() : void {
+    public function init(): void {
         // Get session cookie from request
         $cookies = App::cookieJar();
 
         // Check if session file exists
-        if ((($id = $cookies->get(self::SESSION_COOKIE_NAME)) !== null) && file_exists($this->filePrefix.$id)) {
+        if ((($id = $cookies->get(self::SESSION_COOKIE_NAME)) !== null) && file_exists($this->filePrefix . $id)) {
             $this->sessionId = $id;
             $this->status = PHP_SESSION_ACTIVE;
             $this->data = null;
@@ -94,31 +95,31 @@ class Session implements SessionInterface, SessionStorage
      * @param  T  $default
      * @return mixed|T
      */
-    public function &get(string $key, mixed $default = null) : mixed {
-        if (!$this->isInitialized()) {
+    public function &get(string $key, mixed $default = null): mixed {
+        if ( ! $this->isInitialized()) {
             $this->init();
         }
         if ($this->data === null) {
             $this->loadSessionData();
         }
-        if (!isset($this->data[$key])) {
+        if ( ! isset($this->data[$key])) {
             $this->data[$key] = $default;
         }
         return $this->data[$key];
     }
 
-    public function isInitialized() : bool {
+    public function isInitialized(): bool {
         return $this->getStatus() === PHP_SESSION_ACTIVE;
     }
 
-    public function getStatus() : int {
+    public function getStatus(): int {
         return $this->status;
     }
 
-    private function loadSessionData() : void {
+    private function loadSessionData(): void {
         assert($this->sessionId !== null);
-        $file = $this->filePrefix.$this->sessionId;
-        if (!file_exists($file)) {
+        $file = $this->filePrefix . $this->sessionId;
+        if ( ! file_exists($file)) {
             $this->data = [];
             return;
         }
@@ -129,11 +130,11 @@ class Session implements SessionInterface, SessionStorage
             return;
         }
         $decoded = $this->getUnserializer()($contents);
-        if (!is_array($decoded) || !isset($decoded['expire']) || $decoded['expire'] < time()) {
+        if ( ! is_array($decoded) || ! isset($decoded['expire']) || $decoded['expire'] < time()) {
             $this->data = [];
             return;
         }
-        if (!isset($decoded['data']) || !is_array($decoded['data'])) {
+        if ( ! isset($decoded['data']) || ! is_array($decoded['data'])) {
             $this->data = [];
             return;
         }
@@ -145,34 +146,34 @@ class Session implements SessionInterface, SessionStorage
     /**
      * @return callable(string): mixed
      */
-    private function getUnserializer() : callable {
+    private function getUnserializer(): callable {
         if ($this->serializer === 'igbinary') {
             return 'igbinary_unserialize';
         }
         return 'unserialize';
     }
 
-    private function setCookie() : void {
+    private function setCookie(): void {
         assert($this->sessionId !== null);
         /** @var int<0,max> $ttl */
         $ttl = time() + $this->ttl;
         App::cookieJar()
-           ->set(
-             self::SESSION_COOKIE_NAME,
-             $this->sessionId,
-             $ttl,
-             $this->path,
-             $this->domain,
-             $this->secure,
-             $this->httponly
-           );
+            ->set(
+                self::SESSION_COOKIE_NAME,
+                $this->sessionId,
+                $ttl,
+                $this->path,
+                $this->domain,
+                $this->secure,
+                $this->httponly,
+            );
     }
 
     /**
      * @inheritDoc
      */
-    public function set(string $key, mixed $value) : void {
-        if (!$this->isInitialized()) {
+    public function set(string $key, mixed $value): void {
+        if ( ! $this->isInitialized()) {
             $this->init();
         }
         if ($this->data === null) {
@@ -184,15 +185,15 @@ class Session implements SessionInterface, SessionStorage
         $this->data[$key] = $value;
     }
 
-    private function generateSessionId() : string {
+    private function generateSessionId(): string {
         $random = new Randomizer();
         do {
             $id = bin2hex($random->getBytes(32));
-        } while (file_exists($this->filePrefix.$id));
+        } while (file_exists($this->filePrefix . $id));
         return $id;
     }
 
-    public function close() : void {
+    public function close(): void {
         if ($this->sessionId === null) {
             $this->status = PHP_SESSION_NONE;
             return;
@@ -203,16 +204,16 @@ class Session implements SessionInterface, SessionStorage
         $this->status = PHP_SESSION_NONE;
     }
 
-    private function saveSessionData() : void {
+    private function saveSessionData(): void {
         if ($this->sessionId === null) {
             throw new LogicException('Session not initialized');
         }
-        $file = $this->filePrefix.$this->sessionId;
+        $file = $this->filePrefix . $this->sessionId;
         $data = ($this->getSerializer())(
-          [
-            'expire' => time() + $this->ttl,
-            'data'   => $this->data,
-          ]
+            [
+                'expire' => time() + $this->ttl,
+                'data'   => $this->data,
+            ]
         );
         file_put_contents($file, $data);
     }
@@ -220,7 +221,7 @@ class Session implements SessionInterface, SessionStorage
     /**
      * @return callable(mixed):string
      */
-    private function getSerializer() : callable {
+    private function getSerializer(): callable {
         if ($this->serializer === 'igbinary' && extension_loaded('igbinary')) {
             /** @phpstan-ignore return.type */
             return igbinary_serialize(...);
@@ -229,17 +230,17 @@ class Session implements SessionInterface, SessionStorage
     }
 
     public function setParams(
-      int $lifetime,
-      ?string $path = null,
-      ?string $domain = null,
-      ?bool $secure = null,
-      ?bool $httponly = null
-    ) : bool {
+        int $lifetime,
+        ?string $path = null,
+        ?string $domain = null,
+        ?bool $secure = null,
+        ?bool $httponly = null,
+    ): bool {
         $defaults = $this->getParams();
-        $path = $path ?? $defaults['path'];
-        $domain = $domain ?? $defaults['domain'];
-        $secure = $secure ?? $defaults['secure'];
-        $httponly = $httponly ?? $defaults['httponly'];
+        $path ??= $defaults['path'];
+        $domain ??= $defaults['domain'];
+        $secure ??= $defaults['secure'];
+        $httponly ??= $defaults['httponly'];
 
         $this->ttl = $lifetime;
         $this->path = $path;
@@ -254,21 +255,21 @@ class Session implements SessionInterface, SessionStorage
      *
      * @return array{lifetime:int,path:string,domain:string,secure:bool,httponly:bool}
      */
-    public function getParams() : array {
+    public function getParams(): array {
         return [
-          'lifetime' => $this->ttl,
-          'path'     => $this->path,
-          'domain'   => $this->domain,
-          'secure'   => $this->secure,
-          'httponly' => $this->httponly,
+            'lifetime' => $this->ttl,
+            'path'     => $this->path,
+            'domain'   => $this->domain,
+            'secure'   => $this->secure,
+            'httponly' => $this->httponly,
         ];
     }
 
     /**
      * @inheritDoc
      */
-    public function delete(string $key) : void {
-        if (!$this->isInitialized()) {
+    public function delete(string $key): void {
+        if ( ! $this->isInitialized()) {
             $this->init();
         }
         if ($this->data === null) {
@@ -282,20 +283,20 @@ class Session implements SessionInterface, SessionStorage
     /**
      * @inheritDoc
      */
-    public function clear() : void {
+    public function clear(): void {
         $this->data = null;
     }
 
     /**
      * @inheritDoc
      */
-    public function getFlash(string $key, mixed $default = null) : mixed {
+    public function getFlash(string $key, mixed $default = null): mixed {
         if ($this->data === null) {
             $this->loadSessionData();
         }
         if (
-          !isset($this->data[self::SESSION_FLASH_KEY])
-          || !is_array($this->data[self::SESSION_FLASH_KEY])
+            ! isset($this->data[self::SESSION_FLASH_KEY])
+            || ! is_array($this->data[self::SESSION_FLASH_KEY])
         ) {
             $this->data[self::SESSION_FLASH_KEY] = [];
         }
@@ -305,58 +306,58 @@ class Session implements SessionInterface, SessionStorage
     /**
      * @inheritDoc
      */
-    public function flash(string $key, mixed $value) : void {
-        if (!$this->isInitialized()) {
+    public function flash(string $key, mixed $value): void {
+        if ( ! $this->isInitialized()) {
             $this->init();
         }
         if ($this->data === null) {
             $this->loadSessionData();
         }
-        if (!isset($this->data[self::SESSION_FLASH_KEY]) || !is_array($this->data[self::SESSION_FLASH_KEY])) {
+        if ( ! isset($this->data[self::SESSION_FLASH_KEY]) || ! is_array($this->data[self::SESSION_FLASH_KEY])) {
             $this->data[self::SESSION_FLASH_KEY] = [];
         }
         $this->data[self::SESSION_FLASH_KEY][$key] = $value;
     }
 
-    public function flashSuccess(string $message) : void {
+    public function flashSuccess(string $message): void {
         $this->flashNotice(new Notice($message, NoticeType::SUCCESS));
     }
 
-    public function flashError(string $message) : void {
+    public function flashError(string $message): void {
         $this->flashNotice(new Notice($message, NoticeType::ERROR));
     }
 
-    public function flashWarning(string $message) : void {
+    public function flashWarning(string $message): void {
         $this->flashNotice(new Notice($message, NoticeType::WARNING));
     }
 
-    public function flashInfo(string $message) : void {
+    public function flashInfo(string $message): void {
         $this->flashNotice(new Notice($message, NoticeType::INFO));
     }
 
-    public function flashNotice(Notice $notice) : void {
-        if (!$this->isInitialized()) {
+    public function flashNotice(Notice $notice): void {
+        if ( ! $this->isInitialized()) {
             $this->init();
         }
         if ($this->data === null) {
             $this->loadSessionData();
         }
         if (
-          !isset($this->data[self::SESSION_FLASH_MESSAGE_KEY])
-          || !is_array($this->data[self::SESSION_FLASH_MESSAGE_KEY])
+            ! isset($this->data[self::SESSION_FLASH_MESSAGE_KEY])
+            || ! is_array($this->data[self::SESSION_FLASH_MESSAGE_KEY])
         ) {
             $this->data[self::SESSION_FLASH_MESSAGE_KEY] = [];
         }
         $this->data[self::SESSION_FLASH_MESSAGE_KEY][] = $notice;
     }
 
-    public function getFlashMessages() : array {
+    public function getFlashMessages(): array {
         if ($this->data === null) {
             $this->loadSessionData();
         }
         if (
-          !isset($this->data[self::SESSION_FLASH_MESSAGE_KEY])
-          || !is_array($this->data[self::SESSION_FLASH_MESSAGE_KEY])
+            ! isset($this->data[self::SESSION_FLASH_MESSAGE_KEY])
+            || ! is_array($this->data[self::SESSION_FLASH_MESSAGE_KEY])
         ) {
             $this->data[self::SESSION_FLASH_MESSAGE_KEY] = [];
         }
@@ -366,14 +367,14 @@ class Session implements SessionInterface, SessionStorage
         return $messages;
     }
 
-    public function isAvailable() : bool {
+    public function isAvailable(): bool {
         return $this->getStatus() === PHP_SESSION_ACTIVE;
     }
 
     /**
      * @return array<string,mixed>
      */
-    public function &getData() : array {
+    public function &getData(): array {
         if ($this->get('_tracy') === null) {
             $this->data['_tracy'] = [];
         }
@@ -382,14 +383,14 @@ class Session implements SessionInterface, SessionStorage
         return $this->data['_tracy'];
     }
 
-    public function getCookieHeader() : string {
+    public function getCookieHeader(): string {
         $params = $this->getParams();
-        $cookie = session_name().'='.session_id();
-        if (!empty($params['domain'])) {
-            $cookie .= '; Domain='.$params['domain'];
+        $cookie = session_name() . '=' . session_id();
+        if ( ! empty($params['domain'])) {
+            $cookie .= '; Domain=' . $params['domain'];
         }
-        if (!empty($params['path'])) {
-            $cookie .= '; Path='.$params['path'];
+        if ( ! empty($params['path'])) {
+            $cookie .= '; Path=' . $params['path'];
         }
         if ($params['secure']) {
             $cookie .= '; Secure';
@@ -397,14 +398,14 @@ class Session implements SessionInterface, SessionStorage
         if ($params['httponly']) {
             $cookie .= '; HttpOnly';
         }
-        if (!empty($params['lifetime'])) {
-            $cookie .= '; Expires='.$params['lifetime'];
+        if ( ! empty($params['lifetime'])) {
+            $cookie .= '; Expires=' . $params['lifetime'];
         }
         return $cookie;
     }
 
-    public function clearSessionFiles() : void {
-        $files = glob($this->filePrefix.'*');
+    public function clearSessionFiles(): void {
+        $files = glob($this->filePrefix . '*');
         if ($files === false) {
             throw new RuntimeException('Failed to read session files');
         }
@@ -417,7 +418,7 @@ class Session implements SessionInterface, SessionStorage
             }
 
             $decoded = ($this->getUnserializer())($contents);
-            if (!is_array($decoded) || !isset($decoded['expire']) || $decoded['expire'] < time()) {
+            if ( ! is_array($decoded) || ! isset($decoded['expire']) || $decoded['expire'] < time()) {
                 unlink($file);
             }
         }

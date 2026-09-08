@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Templating;
 
 use Latte\Extension;
@@ -18,10 +20,9 @@ use Lsr\Helpers\Csrf\TokenHelper;
 
 class LatteExtension extends Extension
 {
-
     public function __construct(
-      private readonly App $app,
-      private readonly TokenHelper $tokenHelper,
+        private readonly App $app,
+        private readonly TokenHelper $tokenHelper,
     ) {
 
     }
@@ -29,44 +30,44 @@ class LatteExtension extends Extension
     /**
      * @return array<string,callable>
      */
-    public function getTags() : array {
+    public function getTags(): array {
         return [
-          'alert'        => [AlertNode::class, 'create'],
-          'alertDanger'  => [AlertNode::class, 'createDanger'],
-          'alertInfo'    => [AlertNode::class, 'createInfo'],
-          'alertSuccess' => [AlertNode::class, 'createSuccess'],
-          'alertWarning' => [AlertNode::class, 'createWarning'],
-          'csrf'         => [CsrfNode::class, 'create'],
-          'csrfInput'    => [CsrfInputNode::class, 'create'],
-          'getUrl'       => [GetUrlNode::class, 'create'],
-          'lang'         => [LangNode::class, 'create'],
-          'link'         => [LinkNode::class, 'create'],
-          'logo'         => [LogoNode::class, 'create'],
-          'svgIcon'      => [IconNode::class, 'create'],
-          'tracyDump'    => [DumpNode::class, 'create'],
+            'alert'        => [AlertNode::class, 'create'],
+            'alertDanger'  => [AlertNode::class, 'createDanger'],
+            'alertInfo'    => [AlertNode::class, 'createInfo'],
+            'alertSuccess' => [AlertNode::class, 'createSuccess'],
+            'alertWarning' => [AlertNode::class, 'createWarning'],
+            'csrf'         => [CsrfNode::class, 'create'],
+            'csrfInput'    => [CsrfInputNode::class, 'create'],
+            'getUrl'       => [GetUrlNode::class, 'create'],
+            'lang'         => [LangNode::class, 'create'],
+            'link'         => [LinkNode::class, 'create'],
+            'logo'         => [LogoNode::class, 'create'],
+            'svgIcon'      => [IconNode::class, 'create'],
+            'tracyDump'    => [DumpNode::class, 'create'],
         ];
     }
 
     /**
      * @return array<string,callable>
      */
-    public function getFilters() : array {
+    public function getFilters(): array {
         return [
-          'lang' => 'lang',
+            'lang' => 'lang',
         ];
     }
 
     /**
      * @return array<string,callable>
      */
-    public function getFunctions() : array {
+    public function getFunctions(): array {
         return [
-          'csrf' => [$this->tokenHelper, 'formToken'],
-          'getUrl'  => [$this->app, 'getBaseUrl'],
-          'lang'    => 'lang',
-          'link'    => [$this->app, 'getLink'],
-          'logo'    => [LogoHelper::class, 'getLogoHtml'],
-          'svgIcon' => 'svgIcon',
+            'csrf' => [$this->tokenHelper, 'formToken'],
+            'getUrl'  => [$this->app, 'getBaseUrl'],
+            'lang'    => 'lang',
+            'link'    => [$this->app, 'getLink'],
+            'logo'    => [LogoHelper::class, 'getLogoHtml'],
+            'svgIcon' => 'svgIcon',
         ];
     }
 }

@@ -12,8 +12,7 @@ final class FpmLifecycleEvents
     public array $events = [];
     public ?ResponseInterface $response = null;
 
-    public function record(string $event): void
-    {
+    public function record(string $event): void {
         $this->events[] = $event;
     }
 }

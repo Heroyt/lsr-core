@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Lsr\Core\Middleware;
@@ -10,11 +11,10 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class WithoutCookies implements Middleware
 {
-
     /**
      * @inheritDoc
      */
-    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler) : ResponseInterface {
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface {
         return $handler->handle($request)->withoutHeader('Set-Cookie');
     }
 }

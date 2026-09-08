@@ -25,8 +25,7 @@ final class FpmLifecycleApp extends App
         parent::__construct($router, $routeHandler, $session, $config, $translations);
     }
 
-    public function run(): ResponseInterface
-    {
+    public function run(): ResponseInterface {
         return $this->response;
     }
 }

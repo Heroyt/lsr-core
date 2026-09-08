@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Lsr\Core\Links;
@@ -8,20 +9,19 @@ use Lsr\Core\Translations;
 
 readonly class LanguagePrefixer implements LinkModifier
 {
-
     public function __construct(
-      protected Translations $translations,
-    ) {}
+        protected Translations $translations,
+    ) {
+    }
 
     /**
      * @inheritDoc
      */
-    public function modifyLinkPath(array $link) : array {
+    public function modifyLinkPath(array $link): array {
         if (isset($link['lang'])) {
             $lang = $link['lang'];
             unset($link['lang']);
-        }
-        else {
+        } else {
             $lang = $this->translations->getLangId();
         }
 
@@ -32,9 +32,9 @@ readonly class LanguagePrefixer implements LinkModifier
 
         // Remove an existing language prefix before applying the configured policy.
         if (
-          isset($link[0])
-          && preg_match('/^[a-z]{2,3}$/', (string) $link[0])
-          && $this->translations->supportsLanguage((string) $link[0])
+            isset($link[0])
+            && preg_match('/^[a-z]{2,3}$/', (string) $link[0])
+            && $this->translations->supportsLanguage((string) $link[0])
         ) {
             array_shift($link);
         }

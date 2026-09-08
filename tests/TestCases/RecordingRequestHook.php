@@ -10,12 +10,10 @@ use Psr\Http\Message\ServerRequestInterface;
 
 final readonly class RecordingRequestHook implements RequestLifecycleHookInterface
 {
-    public function __construct(private FpmLifecycleEvents $events)
-    {
+    public function __construct(private FpmLifecycleEvents $events) {
     }
 
-    public function begin(ServerRequestInterface $request): RequestLifecycleScopeInterface
-    {
+    public function begin(ServerRequestInterface $request): RequestLifecycleScopeInterface {
         $this->events->record('request.begin');
         return new RecordingRequestScope($this->events);
     }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Lsr\Core\Templating\Nodes;
 
 use Generator;
@@ -15,7 +17,6 @@ use Lsr\Helpers\Csrf\TokenHelper;
 
 class CsrfInputNode extends StatementNode
 {
-
     private ExpressionNode $name;
     private ModifierNode $modifier;
 
@@ -25,29 +26,29 @@ class CsrfInputNode extends StatementNode
      * @return Node
      * @throws CompileException
      */
-    public static function create(Tag $tag) : Node {
+    public static function create(Tag $tag): Node {
         $tag->expectArguments();
         $node = new self();
         $node->name = $tag->parser->parseExpression();
         $node->modifier = $tag->parser->parseModifier();
-        $node->modifier->escape = !$node->modifier->removeFilter('noescape');
+        $node->modifier->escape = ! $node->modifier->removeFilter('noescape');
         return $node;
     }
 
-    public function print(PrintContext $context) : string {
+    public function print(PrintContext $context): string {
         return $context->format(
-          <<<'XX'
+            <<<'XX'
           echo '<input type="hidden" name="_csrf_token" value="'.hash_hmac('sha256', %node, %raw::getServiceByType(%dump)->formToken(%node)).'" />' %line;
           XX,
-          $this->name,
-          App::class,
-          TokenHelper::class,
-          $this->name,
-          $this->position,
+            $this->name,
+            App::class,
+            TokenHelper::class,
+            $this->name,
+            $this->position,
         );
     }
 
-    public function &getIterator() : Generator {
+    public function &getIterator(): Generator {
         yield $this->name;
     }
 }

@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * @author Tomáš Vojík <xvojik00@stud.fit.vutbr.cz>, <vojik@wboy.cz>
  */
@@ -12,23 +14,22 @@ use Tracy\IBarPanel;
 
 class TranslationTracyPanel implements IBarPanel
 {
-
     /** @var TranslationEvent[] */
-    static public array $events = [];
-    static public int $translations = 0;
+    public static array $events = [];
+    public static int $translations = 0;
 
-    public static function logEvent(TranslationEvent $event) : void {
+    public static function logEvent(TranslationEvent $event): void {
         self::$events[] = $event;
     }
 
-    public static function incrementTranslations() : void {
+    public static function incrementTranslations(): void {
         self::$translations++;
     }
 
     /**
      * @inheritDoc
      */
-    public function getTab() : string {
+    public function getTab(): string {
         $title = lang('Translations', context: 'debugPanel');
         return <<<HTML
         <span title="Překlady">
@@ -57,7 +58,7 @@ class TranslationTracyPanel implements IBarPanel
                                 fill="#d5eded" data-original="#d5eded" style=""></path><path
                                 d="m404.859375 409.359375-31.007813-101.0625c-1.441406-4.800781-7.339843-7.054687-13.417968-7.070313v27.4375l13.898437 49.039063h-13.898437v16.390625h18.398437l6.105469 21.371094c.804688 3.054687 3.535156 4.175781 7.070312 4.175781 5.625 0 13.175782-3.691406 13.175782-8.671875 0-.484375-.160156-.964844-.324219-1.609375zm0 0"
                                 fill="#d5eded" data-original="#d5eded" style=""></path></g></g></svg>
-            <span class="tracy-label">$title</span>
+            <span class="tracy-label">{$title}</span>
         </span>
         HTML;
 
@@ -66,7 +67,7 @@ class TranslationTracyPanel implements IBarPanel
     /**
      * @inheritDoc
      */
-    public function getPanel() : string {
+    public function getPanel(): string {
         $title = lang('Translations', context: 'debugPanel');
         $languageTitle = lang('Language', context: 'debugPanel');
         $language = App::getInstance()->getLanguage();
@@ -76,7 +77,7 @@ class TranslationTracyPanel implements IBarPanel
         $supportedDump = Dumper::toHtml($translations->supportedLanguages);
         $accept = '';
         if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) && is_string($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
-            $accept = '<p><strong>HTTP header:</strong> '.$_SERVER['HTTP_ACCEPT_LANGUAGE'].'</p>';
+            $accept = '<p><strong>HTTP header:</strong> ' . $_SERVER['HTTP_ACCEPT_LANGUAGE'] . '</p>';
         }
         $panel = <<<HTML
         <h1>{$title}</h1>
@@ -91,19 +92,19 @@ class TranslationTracyPanel implements IBarPanel
                     {$supportedDump}
                 </div>
         HTML;
-        $panel .= '<p><strong>Translated strings:</strong> '.self::$translations.'</p>';
+        $panel .= '<p><strong>Translated strings:</strong> ' . self::$translations . '</p>';
         foreach (self::$events as $event) {
-            $panel .= '<div class="p-3 my-2 rounded border"><h5 class="my-1 fs-5">Added a new string:</h5><p>String: '.$event->message.'</p>';
-            if (!empty($event->plural)) {
-                $panel .= '<p>Plural: '.$event->plural.'</p>';
+            $panel .= '<div class="p-3 my-2 rounded border"><h5 class="my-1 fs-5">Added a new string:</h5><p>String: ' . $event->message . '</p>';
+            if ( ! empty($event->plural)) {
+                $panel .= '<p>Plural: ' . $event->plural . '</p>';
             }
-            if (!empty($event->domain)) {
-                $panel .= '<p>Domain: '.$event->domain.'</p>';
+            if ( ! empty($event->domain)) {
+                $panel .= '<p>Domain: ' . $event->domain . '</p>';
             }
-            if (!empty($event->context)) {
-                $panel .= '<p>Context: '.$event->context.'</p>';
+            if ( ! empty($event->context)) {
+                $panel .= '<p>Context: ' . $event->context . '</p>';
             }
-            $panel .= '<div class="p-1 rounded bg-secondary text-light w-100">'.$event->source.'</div></div>';
+            $panel .= '<div class="p-1 rounded bg-secondary text-light w-100">' . $event->source . '</div></div>';
         }
         $panel .= '</div></div>';
         return $panel;

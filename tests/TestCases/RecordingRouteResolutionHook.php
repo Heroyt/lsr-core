@@ -14,8 +14,7 @@ final class RecordingRouteResolutionHook implements RouteResolutionHookInterface
     public array $events = [];
     public bool $fail = false;
 
-    public function record(RouteResolutionEvent $event): void
-    {
+    public function record(RouteResolutionEvent $event): void {
         if ($this->fail) {
             throw new RuntimeException('Hook failure');
         }

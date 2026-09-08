@@ -32,32 +32,28 @@ class FpmHandler
     ) {
         // Validate that all handlers are of the correct type
         /** @phpstan-ignore instanceof.alwaysTrue */
-        assert(array_all($this->exceptionHandlers, static fn($val) => $val instanceof ExceptionHandlerInterface));
+        assert(array_all($this->exceptionHandlers, static fn ($val) => $val instanceof ExceptionHandlerInterface));
         /** @phpstan-ignore instanceof.alwaysTrue */
-        assert(array_all($this->asyncHandlers, static fn($val) => $val instanceof AsyncHandlerInterface));
+        assert(array_all($this->asyncHandlers, static fn ($val) => $val instanceof AsyncHandlerInterface));
     }
 
-    public function setRequestLifecycleHook(RequestLifecycleHookInterface $hook): static
-    {
+    public function setRequestLifecycleHook(RequestLifecycleHookInterface $hook): static {
         $this->requestLifecycle = $hook;
         return $this;
     }
 
-    public function addAsyncHandler(AsyncHandlerInterface $handler): static
-    {
+    public function addAsyncHandler(AsyncHandlerInterface $handler): static {
         $this->asyncHandlers[] = $handler;
         return $this;
     }
 
-    protected function handleAsync(): void
-    {
+    protected function handleAsync(): void {
         foreach ($this->asyncHandlers as $handler) {
             $handler->run();
         }
     }
 
-    public function run(): void
-    {
+    public function run(): void {
         $app = App::getInstance();
 
         try {
@@ -98,8 +94,7 @@ class FpmHandler
         }
     }
 
-    private function beginLifecycle(Request $request): ?RequestLifecycleScopeInterface
-    {
+    private function beginLifecycle(Request $request): ?RequestLifecycleScopeInterface {
         try {
             return $this->requestLifecycle?->begin($request);
         } catch (Throwable) {
@@ -109,7 +104,7 @@ class FpmHandler
 
     private function recordLifecycleException(
         ?RequestLifecycleScopeInterface $scope,
-        Throwable $exception
+        Throwable $exception,
     ): void {
         try {
             $scope?->recordException($exception);
@@ -120,7 +115,7 @@ class FpmHandler
 
     private function finishRequest(
         ?ResponseInterface $response,
-        ?RequestLifecycleScopeInterface $scope
+        ?RequestLifecycleScopeInterface $scope,
     ): void {
         $failure = null;
 
@@ -168,10 +163,9 @@ class FpmHandler
         }
     }
 
-    public function createRequest(): Request
-    {
+    public function createRequest(): Request {
         $request = $this->requestFactory->getHttpRequest();
-        if (!($request instanceof Request)) {
+        if ( ! ($request instanceof Request)) {
             $request = new Request($request); // Wrap the PSR-7 request into our Request class
         }
 
@@ -181,8 +175,7 @@ class FpmHandler
         return $request;
     }
 
-    protected function withCookies(ResponseInterface $response): ResponseInterface
-    {
+    protected function withCookies(ResponseInterface $response): ResponseInterface {
         $headers = App::cookieJar()->getHeaders();
         if (empty($headers)) {
             return $response;
@@ -190,8 +183,7 @@ class FpmHandler
         return $response->withAddedHeader('Set-Cookie', $headers);
     }
 
-    protected function handleException(Throwable $exception, Request $request): ResponseInterface
-    {
+    protected function handleException(Throwable $exception, Request $request): ResponseInterface {
         foreach ($this->exceptionHandlers as $handler) {
             if ($handler->handles($exception)) {
                 return $handler->handle($exception, $request);
@@ -202,8 +194,7 @@ class FpmHandler
         throw $exception;
     }
 
-    protected function sendResponse(ResponseInterface $response): void
-    {
+    protected function sendResponse(ResponseInterface $response): void {
         // Check if something is not already sent
         if (headers_sent()) {
             throw new RuntimeException('Headers were already sent. The response could not be emitted!');
@@ -222,7 +213,7 @@ class FpmHandler
         // Send body
         $stream = $response->getBody();
 
-        if (!$stream->isReadable()) {
+        if ( ! $stream->isReadable()) {
             return;
         }
 
@@ -230,7 +221,7 @@ class FpmHandler
             $stream->rewind();
         }
 
-        while (!$stream->eof()) {
+        while ( ! $stream->eof()) {
             echo $stream->read(8192);
             flush();
         }

@@ -19,8 +19,7 @@ final class RecordingFpmHandler extends FpmHandler
         parent::__construct($requestFactory, $session);
     }
 
-    protected function sendResponse(ResponseInterface $response): void
-    {
+    protected function sendResponse(ResponseInterface $response): void {
         $this->events->record('response.send');
     }
 }

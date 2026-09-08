@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Lsr\Core\Models;
@@ -16,7 +17,6 @@ use Nette\Caching\Cache as CacheParent;
  */
 trait WithCacheClear
 {
-
     /**
      * Clear cache for model queries (the Model::query() method)
      *
@@ -24,15 +24,15 @@ trait WithCacheClear
      * @see Model::query()
      *
      */
-    public static function clearQueryCache() : void {
+    public static function clearQueryCache(): void {
         /** @var Cache $cache */
         $cache = App::getService('cache');
         $cache->clean(
-          [
-            CacheParent::Tags => [
-              static::TABLE.'/query',
+            [
+                CacheParent::Tags => [
+                    static::TABLE . '/query',
+                ],
             ],
-          ]
         );
     }
 
@@ -41,16 +41,16 @@ trait WithCacheClear
      *
      * @return void
      */
-    public static function clearModelCache() : void {
+    public static function clearModelCache(): void {
         /** @var Cache $cache */
         $cache = App::getService('cache');
         $cache->clean(
-          [
-            CacheParent::Tags => [
-              static::TABLE,
-              static::TABLE.'/query',
+            [
+                CacheParent::Tags => [
+                    static::TABLE,
+                    static::TABLE . '/query',
+                ],
             ],
-          ]
         );
     }
 
@@ -64,23 +64,23 @@ trait WithCacheClear
      *
      */
     #[AfterUpdate, AfterDelete, AfterInsert]
-    public function clearCache() : void {
+    public function clearCache(): void {
         if (isset($this->id)) {
             /** @var Cache $cache */
             $cache = App::getService('cache');
             $tags = [
-              $this::TABLE,
-              $this::TABLE.'/query',
-              $this::TABLE.'/'.$this->id,
-              $this::TABLE.'/'.$this->id.'/relations',
+                $this::TABLE,
+                $this::TABLE . '/query',
+                $this::TABLE . '/' . $this->id,
+                $this::TABLE . '/' . $this->id . '/relations',
             ];
             if (method_exists($this, 'getCacheTags')) {
                 $tags = array_merge($tags, $this->getCacheTags());
             }
             $cache->clean(
-              [
-                CacheParent::Tags => $tags,
-              ]
+                [
+                    CacheParent::Tags => $tags,
+                ],
             );
         }
     }

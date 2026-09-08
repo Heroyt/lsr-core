@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace TestCases;
@@ -9,8 +10,7 @@ use PHPUnit\Framework\TestCase;
 
 class LanguagePrefixerTest extends TestCase
 {
-    public function testExistingNonDefaultPrefixIsNotDuplicated(): void
-    {
+    public function test_existing_non_default_prefix_is_not_duplicated(): void {
         $translations = $this->createStub(Translations::class);
         $translations->method('getLangId')->willReturn('en');
         $translations->method('getDefaultLangId')->willReturn('cs');
@@ -21,8 +21,7 @@ class LanguagePrefixerTest extends TestCase
         self::assertSame(['en', 'privacy'], $prefixer->modifyLinkPath(['en', 'privacy']));
     }
 
-    public function testDefaultLocalePrefixIsRemovedAsAnExactSegment(): void
-    {
+    public function test_default_locale_prefix_is_removed_as_an_exact_segment(): void {
         $translations = $this->createStub(Translations::class);
         $translations->method('getLangId')->willReturn('cs');
         $translations->method('getDefaultLangId')->willReturn('cs');
