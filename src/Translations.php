@@ -269,7 +269,7 @@ class Translations implements Translator
         assert($params['domain'] === null || is_string($params['domain']));
         $domain = $params['domain'] ?? LANGUAGE_FILE_NAME;
 
-        $translated = $this->translateModular($message, $plural, $num, $domain);
+        $translated = $this->translateModular((string) $message, $plural, $num, $domain);
 
         $split = explode("\004", $translated);
         if (count($split) === 2) {
