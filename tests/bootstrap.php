@@ -19,7 +19,9 @@ const CHECK_TRANSLATIONS = true;
 const PRODUCTION = true;
 const ASSETS_DIR = ROOT . 'assets/';
 
-ini_set('open_basedir', ROOT);
+// PHPUnit's isolated runner needs temporary files and the active PHP configuration.
+$phpConfigFiles = array_filter(array_map('trim', explode(',', (php_ini_loaded_file() ?: '') . ',' . (php_ini_scanned_files() ?: ''))));
+ini_set('open_basedir', implode(PATH_SEPARATOR, [ROOT, sys_get_temp_dir(), ...$phpConfigFiles]));
 
 if ( ! is_dir(TMP_DIR) && ! mkdir(TMP_DIR, 0777, true) && ! is_dir(TMP_DIR)) {
     throw new \RuntimeException('Cannot create temporary directory: ' . TMP_DIR);

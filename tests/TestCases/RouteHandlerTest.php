@@ -9,7 +9,9 @@ use Lsr\Core\App;
 use Lsr\Core\Http\Lifecycle\RequestOperation;
 use Lsr\Core\Requests\Request;
 use Lsr\Core\RouteHandler;
+use Lsr\Core\Routing\AliasRoute;
 use Lsr\Core\Routing\Route;
+use Lsr\Core\Routing\Router;
 use Lsr\Enums\RequestMethod;
 use Lsr\Serializer\Mapper;
 use Nette\Caching\Storages\MemoryStorage;
@@ -56,6 +58,63 @@ final class RouteHandlerTest extends TestCase
             array_column($hook->begun, 'operation'),
         );
         self::assertCount(2, $hook->completed);
+    }
+
+    #[BackupStaticProperties(true)]
+    public function test_argument_cache_is_isolated_between_domains_with_the_same_path(): void {
+        $router = new Router();
+        $router->unregisterAll();
+        $controller = new class {
+            public function number(int $value): ResponseInterface {
+                return new Response(200, [], 'number:' . $value);
+            }
+
+            public function word(string $value): ResponseInterface {
+                return new Response(200, [], 'word:' . $value);
+            }
+        };
+        $router->domain('numbers.example')->get('/items/{value}', [$controller, 'number']);
+        $router->domain('words.example')->get('/items/{value}', [$controller, 'word']);
+        $router->resolveDomains();
+        $handler = new class (new Cache(new MemoryStorage(), debug: false), $this->createStub(Mapper::class)) extends RouteHandler {
+            protected function withCookies(ResponseInterface $response): ResponseInterface {
+                return $response;
+            }
+        };
+        try {
+            foreach ([
+                ['numbers.example', '42', 'number:42'],
+                ['words.example', 'forty', 'word:forty'],
+                ['numbers.example', '7', 'number:7'],
+            ] as [$host, $value, $expected]) {
+                $params = [];
+                $route = Router::getRoute(RequestMethod::GET, ['items', $value], $params, host: $host);
+                self::assertInstanceOf(Route::class, $route);
+                $request = new Request(new ServerRequest('GET', 'https://' . $host . '/items/' . $value));
+                $request->setParams(['value' => $value]);
+                $response = $handler->setRoute($route)->handle($request);
+                self::assertSame($expected, (string) $response->getBody());
+            }
+        } finally {
+            $router->unregisterAll();
+        }
+    }
+
+    #[BackupStaticProperties(true)]
+    public function test_cross_host_alias_dispatch_injects_the_psr_request(): void {
+        $target = Route::create(RequestMethod::GET, '/items/{id}', static fn () => new Response());
+        $target->restoreDomain('admin.example');
+        $alias = AliasRoute::createAlias(RequestMethod::GET, '/items/{id}', $target);
+        $handler = new class (new Cache(new MemoryStorage(), debug: false), $this->createStub(Mapper::class)) extends RouteHandler {
+            protected function withCookies(ResponseInterface $response): ResponseInterface {
+                return $response;
+            }
+        };
+        $request = new Request(new ServerRequest('GET', 'https://public.example:8443/items/42?tab=score'));
+        $request = $request->withAttribute('id', '42');
+        $response = $handler->setRoute($alias)->handle($request);
+        self::assertSame(308, $response->getStatusCode());
+        self::assertSame('https://admin.example:8443/items/42?tab=score', $response->getHeaderLine('Location'));
     }
 
     #[BackupStaticProperties(true)]
