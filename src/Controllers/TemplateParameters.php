@@ -5,16 +5,12 @@ declare(strict_types=1);
 namespace Lsr\Core\Controllers;
 
 use AllowDynamicProperties;
-use ArrayAccess;
 use Lsr\Core\App;
 use Lsr\Core\Exceptions\UnsupportedOperationException;
 use Lsr\Core\Requests\Request;
 use Lsr\Dto\Notice;
 use Lsr\Interfaces\TemplateParametersInterface;
 
-/**
- * @implements ArrayAccess<string, mixed>
- */
 #[AllowDynamicProperties]
 class TemplateParameters implements TemplateParametersInterface
 {
@@ -68,12 +64,15 @@ class TemplateParameters implements TemplateParametersInterface
     }
 
     /**
-     * @return array<string,mixed>
+     * @return array<array-key,mixed>
      */
     public function jsonSerialize(): array {
         return get_object_vars($this);
     }
 
+    /**
+     * @return array<array-key,mixed>
+     */
     public function getProps(): array {
         $props = get_object_vars($this);
         unset($props['page'], $props['app'], $props['request'], $props['addCss'], $props['addJs']);

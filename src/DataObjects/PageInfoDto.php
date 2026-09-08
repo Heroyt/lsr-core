@@ -26,7 +26,7 @@ readonly class PageInfoDto implements JsonSerializable
     /**
      * @inheritDoc
      *
-     * @return array<string,mixed>
+     * @return array<array-key,mixed>
      */
     public function jsonSerialize(): array {
         return get_object_vars($this);

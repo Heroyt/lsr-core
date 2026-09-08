@@ -145,7 +145,7 @@ class App
         $loader = new ContainerLoader(TMP_DIR . 'di/');
         /** @var class-string<Container> $class */
         $class = $loader->load(
-            function (Compiler $compiler): void {
+            function (Compiler $compiler): null {
                 $compiler->addExtension('extensions', new ExtensionsExtension());
                 /** @var string[] $configs */
                 $configs = require ROOT . 'config/services.php';
@@ -153,6 +153,7 @@ class App
                 foreach ($configs as $config) {
                     $compiler->loadConfig($config);
                 }
+                return null;
             },
         );
         static::$container = new $class();
