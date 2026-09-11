@@ -26,6 +26,7 @@ use Lsr\Logging\Logger;
 use Nette;
 use Nette\DI\CompilerExtension;
 use Nette\Schema\Expect;
+use Psr\Log\LoggerInterface;
 
 /**
  * @property object{
@@ -51,6 +52,9 @@ use Nette\Schema\Expect;
  */
 class LsrExtension extends CompilerExtension
 {
+    /** @var list<array{Nette\DI\Definitions\Statement, class-string<ExceptionHandlerInterface|AsyncHandlerInterface>, string}> */
+    private array $httpHandlerReferences = [];
+
     public function getConfigSchema(): Nette\Schema\Schema {
         return Expect::structure(
             [
@@ -198,19 +202,11 @@ class LsrExtension extends CompilerExtension
                 }
                 /** @var class-string<ExceptionHandlerInterface> $class */
                 $class = $handler;
-                $handler = $builder->getByType($class);
-                if ($handler === null) {
-                    $handler = $builder->addDefinition(null)
-                        ->setType($class)
-                        ->setFactory($class)
-                        ->setAutowired()
-                        ->setTags(['lsr' => true, 'core' => true, 'exceptionHandler' => true]);
-                }
+                $handler = new Nette\DI\Definitions\Statement('?');
+                $this->httpHandlerReferences[] = [$handler, $class, 'exceptionHandler'];
             }
 
-            if ($handler instanceof Nette\DI\Definitions\Statement || $handler instanceof Nette\DI\Definitions\Definition) {
-                $exceptionHandlers[] = $handler;
-            }
+            $exceptionHandlers[] = $handler;
         }
         /** @var list<Nette\DI\Definitions\Statement|Nette\DI\Definitions\Definition> $asyncHandlers */
         $asyncHandlers = [];
@@ -223,19 +219,11 @@ class LsrExtension extends CompilerExtension
                 }
                 /** @var class-string<AsyncHandlerInterface> $class */
                 $class = $handler;
-                $handler = $builder->getByType($class);
-                if ($handler === null) {
-                    $handler = $builder->addDefinition(null)
-                        ->setType($class)
-                        ->setFactory($class)
-                        ->setAutowired()
-                        ->setTags(['lsr' => true, 'core' => true, 'asyncHandler' => true]);
-                }
+                $handler = new Nette\DI\Definitions\Statement('?');
+                $this->httpHandlerReferences[] = [$handler, $class, 'asyncHandler'];
             }
 
-            if ($handler instanceof Nette\DI\Definitions\Statement || $handler instanceof Nette\DI\Definitions\Definition) {
-                $asyncHandlers[] = $handler;
-            }
+            $asyncHandlers[] = $handler;
         }
         $builder->addDefinition($this->prefix('fpmHandler'))
             ->setType(FpmHandler::class)
@@ -305,11 +293,12 @@ class LsrExtension extends CompilerExtension
     }
 
     public function beforeCompile(): void {
-        $logger = $this->getContainerBuilder()->getDefinition($this->prefix('logger'));
+        $builder = $this->getContainerBuilder();
+        $logger = $builder->getDefinition($this->prefix('logger'));
         $type = $logger->getType();
-        if ($type === null || ! is_a($type, Logger::class, true)) {
+        if ($type === null || ! is_a($type, LoggerInterface::class, true)) {
             throw new Nette\InvalidArgumentException(
-                sprintf('Service "%s" must be a %s.', $this->prefix('logger'), Logger::class),
+                sprintf('Service "%s" must be a %s.', $this->prefix('logger'), LoggerInterface::class),
             );
         }
         if ($logger instanceof Nette\DI\Definitions\ServiceDefinition) {
@@ -323,6 +312,21 @@ class LsrExtension extends CompilerExtension
                 $logger->setFactory('?', [$reference]);
                 $logger->lazy = false;
             }
+        }
+
+        // Type lookup resolves the builder; wait until all configured services exist.
+        foreach ($this->httpHandlerReferences as [$reference, $class, $tag]) {
+            $name = $builder->getByType($class);
+            if ($name === null) {
+                $handler = $builder->addDefinition(null)
+                    ->setType($class)
+                    ->setFactory($class)
+                    ->setAutowired()
+                    ->setTags(['lsr' => true, 'core' => true, $tag => true]);
+            } else {
+                $handler = $builder->getDefinition($name);
+            }
+            $reference->arguments = [$handler];
         }
     }
 

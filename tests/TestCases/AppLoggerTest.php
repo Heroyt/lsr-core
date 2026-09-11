@@ -15,13 +15,13 @@ use Lsr\Core\Http\TracyExceptionHandler;
 use Lsr\Core\RouteHandler;
 use Lsr\Core\Routing\Router;
 use Lsr\Core\Translations;
+use Lsr\Interfaces\ResponseFactoryInterface;
 use Lsr\Interfaces\SessionInterface;
 use Lsr\Logging\Logger;
 use Nette\DI\Compiler;
 use Nette\DI\Container;
 use Nette\DI\ContainerBuilder;
 use Nette\DI\Definitions\ServiceDefinition;
-use Nette\DI\Definitions\Statement;
 use Nette\DI\PhpGenerator;
 use Nette\InvalidArgumentException;
 use Nette\Schema\Processor;
@@ -29,15 +29,17 @@ use Nette\Schema\ValidationException;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use stdClass;
+use Stringable;
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState(false)]
 final class AppLoggerTest extends TestCase
 {
-    public function test_direct_construction_keeps_lazy_default_and_accepts_concrete_logger(): void {
+    public function test_direct_construction_keeps_default_output_and_accepts_plain_psr_logger(): void {
         $app = new App(
             $this->createStub(Router::class),
             $this->createStub(RouteHandler::class),
@@ -45,26 +47,34 @@ final class AppLoggerTest extends TestCase
             $this->createStub(Config::class),
             $this->createStub(Translations::class),
         );
-        self::assertFalse((new ReflectionClass(App::class))->getProperty('logger')->isInitialized($app));
         $fallback = $app->getLogger();
+        self::assertInstanceOf(Logger::class, $fallback);
         self::assertSame($fallback, $app->getLogger());
         $this->assertExceptionOutput($fallback, LOG_DIR . 'app-' . date('Y-m-d') . '.log');
 
-        $logger = new Logger(TMP_DIR, 'app-injected');
+        $logger = new AppPsrRecordingLogger();
         $app->setLogger($logger);
         self::assertSame($logger, $app->getLogger());
-        $this->assertExceptionOutput($app->getLogger(), TMP_DIR . 'app-injected-' . date('Y-m-d') . '.log');
+        $exception = new RuntimeException('Application failure', 17);
+        $message = new class implements Stringable {
+            public function __toString(): string {
+                return 'Application message';
+            }
+        };
+        $context = ['exception' => $exception, 'request' => 42];
+        $app->getLogger()->error($message, $context);
+        self::assertSame([['error', $message, $context]], $logger->records);
     }
 
-    public function test_default_is_lazy_and_does_not_select_global_logger(): void {
+    public function test_default_output_is_isolated_from_global_logger(): void {
         $container = $this->container();
         $app = $container->getService('lsr.app');
         self::assertInstanceOf(App::class, $app);
         $logger = $app->getLogger();
+        self::assertInstanceOf(Logger::class, $logger);
         self::assertSame($logger, $container->getService('lsr.logger'));
         self::assertNotSame($container->getService('logger'), $logger);
-        self::assertSame($container->getService('logger'), $container->getByType(Logger::class));
-        self::assertTrue((new ReflectionClass(Logger::class))->isUninitializedLazyObject($logger));
+        self::assertSame($container->getService('logger'), $container->getByType(LoggerInterface::class));
         $this->assertExceptionOutput($logger, LOG_DIR . 'app-' . date('Y-m-d') . '.log');
     }
 
@@ -74,14 +84,18 @@ final class AppLoggerTest extends TestCase
         self::assertInstanceOf(App::class, $app);
         self::assertSame($container->getService('logger'), $app->getLogger());
         self::assertSame($container->getService('logger'), $container->getService('lsr.logger'));
-        $this->assertExceptionOutput($app->getLogger(), TMP_DIR . 'app-global-' . date('Y-m-d') . '.log');
+        $logger = $app->getLogger();
+        self::assertInstanceOf(Logger::class, $logger);
+        $this->assertExceptionOutput($logger, TMP_DIR . 'app-global-' . date('Y-m-d') . '.log');
     }
 
-    public function test_service_setup_keeps_the_selected_logger_shared(): void {
-        $container = $this->container('@logger', static function (ContainerBuilder $builder): void {
+    public function test_plain_psr_alias_chain_with_setup_keeps_shared_identity_and_autowiring(): void {
+        $container = $this->container('@selectedLogger', static function (ContainerBuilder $builder): void {
             $shared = $builder->getDefinition('logger');
             self::assertInstanceOf(ServiceDefinition::class, $shared);
-            $shared->setFactory(SetupLogger::class, [TMP_DIR, 'setup']);
+            $shared->setFactory(AppPsrRecordingLogger::class);
+            $builder->addAlias('selectedLogger', 'loggerAlias');
+            $builder->addDefinition('loggerAlias')->setFactory('@logger')->setAutowired(false);
             $selected = $builder->getDefinition('lsr.logger');
             self::assertInstanceOf(ServiceDefinition::class, $selected);
             $selected->addSetup('info', ['logger configured']);
@@ -89,9 +103,12 @@ final class AppLoggerTest extends TestCase
         $app = $container->getService('lsr.app');
         self::assertInstanceOf(App::class, $app);
         $shared = $container->getService('logger');
-        self::assertInstanceOf(SetupLogger::class, $shared);
+        self::assertInstanceOf(AppPsrRecordingLogger::class, $shared);
         $app->getLogger()->warning('after configuration');
         self::assertSame($shared, $app->getLogger());
+        self::assertSame($shared, $container->getService('lsr.logger'));
+        self::assertSame($shared, $container->getService('selectedLogger'));
+        self::assertSame($shared, $container->getByType(LoggerInterface::class));
         self::assertSame([
             ['info', 'logger configured', []],
             ['warning', 'after configuration', []],
@@ -109,7 +126,9 @@ final class AppLoggerTest extends TestCase
         self::assertInstanceOf(LoggerSelectionApp::class, $app);
         self::assertSame($container->getService('dedicated'), $app->getLogger());
         self::assertNotSame($container->getService('logger'), $app->getLogger());
-        $this->assertExceptionOutput($app->getLogger(), TMP_DIR . 'app-dedicated-' . date('Y-m-d') . '.log');
+        $logger = $app->getLogger();
+        self::assertInstanceOf(Logger::class, $logger);
+        $this->assertExceptionOutput($logger, TMP_DIR . 'app-dedicated-' . date('Y-m-d') . '.log');
     }
 
     public function test_non_reference_configuration_is_rejected(): void {
@@ -142,7 +161,7 @@ final class AppLoggerTest extends TestCase
             'appDir' => ROOT,
             'tempDir' => TMP_DIR,
             'logger' => $logger,
-            'http' => ['exceptionHandlers' => [new Statement(TracyExceptionHandler::class)]],
+            'http' => ['exceptionHandlers' => [TracyExceptionHandler::class]],
         ]);
         self::assertIsObject($config);
         $extension->setConfig($config);
@@ -163,6 +182,7 @@ final class AppLoggerTest extends TestCase
             'session' => $this->createStub(SessionInterface::class),
             'config' => $this->createStub(Config::class),
             'translations' => $this->createStub(Translations::class),
+            'responseFactory' => $this->createStub(ResponseFactoryInterface::class),
         ];
         foreach ($services as $name => $service) {
             $builder->addImportedDefinition($name)->setType($service::class);
@@ -214,12 +234,15 @@ final class LoggerSelectionApp extends App
     }
 }
 
-final class SetupLogger extends Logger
+final class AppPsrRecordingLogger extends AbstractLogger
 {
     /** @var list<array{mixed, mixed, array<string, mixed>}> */
     public array $records = [];
 
-    /** @param array<string, mixed> $context */
+    /**
+     * @param string|Stringable $message
+     * @param array<string, mixed> $context
+     */
     public function log($level, $message, array $context = []): void {
         $this->records[] = [$level, $message, $context];
     }

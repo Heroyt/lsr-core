@@ -42,6 +42,7 @@ use Nette\DI\ContainerLoader;
 use Nette\DI\Extensions\ExtensionsExtension;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
+use Psr\Log\LoggerInterface;
 use ReflectionException;
 use RuntimeException;
 use Throwable;
@@ -74,7 +75,7 @@ class App
     protected ?RouteInterface $route;
     /** @var array<string, mixed> */
     protected array $routeParams = [];
-    protected Logger $logger;
+    protected LoggerInterface $logger;
     protected ?CookieJarInterface $cookieJar = null;
     protected ?RouteResolutionHookInterface $routeResolutionHook = null;
     protected ?RequestOperationLifecycleHookInterface $requestOperationLifecycleHook = null;
@@ -541,11 +542,11 @@ class App
         return $generator->getLink($request);
     }
 
-    public function setLogger(Logger $logger): void {
+    public function setLogger(LoggerInterface $logger): void {
         $this->logger = $logger;
     }
 
-    public function getLogger(): Logger {
+    public function getLogger(): LoggerInterface {
         if ( ! isset($this->logger)) {
             $this->logger = new Logger(LOG_DIR, 'app');
         }
