@@ -43,7 +43,7 @@ $handler->run();
 
 ## Application logger selection
 
-**Unreleased:** this configuration is available in the working tree, not in an existing published package version. Check installed source before using it.
+**Available since `lsr/core 0.5.1`.** Check the installed version before using this configuration.
 
 Core owns a dedicated, non-autowired `<extension>.logger` service (`lsr.logger` when the
 extension is named `lsr`). With `logger: null` or no option, it lazily creates
