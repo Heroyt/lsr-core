@@ -7,6 +7,7 @@
 - PHP `>=8.4`.
 - PHP extensions: `fileinfo`, `gettext`, `simplexml`, `ctype`, `mbstring` and `pdo_sqlite`.
 - Nette DI `^3.2.4` (native lazy logger services), Latte `^3.0`, PHP dotenv `^5.6` and Nette PHP Generator `^4.1`.
+- Core **0.6 (unreleased)** directly supports PSR-3 `psr/log ^1.0 || ^2.0 || ^3.0` and ORM `^0.3 || ^0.4`; using Core's logger seam does not require ORM 0.4.
 - LSR interfaces, logging, routing (`^0.5`), request, DB, serializer, cache and ORM dependencies; see [composer.json](composer.json) for exact constraints and transitive platform requirements.
 - An application-owned bootstrap and service configuration, writable temporary/cache and log locations, and database/cache configuration appropriate to the application. This is a framework library, not an application skeleton.
 
@@ -43,7 +44,9 @@ $handler->run();
 
 ## Application logger selection
 
-**Available since `lsr/core 0.5.1`.** Check the installed version before using this configuration.
+**Logger selection is published in `lsr/core 0.5.1`; the PSR-3 contract below is
+Core 0.6 (unreleased), not part of that compatibility patch.** Check the installed
+version before using either API.
 
 Core owns a dedicated, non-autowired `<extension>.logger` service (`lsr.logger` when the
 extension is named `lsr`). With `logger: null` or no option, it lazily creates
@@ -69,8 +72,10 @@ lsr:
 Use `logger: @logger` instead to share the exact application logger instance.
 Referencing a separate service keeps its output separate. The package service
 does not add another autowiring candidate for the application's global logger.
-The extension injects the selected service through `App::setLogger(Logger $logger): void`,
-so existing `lsr.app` class overrides and their constructor arguments stay intact.
+The extension injects the selected service through `App::setLogger()`, so existing
+`lsr.app` class overrides and their constructor arguments stay intact. Native
+service alias chains and setups on the selected Core logger retain the exact
+shared instance rather than constructing a copy.
 As with other Nette service setups, explicitly resetting a service's setup list
 also removes this injection and leaves that override responsible for its logger.
 
@@ -78,14 +83,65 @@ Direct `App` construction is unchanged. Without a setter call, `getLogger()` sti
 creates the default logger only on first access; call `setLogger($logger)` to
 select one explicitly, including after the fallback has been used.
 
-This is a compatibility patch: the protected `$logger` property and
-`App::getLogger(): Lsr\Logging\Logger` remain concrete, including the `exception()`
-and `logDb()` convenience methods. Configured services must be `Lsr\Logging\Logger`
-instances (subclasses are supported); a generic PSR-3-only logger is not accepted
-in this phase. Invalid references/types fail container configuration. For a
-custom backend, configure a compatible concrete logger using the logging
-package's supported configuration; Core does not introduce driver aliases or
-change exception logging, synchronous failures, or flushing.
+### Published 0.5.1 compatibility patch
+
+In 0.5.1, the protected `$logger` property, `App::getLogger(): Lsr\Logging\Logger`
+and `App::setLogger(Lsr\Logging\Logger $logger): void` remain concrete, including
+the `exception()` and `logDb()` convenience methods. Configured services must be
+`Lsr\Logging\Logger` instances (subclasses are supported); ordinary PSR-3-only
+loggers are not accepted by that release.
+
+### Core 0.6 migration (unreleased)
+
+Core 0.6 changes the protected property to `Psr\Log\LoggerInterface`, the getter
+to `App::getLogger(): Psr\Log\LoggerInterface`, and the setter to
+`App::setLogger(Psr\Log\LoggerInterface $logger): void`. The configured service
+must implement that interface; a plain PSR logger can be selected by reference
+or passed directly to the setter without subclassing or wrapping it. Invalid
+references/types still fail container configuration. No constructor changes,
+driver aliases, forwarding adapters, buffering or exception interception are
+introduced. The default remains the concrete LSR logger and its existing files,
+record order, levels, messages, contexts and synchronous failures are unchanged.
+
+Before opting a consumer into 0.6:
+
+1. Remove any redeclaration of the inherited protected `$logger` property, or
+   change its type to exactly `LoggerInterface`. Mutable PHP property types are
+   invariant: retaining `protected Logger $logger` in an `App` subclass is not
+   compatible. Update setter overrides to accept `LoggerInterface` (or a wider
+   type), never only the concrete LSR logger. A covariant concrete getter is
+   valid only if that subclass actually guarantees a concrete return value even
+   when callers inject an arbitrary PSR logger.
+2. Audit consumers of `App::getLogger()`, including chained calls. Standard PSR
+   methods (`error()`, `debug()`, `warning()`, etc.) need no migration.
+   `exception()` and `logDb()` are **not** PSR methods. They remain public on
+   `Lsr\Logging\Logger`; callers that need those helpers must deliberately inject
+   or retrieve a concrete LSR logger separately instead of assuming the Core
+   getter returns one. Do not remove the helpers from the logging package or
+   silently skip them when a plain logger is configured.
+3. Alternatively, migrate each helper call to standard PSR records while
+   preserving its behavior. For `exception($exception)`, use the same two
+   records in this order, with empty contexts:
+
+   ```php
+   $logger = App::getInstance()->getLogger();
+   $logger->error('Thrown Exception (' . $exception->getCode() . '): ' . $exception->getMessage());
+   $logger->debug($exception->getTraceAsString());
+   ```
+
+   A single `error($message, ['exception' => $exception])` is not equivalent:
+   it changes the message/context and removes the separate debug trace record.
+   For `logDb($event)`, preserve its Dibi exception guard, optional nonzero
+   `(code) ` prefix on the error message, and following `debug('SQL: ' . $sql)`
+   only for nonempty exception SQL. Successful events emit nothing. Preserve
+   empty contexts and let logging failures propagate; do not add catch/retry or
+   flushing behavior as part of this migration.
+4. Update the consumer's Composer constraint deliberately, rebuild compiled DI
+   containers and restart long-running workers. Existing `^0.3` and `^0.5`
+   Core constraints do not opt into 0.6. Applications can migrate and deploy
+   independently; this unreleased package change does not update their source
+   or lock files. ORM's corresponding PSR provider contract is separately
+   versioned as ORM 0.4 (unreleased); Core also supports published ORM 0.3.
 
 ## Exact-host routing and links
 
