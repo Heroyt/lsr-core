@@ -6,7 +6,7 @@
 
 - PHP `>=8.4`.
 - PHP extensions: `fileinfo`, `gettext`, `simplexml`, `ctype`, `mbstring` and `pdo_sqlite`.
-- Nette DI `^3.2`, Latte `^3.0`, PHP dotenv `^5.6` and Nette PHP Generator `^4.1`.
+- Nette DI `^3.2.4` (native lazy logger services), Latte `^3.0`, PHP dotenv `^5.6` and Nette PHP Generator `^4.1`.
 - LSR interfaces, logging, routing (`^0.5`), request, DB, serializer, cache and ORM dependencies; see [composer.json](composer.json) for exact constraints and transitive platform requirements.
 - An application-owned bootstrap and service configuration, writable temporary/cache and log locations, and database/cache configuration appropriate to the application. This is a framework library, not an application skeleton.
 
@@ -40,6 +40,52 @@ $handler->run();
 ```
 
 [`FpmHandler`](src/FpmHandler.php) creates the request, invokes the application, handles dispatch-break responses and configured exception handlers, and finishes the response lifecycle. [`RouteHandler`](src/RouteHandler.php) performs controller/handler dispatch. [`LsrExtension`](src/DI/LsrExtension.php) wires the session, translation, link, menu and Latte services; use it as the integration reference rather than manually reproducing the service graph.
+
+## Application logger selection
+
+**Unreleased:** this configuration is available in the working tree, not in an existing published package version. Check installed source before using it.
+
+Core owns a dedicated, non-autowired `<extension>.logger` service (`lsr.logger` when the
+extension is named `lsr`). With `logger: null` or no option, it lazily creates
+`Lsr\Logging\Logger(LOG_DIR, 'app')`, preserving the daily `app-YYYY-MM-DD.log` output.
+`LOG_DIR` is resolved at runtime when the logger initializes, not while compiling
+the container. A global `@logger` is never selected implicitly.
+
+Select an existing logger with a native Nette service reference:
+
+```neon
+services:
+    logger: Lsr\Logging\Logger(%logDir%, application)
+    coreLogger:
+        factory: Lsr\Logging\Logger(%logDir%, core)
+        autowired: false
+
+lsr:
+    appDir: %appDir%
+    tempDir: %tempDir%
+    logger: @coreLogger
+```
+
+Use `logger: @logger` instead to share the exact application logger instance.
+Referencing a separate service keeps its output separate. The package service
+does not add another autowiring candidate for the application's global logger.
+The extension injects the selected service through `App::setLogger(Logger $logger): void`,
+so existing `lsr.app` class overrides and their constructor arguments stay intact.
+As with other Nette service setups, explicitly resetting a service's setup list
+also removes this injection and leaves that override responsible for its logger.
+
+Direct `App` construction is unchanged. Without a setter call, `getLogger()` still
+creates the default logger only on first access; call `setLogger($logger)` to
+select one explicitly, including after the fallback has been used.
+
+This is a compatibility patch: the protected `$logger` property and
+`App::getLogger(): Lsr\Logging\Logger` remain concrete, including the `exception()`
+and `logDb()` convenience methods. Configured services must be `Lsr\Logging\Logger`
+instances (subclasses are supported); a generic PSR-3-only logger is not accepted
+in this phase. Invalid references/types fail container configuration. For a
+custom backend, configure a compatible concrete logger using the logging
+package's supported configuration; Core does not introduce driver aliases or
+change exception logging, synchronous failures, or flushing.
 
 ## Exact-host routing and links
 
