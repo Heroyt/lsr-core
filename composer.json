@@ -2,7 +2,7 @@
   "name": "lsr/core",
   "license": "MIT",
   "description": "Laser framework core.",
-  "version": "0.5.1",
+  "version": "0.6.0-dev",
   "repositories": [
     {
       "type": "composer",
