@@ -312,6 +312,18 @@ class LsrExtension extends CompilerExtension
                 sprintf('Service "%s" must be a %s.', $this->prefix('logger'), Logger::class),
             );
         }
+        if ($logger instanceof Nette\DI\Definitions\ServiceDefinition) {
+            $factory = $logger->getFactory();
+            $reference = $factory->getEntity();
+            if (is_string($reference) && str_starts_with($reference, '@')) {
+                $reference = new Nette\DI\Definitions\Reference(substr($reference, 1));
+            }
+            if ($reference instanceof Nette\DI\Definitions\Reference && $factory->arguments === []) {
+                // Reference factories with setups create a copy; a reference expression retrieves the shared service.
+                $logger->setFactory('?', [$reference]);
+                $logger->lazy = false;
+            }
+        }
     }
 
 }

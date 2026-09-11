@@ -77,6 +77,27 @@ final class AppLoggerTest extends TestCase
         $this->assertExceptionOutput($app->getLogger(), TMP_DIR . 'app-global-' . date('Y-m-d') . '.log');
     }
 
+    public function test_service_setup_keeps_the_selected_logger_shared(): void {
+        $container = $this->container('@logger', static function (ContainerBuilder $builder): void {
+            $shared = $builder->getDefinition('logger');
+            self::assertInstanceOf(ServiceDefinition::class, $shared);
+            $shared->setFactory(SetupLogger::class, [TMP_DIR, 'setup']);
+            $selected = $builder->getDefinition('lsr.logger');
+            self::assertInstanceOf(ServiceDefinition::class, $selected);
+            $selected->addSetup('info', ['logger configured']);
+        });
+        $app = $container->getService('lsr.app');
+        self::assertInstanceOf(App::class, $app);
+        $shared = $container->getService('logger');
+        self::assertInstanceOf(SetupLogger::class, $shared);
+        $app->getLogger()->warning('after configuration');
+        self::assertSame($shared, $app->getLogger());
+        self::assertSame([
+            ['info', 'logger configured', []],
+            ['warning', 'after configuration', []],
+        ], $shared->records);
+    }
+
     public function test_dedicated_logger_isolated_from_global_and_app_override_keeps_constructor(): void {
         $container = $this->container('@dedicated', static function (ContainerBuilder $builder): void {
             $builder->addDefinition('dedicated')->setFactory(Logger::class, [TMP_DIR, 'app-dedicated'])->setAutowired(false);
@@ -190,5 +211,16 @@ final class AppLoggerTest extends TestCase
 final class LoggerSelectionApp extends App
 {
     public function __construct() {
+    }
+}
+
+final class SetupLogger extends Logger
+{
+    /** @var list<array{mixed, mixed, array<string, mixed>}> */
+    public array $records = [];
+
+    /** @param array<string, mixed> $context */
+    public function log($level, $message, array $context = []): void {
+        $this->records[] = [$level, $message, $context];
     }
 }
