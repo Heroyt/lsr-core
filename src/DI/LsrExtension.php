@@ -22,6 +22,7 @@ use Lsr\Core\Templating\LatteExtension;
 use Lsr\Core\Templating\TranslatorExtension;
 use Lsr\Core\Translations;
 use Lsr\Helpers\Csrf\TokenHelper;
+use Lsr\Logging\Logger;
 use Nette;
 use Nette\DI\CompilerExtension;
 use Nette\Schema\Expect;
@@ -30,6 +31,7 @@ use Nette\Schema\Expect;
  * @property object{
  *     appDir: non-empty-string,
  *     tempDir: non-empty-string,
+ *     logger: string|Nette\DI\Definitions\Reference|null,
  *     translations: object{
  *     defaultLang: non-empty-string,
  *      supportedLanguages: non-empty-string[],
@@ -64,6 +66,13 @@ class LsrExtension extends CompilerExtension
                         static fn (mixed $value) => is_string($value) && file_exists($value) && is_dir($value),
                         'Temp directory must be a valid directory',
                     ),
+                'logger' => Expect::anyOf(
+                    Expect::string()->assert(
+                        static fn (mixed $value): bool => is_string($value) && str_starts_with($value, '@') && strlen($value) > 1,
+                        'Logger must be a service reference (@service)',
+                    ),
+                    Expect::type(Nette\DI\Definitions\Reference::class),
+                )->nullable()->default(null),
                 'latte'        => Expect::structure(
                     [
                         'tempDir' => Expect::string()
@@ -138,8 +147,21 @@ class LsrExtension extends CompilerExtension
         $builder->addDefinition($this->prefix('routeHandler'))
             ->setFactory(RouteHandler::class)
             ->setTags(['lsr' => true, 'core' => true]);
+        $logger = $builder->addDefinition($this->prefix('logger'))
+            ->setAutowired(false)
+            ->setTags(['lsr' => true, 'core' => true]);
+        if ($this->config->logger !== null) {
+            $logger->setFactory($this->config->logger);
+        } else {
+            $logger->setFactory(Logger::class, [
+                new Nette\DI\Definitions\Statement(['', 'constant'], ['LOG_DIR']),
+                'app',
+            ]);
+            $logger->lazy = true;
+        }
         $builder->addDefinition($this->prefix('app'))
             ->setFactory(App::class)
+            ->addSetup('setLogger', ['@' . $this->prefix('logger')])
             ->setTags(['lsr' => true, 'core' => true]);
         $builder->addDefinition($this->prefix('links.generator'))
             ->setFactory(
@@ -280,6 +302,16 @@ class LsrExtension extends CompilerExtension
         $builder->addAlias('templating.latte.translatorExtension', $this->prefix('latte.extension.translator'));
         $builder->addAlias('templating.latte.engine', $this->prefix('latte.engine'));
         $builder->addAlias('templating.latte', $this->prefix('latte'));
+    }
+
+    public function beforeCompile(): void {
+        $logger = $this->getContainerBuilder()->getDefinition($this->prefix('logger'));
+        $type = $logger->getType();
+        if ($type === null || ! is_a($type, Logger::class, true)) {
+            throw new Nette\InvalidArgumentException(
+                sprintf('Service "%s" must be a %s.', $this->prefix('logger'), Logger::class),
+            );
+        }
     }
 
 }

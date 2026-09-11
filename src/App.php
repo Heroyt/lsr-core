@@ -541,6 +541,10 @@ class App
         return $generator->getLink($request);
     }
 
+    public function setLogger(Logger $logger): void {
+        $this->logger = $logger;
+    }
+
     public function getLogger(): Logger {
         if ( ! isset($this->logger)) {
             $this->logger = new Logger(LOG_DIR, 'app');
