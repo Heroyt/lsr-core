@@ -2,7 +2,7 @@
   "name": "lsr/core",
   "license": "MIT",
   "description": "Laser framework core.",
-  "version": "0.6.0-dev",
+  "version": "0.6.0",
   "repositories": [
     {
       "type": "composer",
@@ -41,7 +41,7 @@
   },
   "authors": [
     {
-      "name": "Tomáš Vojík",
+      "name": "Tom\u00e1\u0161 Voj\u00edk",
       "email": "vojik@wboy.cz"
     }
   ],
