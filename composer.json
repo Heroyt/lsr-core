@@ -66,7 +66,8 @@
     "lsr/caching": "^0.3",
     "lsr/orm": "^0.3 || ^0.4",
     "vlucas/phpdotenv": "^5.6",
-    "nette/php-generator": "^4.1"
+    "nette/php-generator": "^4.1",
+    "lsr/translations": "^0.1"
   },
   "config": {
     "allow-plugins": {

@@ -6,6 +6,7 @@ namespace TestCases;
 
 use InvalidArgumentException;
 use Lsr\Core\Config;
+use Lsr\Core\Exceptions\InvalidLanguageException;
 use Lsr\Core\Translations;
 use PHPUnit\Framework\TestCase;
 use Stringable;
@@ -97,5 +98,31 @@ class TranslationsTest extends TestCase
             num: null,
             domain: null,
         );
+    }
+
+    public function test_language_codes_resolve_to_the_configured_country(): void {
+        $translations = new Translations(
+            new Config(sys_get_temp_dir()),
+            defaultLang: 'cs_CZ',
+            supportedLanguages: ['cs_CZ', 'en_GB'],
+        );
+
+        self::assertSame(['cs' => 'CZ', 'en' => 'GB'], $translations->supportedLanguages);
+        self::assertSame('cs_CZ', $translations->getLang());
+        $translations->setLang('en_US');
+        self::assertSame(['en_GB', 'en', 'GB'], [$translations->getLang(), $translations->getLangId(), $translations->getCountry()]);
+        self::assertSame('cs', $translations->getDefaultLangId());
+        self::assertTrue($translations->supportsLanguage('en'));
+        self::assertFalse($translations->supportsLanguage('de'));
+    }
+
+    public function test_unsupported_language_keeps_the_core_exception_type_and_active_language(): void {
+        try {
+            $this->translations->setLang('de');
+            self::fail('Unsupported language was accepted.');
+        } catch (InvalidLanguageException $exception) {
+            self::assertStringStartsWith('Unsupported language de (de).', $exception->getMessage());
+        }
+        self::assertSame('cs_CZ', $this->translations->getLang());
     }
 }
