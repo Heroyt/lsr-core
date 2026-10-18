@@ -8,7 +8,7 @@
 - PHP extensions: `fileinfo`, `gettext`, `simplexml`, `ctype`, `mbstring` and `pdo_sqlite`.
 - Nette DI `^3.2.4` (native lazy logger services), Latte `^3.0`, PHP dotenv `^5.6` and Nette PHP Generator `^4.1`.
 - Core **0.6 (unreleased)** directly supports PSR-3 `psr/log ^1.0 || ^2.0 || ^3.0` and ORM `^0.3 || ^0.4`; using Core's logger seam does not require ORM 0.4.
-- Core **0.7 (unreleased)** builds `Translations` on [`lsr/translations`](https://github.com/Heroyt/lsr-translations) `^0.1`.
+- Core **0.7** builds `Translations` on [`lsr/translations`](https://github.com/Heroyt/lsr-translations) `^0.1`.
 - LSR interfaces, logging, routing (`^0.5`), request, DB, serializer, cache and ORM dependencies; see [composer.json](composer.json) for exact constraints and transitive platform requirements.
 - An application-owned bootstrap and service configuration, writable temporary/cache and log locations, and database/cache configuration appropriate to the application. This is a framework library, not an application skeleton.
 
@@ -146,9 +146,9 @@ Before opting a consumer into 0.6:
 
 ## Translations
 
-`Lsr\Core\Translations` (service `translations`, the `lang()` helper, Latte `{_}`/`{translate}`/`|translate` and the Nette `Translator` interface) is the application translation service. From Core 0.7 (unreleased) it delegates language resolution, locale application and gettext lookup to the framework-neutral [`lsr/translations`](https://github.com/Heroyt/lsr-translations) runtime, bound to the application's `LANGUAGE_DIR`, `LANGUAGE_FILE_NAME` and `translations.domains`. Its public API is unchanged. Core keeps the language discovery fallback, supported countries, Tracy instrumentation and the development collection of missing messages (`CHECK_TRANSLATIONS` with `updateTranslations()`).
+`Lsr\Core\Translations` (service `translations`, the `lang()` helper, Latte `{_}`/`{translate}`/`|translate` and the Nette `Translator` interface) is the application translation service. From Core 0.7 it delegates language resolution, locale application and gettext lookup to the framework-neutral [`lsr/translations`](https://github.com/Heroyt/lsr-translations) runtime, bound to the application's `LANGUAGE_DIR`, `LANGUAGE_FILE_NAME` and `translations.domains`. Its public API is unchanged. Core keeps the language discovery fallback, supported countries, Tracy instrumentation and the development collection of missing messages (`CHECK_TRANSLATIONS` with `updateTranslations()`).
 
-Behavior changes in Core 0.7 (unreleased):
+Behavior changes in Core 0.7:
 
 - A message with a plural always uses `ngettext`, including `num: 1`; previously `num: 1` used the singular lookup.
 - `num` other than 1 without a plural now uses the singular lookup; previously an untranslated message returned an empty string.
